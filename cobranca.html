@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Inadimplência - LEME Supreme</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['"Inter"', 'sans-serif'], mono: ['"Fira Code"', 'monospace'] } } }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- CABEÇALHO -->
+    <header class="bg-slate-900/90 border-b border-slate-800 p-4 flex items-center justify-between sticky top-0 z-20 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <span class="bg-amber-500/10 text-amber-400 text-xs font-black px-2.5 py-1 rounded-lg border border-amber-500/20 flex items-center gap-1.5">
+                <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i> CENTRAL DE RECUPERAÇÃO
+            </span>
+            <h1 class="text-lg font-black text-white tracking-tight uppercase">GESTÃO DE INADIMPLÊNCIA</h1>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-all">
+                <i data-lucide="users" class="w-4 h-4"></i> CARTEIRA ATIVA
+            </button>
+            <button class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-all">
+                <i data-lucide="send" class="w-4 h-4"></i> ENVIAR SEL.
+            </button>
+            <button class="bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 border border-sky-500/30 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-all">
+                <i data-lucide="calendar-plus" class="w-4 h-4"></i> NOVA AGENDA
+            </button>
+            <button class="bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-all">
+                <i data-lucide="calendar" class="w-4 h-4"></i> CALENDÁRIO
+            </button>
+            <button class="bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/30 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-all">
+                <i data-lucide="activity" class="w-4 h-4"></i> DASHBOARD
+            </button>
+            <button onclick="consultarInadimplencia()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2 transition-all ml-2">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> ATUALIZAR DADOS
+            </button>
+        </div>
+    </header>
+
+    <main class="p-6 space-y-6 flex-1">
+
+        <!-- PARÂMETROS DA CARTEIRA -->
+        <section class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-xl">
+            <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i data-lucide="sliders" class="w-3.5 h-3.5 text-sky-400"></i> Parâmetros da Carteira
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-rose-400 uppercase mb-1">Dias Atraso</label>
+                    <div class="flex items-center gap-1.5">
+                        <input type="number" id="diasAtrasoMin" value="15" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white text-center font-bold font-mono">
+                        <span class="text-xs text-slate-600">-</span>
+                        <input type="number" id="diasAtrasoMax" value="20" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white text-center font-bold font-mono">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Período Vencimento</label>
+                    <div class="flex items-center gap-1">
+                        <input type="date" id="dataVencInicio" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-white">
+                        <span class="text-xs text-slate-600">-</span>
+                        <input type="date" id="dataVencFim" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Status do Título</label>
+                    <select id="statusTitulo" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none">
+                        <option value="Todas as Situações">Todas as Situações</option>
+                        <option value="Em Aberto">Em Aberto</option>
+                        <option value="Acordo em Andamento">Acordo em Andamento</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Filial ERP</label>
+                    <select id="filialErp" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none">
+                        <option value="Consolidado Geral">Consolidado Geral</option>
+                        <option value="01">01 - Filial Matriz</option>
+                        <option value="02">02 - Filial AL</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Busca Rápida (Cliente)</label>
+                    <div class="relative">
+                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input type="text" id="buscaCliente" placeholder="NOME OU CNPJ..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 pl-8 text-xs text-white uppercase outline-none">
+                    </div>
+                </div>
+
+                <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-center items-center">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Títulos Filtrados</span>
+                    <span id="totalTitulosFiltrados" class="text-xl font-black font-mono text-sky-400">0</span>
+                </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-t border-slate-800/60 flex items-center gap-3">
+                <span class="text-[10px] font-bold text-slate-400 uppercase">Retorno:</span>
+                <input type="date" id="retornoInicio" class="bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-white">
+                <span class="text-xs text-slate-600">A</span>
+                <input type="date" id="retornoFim" class="bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-white">
+            </div>
+        </section>
+
+        <!-- RELAÇÃO DE INADIMPLÊNCIA -->
+        <section class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="p-4 border-b border-slate-800 bg-slate-900/80 flex items-center justify-between">
+                <h3 class="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="list" class="w-4 h-4 text-sky-400"></i> Relação de Inadimplência
+                </h3>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs whitespace-nowrap">
+                    <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider text-[10px] border-b border-slate-800">
+                        <tr>
+                            <th class="p-3 text-center w-10">
+                                <input type="checkbox" id="checkAll" onclick="marcarTodos(this)" class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+                            </th>
+                            <th class="p-3">Status / Ação</th>
+                            <th class="p-3">Filial</th>
+                            <th class="p-3">Doc / Parc</th>
+                            <th class="p-3">Vencimento</th>
+                            <th class="p-3">Atraso</th>
+                            <th class="p-3">Identificação do Cliente</th>
+                            <th class="p-3 text-right">Valor Original</th>
+                            <th class="p-3 text-right">Saldo Devedor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaInadimplenciaCorpo" class="divide-y divide-slate-800/50 font-medium">
+                        <tr>
+                            <td colspan="9" class="p-8 text-center text-slate-500">
+                                Clique em <strong class="text-slate-400">Atualizar Dados</strong> para carregar a carteira de inadimplência.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            consultarInadimplencia();
+        });
+
+        function marcarTodos(source) {
+            const checkboxes = document.querySelectorAll('.checkItem');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+        }
+
+        // FUNÇÃO PRINCIPAL DE CONSULTA DA CARTEIRA
+        async function consultarInadimplencia() {
+            const tabelaCorpo = document.getElementById('tabelaInadimplenciaCorpo');
+            const totalElemento = document.getElementById('totalTitulosFiltrados');
+            
+            tabelaCorpo.innerHTML = `
+                <tr>
+                    <td colspan="9" class="p-8 text-center text-slate-400 font-medium">
+                        <i data-lucide="loader-2" class="w-6 h-6 animate-spin inline-block mb-2 text-sky-400"></i><br>
+                        A carregar a carteira de inadimplência...
+                    </td>
+                </tr>`;
+            lucide.createIcons();
+
+            const payload = {
+                diasAtrasoMin: document.getElementById('diasAtrasoMin')?.value || 15,
+                diasAtrasoMax: document.getElementById('diasAtrasoMax')?.value || 20,
+                dataVencInicio: document.getElementById('dataVencInicio')?.value || '',
+                dataVencFim: document.getElementById('dataVencFim')?.value || '',
+                statusTitulo: document.getElementById('statusTitulo')?.value || 'Todas as Situações',
+                filial: document.getElementById('filialErp')?.value || 'Consolidado Geral',
+                buscaCliente: document.getElementById('buscaCliente')?.value.trim() || ''
+            };
+
+            const ENDPOINT_COBRANCA = "/api/cobranca/carteira-inadimplencia";
+
+            try {
+                const response = await fetch(ENDPOINT_COBRANCA, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error ${response.status}`);
+                }
+
+                const resData = await response.json();
+
+                if (!resData || !resData.success) {
+                    throw new Error(resData.message || "Resposta inválida do servidor.");
+                }
+
+                const listaTitulos = resData.data || [];
+                totalElemento.innerText = listaTitulos.length;
+                renderizarTabelaCobranca(listaTitulos);
+
+            } catch (error) {
+                console.warn("Rota principal indisponível. A tentar rota de fallback...", error);
+                
+                // FALLBACK AUTOMÁTICO PARA A ROTA DO CONTAS A RECEBER
+                try {
+                    const fbResponse = await fetch("/api/contas-receber/consultar", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            dataVencInicio: payload.dataVencInicio,
+                            dataVencFim: payload.dataVencFim,
+                            filial: payload.filial,
+                            cliente: payload.buscaCliente
+                        })
+                    });
+
+                    if (fbResponse.ok) {
+                        const fbData = await fbResponse.json();
+                        if (fbData && fbData.success && Array.isArray(fbData.data)) {
+                            totalElemento.innerText = fbData.data.length;
+                            renderizarTabelaCobranca(fbData.data);
+                            return;
+                        }
+                    }
+                } catch (fbError) {
+                    console.error("Falha na rota alternativa:", fbError);
+                }
+
+                // EXIBIÇÃO DE MENSAGEM TRATADA CASO TUDO FALHE
+                tabelaCorpo.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="p-8 text-center text-rose-400 font-bold">
+                            <i data-lucide="alert-triangle" class="w-6 h-6 inline-block mb-2"></i><br>
+                            Servidor indisponível no momento.<br>
+                            <span class="text-xs text-slate-400 font-normal">Garanta que o processo Node.js (<code class="bg-slate-800 px-1 py-0.5 rounded text-rose-300">pm2 status</code>) está em execução.</span>
+                        </td>
+                    </tr>`;
+                lucide.createIcons();
+            }
+        }
+
+        // RENDERIZAÇÃO DAS LINHAS DA TABELA
+        function renderizarTabelaCobranca(dados) {
+            const tabelaCorpo = document.getElementById('tabelaInadimplenciaCorpo');
+
+            if (!dados || dados.length === 0) {
+                tabelaCorpo.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="p-8 text-center text-slate-500">
+                            Nenhum título inadimplente encontrado para os parâmetros selecionados.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tabelaCorpo.innerHTML = dados.map((item, idx) => {
+                const doc = item.E1_NUM || item.documento || item.doc || '000000';
+                const parc = item.E1_PARCELA || item.parcela || item.parc || '01';
+                const vencto = item.E1_VENCTO || item.vencimento || '';
+                const atraso = item.atraso || item.diasAtraso || '0 d';
+                const cliente = item.E1_NOMCLI || item.cliente || item.razaoSocial || 'CLIENTE NÃO IDENTIFICADO';
+                const vlrOrig = Number(item.E1_VALOR || item.vlrOriginal || 0);
+                const saldoDev = Number(item.E1_SALDO || item.saldoDevendor || item.saldo || 0);
+                const status = item.status || 'EM ABERTO';
+
+                return `
+                    <tr class="hover:bg-slate-800/40 border-b border-slate-800/50 transition-colors text-xs">
+                        <td class="p-3 text-center">
+                            <input type="checkbox" class="checkItem rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+                        </td>
+                        <td class="p-3">
+                            <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-black px-2 py-0.5 rounded">
+                                ${status}
+                            </span>
+                        </td>
+                        <td class="p-3 font-mono text-slate-300">${item.E1_FILIAL || item.filial || '01'}</td>
+                        <td class="p-3 font-mono font-bold text-white">${doc} / ${parc}</td>
+                        <td class="p-3 font-mono text-slate-300">${vencto}</td>
+                        <td class="p-3 font-mono text-rose-400 font-bold">${atraso}</td>
+                        <td class="p-3 text-white font-semibold uppercase">${cliente}</td>
+                        <td class="p-3 font-mono text-right text-slate-300">R$ ${vlrOrig.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-3 font-mono text-right font-bold text-sky-400">R$ ${saldoDev.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

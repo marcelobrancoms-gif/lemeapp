@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Contas a Pagar (SE2) V3.7 - Comlub ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .erp-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        .erp-table th { background-color: #ffffff; border-bottom: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0; font-weight: 800; color: #64748b; padding: 12px 16px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 20; text-align: left; white-space: nowrap;}
+        .erp-table td { border-bottom: 1px solid #f1f5f9; padding: 14px 16px; color: #334155; font-size: 12px; font-weight: 600; transition: background-color 0.1s; white-space: nowrap;}
+        .erp-table tbody tr:hover td { background-color: #f8fafc; }
+
+        .erp-input { width: 100%; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #1e293b; outline: none; transition: all 0.2s; }
+        .erp-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1); }
+        .erp-label { display: block; font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+
+        .loader-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        .tree-checkbox { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #cbd5e1; appearance: none; outline: none; cursor: pointer; position: relative; background: white; transition: all 0.2s; }
+        .tree-checkbox:checked { background-color: #0284c7; border-color: #0284c7; }
+        .tree-checkbox:checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+        .tree-checkbox:indeterminate { background-color: #0284c7; border-color: #0284c7; }
+        .tree-checkbox:indeterminate::after { content: ''; position: absolute; left: 3px; top: 6px; width: 6px; height: 2px; background: white; }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .modal-overlay { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); transform: scale(0.95); opacity: 0; }
+        .modal-active .modal-content { transform: scale(1); opacity: 1; }
+    </style>
+</head>
+<body class="flex flex-col h-screen antialiased">
+
+    <div id="topProgressBarContainer" class="fixed top-0 left-0 w-full h-1.5 bg-transparent z-[300] overflow-hidden hidden">
+        <div id="topProgressBar" class="h-full bg-rose-500 w-0 transition-[width] duration-300 ease-out shadow-[0_0_10px_rgba(244,63,94,0.8)]"></div>
+    </div>
+
+    <div id="toastNotification" class="fixed top-5 right-5 z-[200] bg-slate-900 text-white text-xs font-bold uppercase tracking-widest px-5 py-4 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400" id="toastIcon"></i>
+        <span id="toastMessage">Operação efetuada!</span>
+    </div>
+
+    <header class="bg-[#0f172a] border-b border-slate-800 px-6 py-4 flex items-center justify-between shrink-0 z-40 shadow-md">
+        <div class="flex items-center gap-4">
+            <div class="flex items-baseline select-none" style="letter-spacing: -0.05em; line-height: 1;">
+                <span class="text-white font-black text-2xl">com</span><span class="text-[#FFCB05] font-black text-2xl">lub</span>
+            </div>
+            <div class="h-6 w-px bg-slate-700 ml-2"></div>
+            <div class="flex items-center gap-3 ml-2">
+                <span class="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                    <i data-lucide="receipt" class="w-3 h-3"></i> Financeiro
+                </span>
+                <h1 class="text-sm font-bold text-white uppercase tracking-wider hidden sm:block">Contas a Pagar (SE2)</h1>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <span class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest items-center gap-1.5 hidden sm:flex">
+                <i data-lucide="server" class="w-3.5 h-3.5"></i> V3.7 - ROTA ESTÁVEL
+            </span>
+            <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-white transition-colors p-1.5 rounded hover:bg-slate-800" title="Fechar Módulo">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <section class="bg-slate-50 border-b border-slate-200 px-6 py-5 shrink-0 z-30 flex flex-col gap-4">
+        
+        <div class="flex items-center justify-between">
+            <h2 class="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="filter" class="w-4 h-4 text-rose-500"></i> Filtros Híbridos
+            </h2>
+            <div class="flex items-center gap-3">
+                <button onclick="limparFiltros()" class="text-[10px] font-bold text-slate-500 hover:text-slate-800 uppercase tracking-widest underline transition-colors cursor-pointer">Limpar Filtros</button>
+                <button onclick="exportarExcelTabela()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors shadow-sm cursor-pointer">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar (Tabela)
+                </button>
+                <button onclick="carregarDados()" id="btnConsultar" class="bg-[#003865] hover:bg-blue-900 text-white px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors shadow-sm cursor-pointer">
+                    <i data-lucide="search" class="w-4 h-4 text-[#FFCB05]"></i> Consultar Base
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4" id="areaFiltros">
+            
+            <div class="col-span-1 lg:col-span-2 relative date-tree-container">
+                <label class="erp-label">Emissão (Data ou Mês)</label>
+                <div class="flex items-center gap-1">
+                    <input type="text" id="exato_de_emis" placeholder="DD/MM/AAAA" maxlength="10" oninput="maskDate(this);" class="erp-input !py-1.5 !px-2 !text-[11px] font-mono text-center w-full shadow-inner focus:ring-1 focus:ring-blue-500">
+                    <span class="text-[10px] font-bold text-slate-400">A</span>
+                    <input type="text" id="exato_ate_emis" placeholder="DD/MM/AAAA" maxlength="10" oninput="maskDate(this);" class="erp-input !py-1.5 !px-2 !text-[11px] font-mono text-center w-full shadow-inner focus:ring-1 focus:ring-blue-500">
+                    <button type="button" id="btn_tree_emis" onclick="toggleDrop('drop_emis')" class="bg-slate-100 border border-slate-300 p-1.5 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center justify-center shrink-0 w-8 h-[30px]">
+                        <i data-lucide="list-tree" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div id="drop_emis" class="hidden absolute top-[100%] right-0 w-56 bg-white border border-slate-300 shadow-2xl rounded-lg z-[100] max-h-96 flex-col mt-1">
+                    <div class="p-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Múltiplos Meses</span>
+                        <button type="button" onclick="clearTree('emis')" class="text-[9px] text-blue-600 font-bold hover:underline">Limpar</button>
+                    </div>
+                    <div id="tree_emis" class="p-2 overflow-y-auto flex-1 custom-scroll"><div class="text-[10px] text-slate-400 p-2 text-center font-bold">Consulte primeiro</div></div>
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-2 relative date-tree-container">
+                <label class="erp-label">Venc. Original (Data ou Mês)</label>
+                <div class="flex items-center gap-1">
+                    <input type="text" id="exato_de_venc_orig" placeholder="DD/MM/AAAA" maxlength="10" oninput="maskDate(this);" class="erp-input !py-1.5 !px-2 !text-[11px] font-mono text-center w-full shadow-inner focus:ring-1 focus:ring-blue-500">
+                    <span class="text-[10px] font-bold text-slate-400">A</span>
+                    <input type="text" id="exato_ate_venc_orig" placeholder="DD/MM/AAAA" maxlength="10" oninput="maskDate(this);" class="erp-input !py-1.5 !px-2 !text-[11px] font-mono text-center w-full shadow-inner focus:ring-1 focus:ring-blue-500">
+                    <button type="button" id="btn_tree_venc_orig" onclick="toggleDrop('drop_venc_orig')" class="bg-slate-100 border border-slate-300 p-1.5 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center justify-center shrink-0 w-8 h-[30px]">
+                        <i data-lucide="list-tree" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div id="drop_venc_orig" class="hidden absolute top-[100%] right-0 w-56 bg-white border border-slate-300 shadow-2xl rounded-lg z-[100] max-h-96 flex-col mt-1">
+                    <div class="p-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Múltiplos Meses</span>
+                        <button type="button" onclick="clearTree('venc_orig')" class="text-[9px] text-blue-600 font-bold hover:underline">Limpar</button>
+                    </div>
+                    <div id="tree_venc_orig" class="p-2 overflow-y-auto flex-1 custom-scroll"><div class="text-[10px] text-slate-400 p-2 text-center font-bold">Consulte primeiro</div></div>
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-2 relative date-tree-container">
+                <label class="erp-label">Venc. Real (Data ou Mês)</label>
+                <div class="flex items-center gap-1">
+                    <input type="text" id="exato_de_venc_real" placeholder="DD/MM/AAAA" maxlength="10" oninput="maskDate(this);" class="erp-input !py-1.5 !px-2 !text-[11px] font-mono text-center w-full shadow-inner focus:ring-1 focus:ring-blue-500">
+                    <span class="text-[10px] font-bold text-slate-400">A</span>
+                    <input type="text" id="exato_ate_venc_real" placeholder="DD/MM/AAAA" maxlength="10" oninput="maskDate(this);" class="erp-input !py-1.5 !px-2 !text-[11px] font-mono text-center w-full shadow-inner focus:ring-1 focus:ring-blue-500">
+                    <button type="button" id="btn_tree_venc_real" onclick="toggleDrop('drop_venc_real')" class="bg-slate-100 border border-slate-300 p-1.5 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center justify-center shrink-0 w-8 h-[30px]">
+                        <i data-lucide="list-tree" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div id="drop_venc_real" class="hidden absolute top-[100%] right-0 w-56 bg-white border border-slate-300 shadow-2xl rounded-lg z-[100] max-h-96 flex-col mt-1">
+                    <div class="p-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Múltiplos Meses</span>
+                        <button type="button" onclick="clearTree('venc_real')" class="text-[9px] text-blue-600 font-bold hover:underline">Limpar</button>
+                    </div>
+                    <div id="tree_venc_real" class="p-2 overflow-y-auto flex-1 custom-scroll"><div class="text-[10px] text-slate-400 p-2 text-center font-bold">Consulte primeiro</div></div>
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-2 relative date-tree-container">
+                <label class="erp-label">Baixa / Pagtº (Data ou Mês)</label>
+                <div class="flex items-center gap-1">
+                    <input type="text" id="exato_de_baixa" placeholder="DD/MM/AAAA" maxlength="10" oninput="maskDate(this);" class="erp-input !py-1.5 !px-2 !text-[11px] font-mono text-center w-full shadow-inner focus:ring-1 focus:ring-blue-500">
+                    <span class="text-[10px] font-bold text-slate-400">A</span>
+                    <input type="text" id="exato_ate_baixa" placeholder="DD/MM/AAAA" maxlength="10" oninput="maskDate(this);" class="erp-input !py-1.5 !px-2 !text-[11px] font-mono text-center w-full shadow-inner focus:ring-1 focus:ring-blue-500">
+                    <button type="button" id="btn_tree_baixa" onclick="toggleDrop('drop_baixa')" class="bg-slate-100 border border-slate-300 p-1.5 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center justify-center shrink-0 w-8 h-[30px]">
+                        <i data-lucide="list-tree" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div id="drop_baixa" class="hidden absolute top-[100%] right-0 w-56 bg-white border border-slate-300 shadow-2xl rounded-lg z-[100] max-h-96 flex-col mt-1">
+                    <div class="p-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Múltiplos Meses</span>
+                        <button type="button" onclick="clearTree('baixa')" class="text-[9px] text-blue-600 font-bold hover:underline">Limpar</button>
+                    </div>
+                    <div id="tree_baixa" class="p-2 overflow-y-auto flex-1 custom-scroll"><div class="text-[10px] text-slate-400 p-2 text-center font-bold">Consulte primeiro</div></div>
+                </div>
+            </div>
+
+            <!-- LINHA 2 (FILTROS) -->
+            <div class="col-span-1">
+                <label class="erp-label text-rose-700 flex items-center gap-1"><i data-lucide="calendar-clock" class="w-3 h-3"></i> Data Base</label>
+                <input type="date" id="f_data_base" title="Recalcula Status, Juros e Atraso a partir deste dia" class="erp-input cursor-pointer font-black text-rose-700 bg-rose-50 border-rose-200 focus:border-rose-500 shadow-inner">
+            </div>
+
+            <div class="col-span-1">
+                <label class="erp-label">Filial</label>
+                <select id="f_filial" class="erp-input cursor-pointer">
+                    <option value="consolidado">Consolidado</option>
+                    <option value="01">01 - ALAGOAS</option>
+                    <option value="02">02 - PERNAMBUCO</option>
+                    <option value="03">03 - SERGIPE</option>
+                </select>
+            </div>
+            
+            <div class="col-span-1">
+                <label class="erp-label">Status do Título</label>
+                <select id="f_status" class="erp-input cursor-pointer">
+                    <option value="">Todos</option>
+                    <option value="VENCIDO">Vencidos (Atrasados)</option>
+                    <option value="A VENCER">A Vencer (No Prazo)</option>
+                    <option value="VENCIDOS/A VENCER">Vencidos e A Vencer (Em Aberto)</option>
+                    <option value="BAIXADO">Baixado / Liquidado</option>
+                </select>
+            </div>
+            
+            <div class="col-span-1">
+                <label class="erp-label" title="Considera tipo LIQ gerado pelo ERP">Considera Liquidados (LIQ)</label>
+                <select id="f_tipoliq" class="erp-input cursor-pointer">
+                    <option value="AMBOS">Ambos</option>
+                    <option value="SIM">Sim (LIQ)</option>
+                    <option value="NAO">Não (Em branco)</option>
+                </select>
+            </div>
+
+            <div class="col-span-1 flex items-end">
+                <div class="bg-rose-50 border border-rose-200 p-1 rounded-lg w-full flex flex-col items-center justify-center shadow-sm h-[38px]">
+                    <span class="text-[8px] font-black text-rose-800 uppercase tracking-widest text-center leading-none">Total Títulos a Pagar</span>
+                    <span id="lblCount" class="text-sm font-black text-rose-600 text-center leading-none mt-1">0</span>
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-2">
+                <label class="erp-label">Fornecedor (Razão Social)</label>
+                <input type="text" id="f_cliente" class="erp-input uppercase" placeholder="Parte do nome...">
+            </div>
+
+            <div class="col-span-1">
+                <label class="erp-label">Cód. Fornecedor</label>
+                <input type="text" id="f_cod_cliente" class="erp-input uppercase font-mono" placeholder="Ex: 000123">
+            </div>
+
+            <!-- LINHA 3 (NATUREZA MODAL E TEXTOS) -->
+            <div class="col-span-1">
+                <label class="erp-label">Tipo Doc (TP)</label>
+                <input type="text" id="f_tipo_doc" class="erp-input uppercase font-mono" placeholder="Ex: NF, BOL...">
+            </div>
+
+            <div class="col-span-1 lg:col-span-2">
+                <label class="erp-label">Nome Fantasia</label>
+                <input type="text" id="f_fantasia" class="erp-input uppercase" placeholder="Fantasia...">
+            </div>
+
+            <div class="col-span-1 lg:col-span-2">
+                <label class="erp-label">Natureza Financeira (SED)</label>
+                <button type="button" onclick="openModalNaturezas()" class="erp-input text-left flex justify-between items-center cursor-pointer border-slate-300 hover:border-rose-500 transition-colors">
+                    <span id="lblNaturezasSelecionadas" class="truncate font-bold text-slate-600">Todas as Naturezas</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0 ml-2"></i>
+                </button>
+            </div>
+
+            <div class="col-span-1 lg:col-span-2">
+                <label class="erp-label">Nº Título (Doc)</label>
+                <input type="text" id="f_titulo" class="erp-input uppercase font-mono" placeholder="Nº do documento...">
+            </div>
+
+            <div class="col-span-1 lg:col-span-2">
+                <label class="erp-label">Código Banco (Portador)</label>
+                <input type="text" id="f_banco" class="erp-input uppercase font-mono" placeholder="Ex: 341">
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ÁREA DA TABELA -->
+    <main class="flex-1 overflow-auto bg-white relative">
+        <table class="erp-table">
+            <thead>
+                <tr>
+                    <th class="w-16 text-center">Filial</th>
+                    <th class="w-32">Documento</th>
+                    <th class="w-16 text-center">Prc</th>
+                    <th class="w-16 text-center">TP</th>
+                    <th class="w-24 text-center">Emissão</th>
+                    <th class="w-24 text-center">Vencimento</th>
+                    <th class="w-24 text-center">Vencto Real</th>
+                    <th class="w-24 text-center">Data Baixa</th>
+                    <th>Fornecedor / Razão Social</th>
+                    <th class="w-48">Natureza</th>
+                    <th class="w-32 text-right">Valor Original (R$)</th>
+                    <th class="w-24 text-right">Juros/Multa (R$)</th>
+                    <th class="w-32 text-right">Valor Baixado (R$)</th>
+                    <th class="w-32 text-right">Saldo a Pagar (R$)</th>
+                    <th class="w-24 text-center">Dias Atraso</th>
+                    <th class="w-24 text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyTitulos">
+                <tr>
+                    <td colspan="16" class="text-center py-20 text-rose-700">
+                        <i data-lucide="shield-alert" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                        <p class="font-black uppercase tracking-widest text-xs">A base de dados é muito extensa.</p>
+                        <p class="font-medium text-[10px] mt-2 text-slate-500">Utilize os filtros acima e clique em "Consultar Base".</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </main>
+
+    <!-- FOOTER DE TOTAIS -->
+    <footer class="bg-white border-t border-slate-200 px-6 py-3 flex justify-between items-center shrink-0 z-20">
+        <div class="flex items-center gap-2">
+            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Resumo Financeiro da Visualização</span>
+        </div>
+        <div class="flex gap-6">
+            <div class="text-right">
+                <span class="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Valor Original</span>
+                <span class="text-sm font-black text-slate-700 tabular-nums" id="totOrig">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-slate-200 hidden sm:block">
+                <span class="block text-[9px] font-bold text-rose-400 uppercase tracking-widest">Total Juros (Acresc)</span>
+                <span class="text-sm font-black text-rose-500 tabular-nums" id="totJuros">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-slate-200">
+                <span class="block text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Total Baixado (Pago)</span>
+                <span class="text-sm font-black text-emerald-600 tabular-nums" id="totBaixado">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-slate-200">
+                <span class="block text-[9px] font-bold text-rose-700 uppercase tracking-widest">Saldo a Pagar Restante</span>
+                <span class="text-lg font-black text-rose-600 tabular-nums" id="totCorrigido">R$ 0,00</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL NATUREZAS -->
+    <div id="modalNatureza" class="fixed inset-0 z-[160] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 modal-overlay opacity-0">
+        <div class="absolute inset-0" onclick="closeModalNaturezas()"></div>
+        <div class="bg-white w-full max-w-lg flex flex-col overflow-hidden relative z-10 modal-content rounded-2xl shadow-2xl border border-slate-200">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center shrink-0">
+                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2"><i data-lucide="tags" class="w-4 h-4 text-rose-500"></i> Filtrar Naturezas</h3>
+                <button onclick="closeModalNaturezas()" class="text-slate-400 hover:text-rose-500 transition-colors p-1 bg-white rounded-lg shadow-sm border border-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="p-4 border-b border-slate-100 bg-white shrink-0">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                    <input type="text" id="pesquisaNaturezaModal" oninput="filtrarModalNaturezas()" placeholder="Pesquisar código ou descrição (SED)..." class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 pl-9 pr-3 text-xs font-bold outline-none focus:border-rose-500">
+                </div>
+            </div>
+            <div class="px-4 py-2 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
+                <button onclick="marcarTodasNaturezas(true)" class="text-[10px] font-black text-rose-700 hover:underline px-2 py-1 uppercase tracking-widest">Marcar Filtradas</button>
+                <button onclick="marcarTodasNaturezas(false)" class="text-[10px] font-black text-slate-500 hover:underline px-2 py-1 uppercase tracking-widest">Desmarcar Filtradas</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 custom-scroll max-h-[50vh]" id="listaNaturezasModal">
+                <!-- Checkboxes injetados aqui -->
+            </div>
+            <div class="p-4 bg-white border-t border-slate-200 shrink-0 flex justify-end">
+                <button onclick="confirmarNaturezas()" class="bg-rose-600 hover:bg-rose-700 text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md flex items-center gap-2">
+                    <i data-lucide="filter" class="w-4 h-4 text-white"></i> Aplicar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let rawData = [];
+        let filteredData = [];
+        let filterTimeout;
+
+        let naturezasDisponiveis = [];
+        let naturezasSelecionadas = new Set();
+
+        let apiHost = window.location.hostname;
+        if (!apiHost || apiHost.includes('goog') || apiHost === 'localhost') {
+            apiHost = '20.0.0.103'; 
+        }
+        const API_BASE_URL = `http://${apiHost}:3001/api`;
+        
+        // ==========================================
+        // EXTRATOR UNIVERSAL BLINDADO (JSON)
+        // ==========================================
+        const extrairNum = (row, ...chavesPossiveis) => {
+            if (!row) return 0;
+            const keys = Object.keys(row);
+            for (let chave of chavesPossiveis) {
+                const limpa = String(chave).toLowerCase().replace(/[^a-z0-9]/g, '');
+                const kFound = keys.find(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, '') === limpa);
+                if (kFound !== undefined && row[kFound] !== null && row[kFound] !== '') {
+                    const val = row[kFound];
+                    if (typeof val === 'number') return val;
+                    
+                    let s = String(val).replace(/[^0-9,\.-]/g, '');
+                    if (s.includes(',')) {
+                        s = s.replace(/\./g, '').replace(',', '.');
+                    }
+                    const n = parseFloat(s);
+                    if (!isNaN(n)) return n;
+                }
+            }
+            return 0;
+        };
+
+        const extrairStr = (row, ...chavesPossiveis) => {
+            if (!row) return '';
+            const keys = Object.keys(row);
+            for (let chave of chavesPossiveis) {
+                const limpa = String(chave).toLowerCase().replace(/[^a-z0-9]/g, '');
+                const kFound = keys.find(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, '') === limpa);
+                if (kFound !== undefined && row[kFound] !== null) {
+                    return String(row[kFound]);
+                }
+            }
+            return '';
+        };
+
+        const fmtCurrDisplay = v => {
+            let n = parseFloat(v);
+            return isNaN(n) ? 'R$ 0,00' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        // ==========================================
+        // LÓGICA DO MODAL DE NATUREZAS
+        // ==========================================
+        function extrairNaturezasDaBase() {
+            const mapNat = new Map();
+            rawData.forEach(r => {
+                const cod = extrairStr(r, 'natureza');
+                const desc = extrairStr(r, 'descnatureza');
+                if (cod) {
+                    mapNat.set(cod, { cod: cod, desc: desc || 'SEM DESCRIÇÃO' });
+                }
+            });
+            naturezasDisponiveis = Array.from(mapNat.values()).sort((a, b) => a.cod.localeCompare(b.cod));
+            naturezasSelecionadas = new Set(naturezasDisponiveis.map(n => n.cod));
+            atualizarBotaoNaturezas();
+        }
+
+        function openModalNaturezas() {
+            renderListaNaturezasModal();
+            const modal = document.getElementById('modalNatureza');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            void modal.offsetWidth;
+            modal.classList.add('modal-active', 'opacity-100');
+        }
+
+        function closeModalNaturezas() {
+            const modal = document.getElementById('modalNatureza');
+            modal.classList.remove('modal-active', 'opacity-100');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+        }
+
+        function renderListaNaturezasModal() {
+            const container = document.getElementById('listaNaturezasModal');
+            const termo = document.getElementById('pesquisaNaturezaModal').value.toLowerCase().trim();
+            
+            let html = '';
+            let filtered = naturezasDisponiveis.filter(n => 
+                n.cod.toLowerCase().includes(termo) || n.desc.toLowerCase().includes(termo)
+            );
+
+            if (filtered.length === 0) {
+                html = '<div class="text-center py-8 text-slate-400 font-bold text-[10px] uppercase tracking-widest">Nenhuma natureza atende à pesquisa.</div>';
+            } else {
+                filtered.forEach(n => {
+                    const isChecked = naturezasSelecionadas.has(n.cod) ? 'checked' : '';
+                    html += `
+                        <label class="flex items-center gap-3 p-2.5 hover:bg-slate-50 rounded-lg cursor-pointer border border-transparent hover:border-slate-200 transition-colors mb-1.5 shadow-sm bg-white">
+                            <input type="checkbox" value="${n.cod}" ${isChecked} onchange="toggleNatureza('${n.cod}', this.checked)" class="w-4 h-4 text-rose-600 bg-slate-100 border-slate-300 rounded focus:ring-rose-500 shrink-0">
+                            <div class="flex flex-col overflow-hidden">
+                                <span class="text-xs font-black text-rose-700 font-mono">${n.cod}</span>
+                                <span class="text-[10px] font-bold text-slate-500 uppercase truncate" title="${n.desc}">${n.desc}</span>
+                            </div>
+                        </label>
+                    `;
+                });
+            }
+            container.innerHTML = html;
+        }
+
+        function toggleNatureza(cod, isChecked) {
+            if (isChecked) naturezasSelecionadas.add(cod);
+            else naturezasSelecionadas.delete(cod);
+            atualizarBotaoNaturezas();
+        }
+
+        function filtrarModalNaturezas() {
+            renderListaNaturezasModal();
+        }
+
+        function marcarTodasNaturezas(marcar) {
+            const termo = document.getElementById('pesquisaNaturezaModal').value.toLowerCase().trim();
+            naturezasDisponiveis.forEach(n => {
+                if (n.cod.toLowerCase().includes(termo) || n.desc.toLowerCase().includes(termo)) {
+                    if (marcar) naturezasSelecionadas.add(n.cod);
+                    else naturezasSelecionadas.delete(n.cod);
+                }
+            });
+            renderListaNaturezasModal();
+            atualizarBotaoNaturezas();
+        }
+
+        function confirmarNaturezas() {
+            atualizarBotaoNaturezas();
+            closeModalNaturezas();
+            aplicarFiltrosFrontEnd();
+        }
+
+        function atualizarBotaoNaturezas() {
+            const btn = document.getElementById('lblNaturezasSelecionadas');
+            if (naturezasSelecionadas.size === naturezasDisponiveis.length && naturezasDisponiveis.length > 0) {
+                btn.innerText = 'Todas as Naturezas (' + naturezasDisponiveis.length + ')';
+            } else if (naturezasSelecionadas.size === 0) {
+                btn.innerText = 'Nenhuma Selecionada';
+            } else {
+                btn.innerText = `${naturezasSelecionadas.size} Selecionada(s)`;
+            }
+        }
+
+        // ==========================================
+        // MÁSCARAS E DROPDOWNS
+        // ==========================================
+        function maskDate(input) {
+            let v = input.value.replace(/\D/g, '');
+            if (v.length > 2) v = v.substring(0, 2) + '/' + v.substring(2);
+            if (v.length > 5) v = v.substring(0, 5) + '/' + v.substring(5, 9);
+            input.value = v;
+        }
+
+        function setProgress(pct) {
+            const container = document.getElementById('topProgressBarContainer');
+            const bar = document.getElementById('topProgressBar');
+            if(!container || !bar) return;
+            
+            container.classList.remove('hidden');
+            void bar.offsetWidth; 
+            bar.style.width = pct + '%';
+            
+            if (pct >= 100) {
+                setTimeout(() => {
+                    bar.style.width = '0%';
+                    container.classList.add('hidden');
+                }, 800);
+            }
+        }
+
+        let treesState = { emis: {}, venc_orig: {}, venc_real: {}, baixa: {} };
+        const monthNames = { '01':'Janeiro', '02':'Fevereiro', '03':'Março', '04':'Abril', '05':'Maio', '06':'Junho', '07':'Julho', '08':'Agosto', '09':'Setembro', '10':'Outubro', '11':'Novembro', '12':'Dezembro' };
+
+        function initTrees() {
+            treesState = { emis: {}, venc_orig: {}, venc_real: {}, baixa: {} };
+            
+            rawData.forEach(r => {
+                processDateForTree(extrairStr(r, 'datadeemissao', 'emissao'), 'emis');
+                processDateForTree(extrairStr(r, 'venctotitulo', 'vencimentotitulo'), 'venc_orig');
+                processDateForTree(extrairStr(r, 'venctoreal', 'vencimentoreal'), 'venc_real');
+                processDateForTree(extrairStr(r, 'databaixa', 'datadabaixa', 'baixa'), 'baixa');
+            });
+
+            renderTreeUI('emis');
+            renderTreeUI('venc_orig');
+            renderTreeUI('venc_real');
+            renderTreeUI('baixa');
+        }
+
+        function processDateForTree(dateStr, type) {
+            if (!dateStr || dateStr === '---' || dateStr.length < 10) return;
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return;
+            const y = parts[2];
+            const m = parts[1];
+            
+            if (!treesState[type][y]) treesState[type][y] = new Set();
+            treesState[type][y].add(m);
+        }
+
+        function renderTreeUI(type) {
+            const container = document.getElementById('tree_' + type);
+            const years = Object.keys(treesState[type]).sort((a,b) => b - a);
+            
+            if (years.length === 0) {
+                container.innerHTML = '<div class="text-[10px] text-slate-400 p-2 text-center font-bold">Sem dados</div>';
+                return;
+            }
+
+            let html = '';
+            years.forEach(y => {
+                const months = Array.from(treesState[type][y]).sort();
+                html += `
+                    <div class="mb-2 select-none">
+                        <div class="flex items-center gap-2 py-1 hover:bg-slate-100 rounded pr-2 transition-colors">
+                            <button type="button" onclick="toggleTreeNode('${type}_${y}')" class="w-5 h-5 flex items-center justify-center bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-sm font-black text-xs transition-colors shadow-sm" id="btn_node_${type}_${y}">+</button>
+                            <input type="checkbox" id="chk_y_${type}_${y}" onchange="checkYear('${type}', '${y}', this.checked)" class="tree-checkbox">
+                            <label for="chk_y_${type}_${y}" class="text-[11px] font-black text-slate-700 cursor-pointer flex-1">${y}</label>
+                        </div>
+                        <div id="node_${type}_${y}" class="hidden flex-col pl-8 gap-1.5 mt-1 border-l-2 border-slate-100 ml-2.5">
+                            ${months.map(m => `
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 py-1 px-2 rounded transition-colors">
+                                    <input type="checkbox" value="${y}-${m}" class="tree-checkbox chk-m-${type} chk-m-${type}-${y}" onchange="checkMonth('${type}', '${y}')">
+                                    <span class="text-[10px] font-bold text-slate-600 uppercase">${monthNames[m]}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            updateTreeLabel(type);
+        }
+
+        function toggleDrop(id) {
+            const drop = document.getElementById(id);
+            const isHidden = drop.classList.contains('hidden');
+            ['drop_emis', 'drop_venc_orig', 'drop_venc_real', 'drop_baixa'].forEach(d => {
+                document.getElementById(d).classList.add('hidden');
+                document.getElementById(d).classList.remove('flex');
+            });
+            if (isHidden) {
+                drop.classList.remove('hidden');
+                drop.classList.add('flex');
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.date-tree-container')) {
+                ['drop_emis', 'drop_venc_orig', 'drop_venc_real', 'drop_baixa'].forEach(d => {
+                    const el = document.getElementById(d);
+                    if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+                });
+            }
+        });
+
+        function toggleTreeNode(nodeId) {
+            const node = document.getElementById('node_' + nodeId);
+            const btn = document.getElementById('btn_node_' + nodeId);
+            if (node.classList.contains('hidden')) {
+                node.classList.remove('hidden'); node.classList.add('flex'); btn.innerText = '−';
+            } else {
+                node.classList.add('hidden'); node.classList.remove('flex'); btn.innerText = '+';
+            }
+        }
+
+        function checkYear(type, year, isChecked) {
+            const monthChks = document.querySelectorAll(`.chk-m-${type}-${year}`);
+            monthChks.forEach(cb => cb.checked = isChecked);
+            updateTreeLabel(type);
+            aplicarFiltrosFrontEnd();
+        }
+
+        function checkMonth(type, year) {
+            const monthChks = document.querySelectorAll(`.chk-m-${type}-${year}`);
+            const allChecked = Array.from(monthChks).every(cb => cb.checked);
+            const someChecked = Array.from(monthChks).some(cb => cb.checked);
+            
+            const yearChk = document.getElementById(`chk_y_${type}_${year}`);
+            yearChk.checked = allChecked;
+            yearChk.indeterminate = someChecked && !allChecked;
+            
+            updateTreeLabel(type);
+            aplicarFiltrosFrontEnd();
+        }
+
+        function clearTree(type) {
+            const chks = document.querySelectorAll(`.chk-m-${type}, [id^="chk_y_${type}_"]`);
+            chks.forEach(cb => { cb.checked = false; cb.indeterminate = false; });
+            document.getElementById(`exato_de_${type}`).value = '';
+            document.getElementById(`exato_ate_${type}`).value = '';
+            updateTreeLabel(type);
+            aplicarFiltrosFrontEnd();
+        }
+
+        function updateTreeLabel(type) {
+            const checkedMonths = document.querySelectorAll(`.chk-m-${type}:checked`).length;
+            const de = document.getElementById(`exato_de_${type}`).value;
+            const ate = document.getElementById(`exato_ate_${type}`).value;
+            const btn = document.getElementById(`btn_tree_${type}`);
+            
+            if (checkedMonths === 0 && !de && !ate) {
+                btn.classList.remove('bg-blue-50', 'text-blue-600', 'border-blue-300');
+                btn.classList.add('bg-slate-100', 'text-slate-600', 'border-slate-300');
+                btn.innerHTML = '<i data-lucide="list-tree" class="w-4 h-4"></i>';
+            } else {
+                btn.classList.remove('bg-slate-100', 'text-slate-600', 'border-slate-300');
+                btn.classList.add('bg-blue-50', 'text-blue-600', 'border-blue-300');
+                btn.innerHTML = `<span class="text-[10px] font-black">${checkedMonths > 0 ? checkedMonths : '*'}</span>`;
+            }
+            lucide.createIcons({ root: btn });
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = msg;
+            const icon = document.getElementById('toastIcon');
+            
+            if(isError) {
+                toast.classList.replace('border-slate-700', 'border-rose-500');
+                icon.setAttribute('data-lucide', 'alert-triangle');
+                icon.classList.replace('text-emerald-400', 'text-rose-500');
+            } else {
+                toast.classList.replace('border-rose-500', 'border-slate-700');
+                icon.setAttribute('data-lucide', 'check-circle');
+                icon.classList.replace('text-rose-500', 'text-emerald-400');
+            }
+            lucide.createIcons({root: toast});
+
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-[-100px]', 'opacity-0'); }, 3500);
+        }
+
+        function limparFiltros() {
+            clearTree('emis');
+            clearTree('venc_orig');
+            clearTree('venc_real');
+            clearTree('baixa');
+            document.getElementById('f_status').value = '';
+            document.getElementById('f_cliente').value = '';
+            document.getElementById('f_cod_cliente').value = '';
+            document.getElementById('f_fantasia').value = '';
+            document.getElementById('f_titulo').value = '';
+            document.getElementById('f_tipo_doc').value = '';
+            document.getElementById('f_banco').value = '';
+            document.getElementById('f_tipoliq').value = 'AMBOS';
+            const dtBase = document.getElementById('f_data_base');
+            if (dtBase) dtBase.valueAsDate = new Date();
+            
+            naturezasSelecionadas = new Set(naturezasDisponiveis.map(n => n.cod));
+            atualizarBotaoNaturezas();
+            document.getElementById('pesquisaNaturezaModal').value = '';
+            
+            aplicarFiltrosFrontEnd();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initTrees();
+            const dtBase = document.getElementById('f_data_base');
+            if (dtBase) dtBase.valueAsDate = new Date();
+
+            const inputsContainer = document.getElementById('areaFiltros');
+            if (inputsContainer) {
+                inputsContainer.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        carregarDados();
+                    }
+                });
+            }
+        });
+
+        async function carregarDados() {
+            const formatForAPI = (id) => {
+                const val = document.getElementById(id).value;
+                if (val && val.length === 10) return val.split('/').reverse().join('');
+                return '';
+            };
+
+            const dEmis = formatForAPI('exato_de_emis');
+            const aEmis = formatForAPI('exato_ate_emis');
+            const dVenc = formatForAPI('exato_de_venc_orig');
+            const aVenc = formatForAPI('exato_ate_venc_orig');
+            const dReal = formatForAPI('exato_de_venc_real');
+            const aReal = formatForAPI('exato_ate_venc_real');
+            const dBaixa = formatForAPI('exato_de_baixa');
+            const aBaixa = formatForAPI('exato_ate_baixa');
+            
+            const fFornecedor = document.getElementById('f_cliente').value.trim();
+            const fCodForn = document.getElementById('f_cod_cliente').value.trim();
+            const fTitulo = document.getElementById('f_titulo').value.trim();
+
+            if (!dEmis && !aEmis && !dVenc && !aVenc && !dReal && !aReal && !dBaixa && !aBaixa && !fFornecedor && !fCodForn && !fTitulo) {
+                showToast("⚠️ OBRIGATORIO: Preencha pelo menos um periodo de datas, Fornecedor, Codigo ou Titulo para consultar.", true);
+                return;
+            }
+
+            setProgress(15);
+            const filial = document.getElementById('f_filial').value;
+            const btn = document.getElementById('btnConsultar');
+            const originalHTML = btn.innerHTML;
+            
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-[#FFCB05]"></i> Buscando...`;
+            btn.disabled = true;
+            lucide.createIcons({root: btn});
+
+            const tbody = document.getElementById('tbodyTitulos');
+            tbody.innerHTML = `<tr><td colspan="16" class="text-center py-20 text-[#003865] font-bold uppercase tracking-widest text-[10px]"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-3"></i> Consultando base de dados nativa (SE2)...</td></tr>`;
+            lucide.createIcons({root: tbody});
+
+            setProgress(40);
+
+            try {
+                let rawDataBase = document.getElementById('f_data_base').value;
+                let dataBaseAPI = rawDataBase ? rawDataBase.replace(/-/g, '') : '';
+
+                // Rota Padronizada com Anti-Cache dinâmico via Query String
+                const endpoint = `${API_BASE_URL}/se2-consultar/${filial}?_t=${new Date().getTime()}`;
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        emis: { de: dEmis, ate: aEmis, meses: Array.from(document.querySelectorAll('.chk-m-emis:checked')).map(cb => cb.value) },
+                        venc_orig: { de: dVenc, ate: aVenc, meses: Array.from(document.querySelectorAll('.chk-m-venc_orig:checked')).map(cb => cb.value) },
+                        venc_real: { de: dReal, ate: aReal, meses: Array.from(document.querySelectorAll('.chk-m-venc_real:checked')).map(cb => cb.value) },
+                        baixa: { de: dBaixa, ate: aBaixa, meses: Array.from(document.querySelectorAll('.chk-m-baixa:checked')).map(cb => cb.value) },
+                        status: document.getElementById('f_status').value.toUpperCase(),
+                        fornecedor: fFornecedor,
+                        cod_fornecedor: fCodForn,
+                        fantasia: document.getElementById('f_fantasia').value.toUpperCase().trim(),
+                        titulo: fTitulo,
+                        tipo_doc: document.getElementById('f_tipo_doc').value.toUpperCase().trim(),
+                        banco: document.getElementById('f_banco').value.toUpperCase().trim(),
+                        dataBase: dataBaseAPI
+                    })
+                });
+                
+                let resData;
+                const contentType = response.headers.get("content-type");
+                
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    resData = await response.json();
+                } else {
+                    const errText = await response.text();
+                    throw new Error(errText.substring(0, 200) || `Erro HTTP ${response.status}`);
+                }
+                
+                if (!response.ok) {
+                    throw new Error(resData.error || `Erro HTTP ${response.status}`);
+                }
+                
+                if (resData.error) {
+                    throw new Error(resData.error);
+                }
+                
+                rawData = Array.isArray(resData) ? resData : (resData.data || []);
+
+                setProgress(80);
+
+                if (rawData.length > 0) {
+                    initTrees(); 
+                    extrairNaturezasDaBase();
+                    showToast(`Sucesso! ${rawData.length} titulos importados.`);
+                } else {
+                    showToast("A consulta nao retornou resultados.", false);
+                }
+
+                setTimeout(() => {
+                    aplicarFiltrosFrontEnd();
+                    setProgress(100);
+                }, 300);
+
+            } catch (err) {
+                console.error(err);
+                setProgress(100);
+                rawData = [];
+                filteredData = [];
+                
+                let msgDetalhe = err.message || "Ocorreu um erro desconhecido ao conectar com a API.";
+                let errorTitle = "Falha de Conexão com o Servidor";
+                let actionText = "Aguarde ou contacte o suporte de TI.";
+                
+                if (msgDetalhe.includes("Failed to fetch") || msgDetalhe.includes("NetworkError")) {
+                    msgDetalhe = "O navegador não conseguiu ligar ao servidor. Verifique se a API Node.js está ligada no IP correto (http://20.0.0.103:3001).";
+                    actionText = "Inicie a API com 'node api_comlub.js'.";
+                } else if (msgDetalhe.includes("Cannot POST") || msgDetalhe.includes("404")) {
+                    errorTitle = "Servidor Desatualizado (Erro 404)";
+                    msgDetalhe = `A rota /se2-consultar/ não existe. O processo Node.js atual não reconheceu o ficheiro api_comlub.js atualizado. Erro: ${msgDetalhe}`;
+                    actionText = "Use 'taskkill /F /IM node.exe' para forçar a paragem e reinicie a API.";
+                }
+                
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="16" class="text-center py-20">
+                            <div class="flex flex-col items-center justify-center text-rose-500">
+                                <i data-lucide="server-crash" class="w-10 h-10 mb-3 opacity-80"></i>
+                                <h3 class="text-sm font-black uppercase tracking-widest">${errorTitle}</h3>
+                                <div class="bg-rose-50 text-rose-800 p-4 rounded-xl mt-3 border border-rose-200 text-left max-w-2xl overflow-hidden shadow-inner w-full">
+                                    <p class="text-[11px] font-mono font-bold break-words text-center">${msgDetalhe}</p>
+                                </div>
+                                <p class="text-[10px] font-bold mt-4 bg-slate-100 text-slate-500 p-3 rounded uppercase tracking-widest">${actionText}</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                lucide.createIcons({root: tbody});
+                showToast("Falha na extracao de dados.", true);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                lucide.createIcons({root: btn});
+            }
+        }
+
+        const inputsFiltro = ['f_cliente', 'f_cod_cliente', 'f_fantasia', 'f_titulo', 'f_tipo_doc', 'f_banco', 'f_status', 'f_tipoliq'];
+        inputsFiltro.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.addEventListener('input', () => {
+                    if(rawData.length === 0) return;
+                    setProgress(30); 
+                    clearTimeout(filterTimeout);
+                    filterTimeout = setTimeout(() => {
+                        aplicarFiltrosFrontEnd();
+                        setProgress(100);
+                    }, 600);
+                });
+            }
+        });
+
+        function aplicarFiltrosFrontEnd() {
+            const fStatus = document.getElementById('f_status').value.toUpperCase();
+            const fCliente = document.getElementById('f_cliente').value.toUpperCase().trim();
+            const fCodCli = document.getElementById('f_cod_cliente').value.toUpperCase().trim();
+            const fFantasia = document.getElementById('f_fantasia').value.toUpperCase().trim();
+            const fTitulo = document.getElementById('f_titulo').value.toUpperCase().trim();
+            const fTipo = document.getElementById('f_tipo_doc').value.toUpperCase().trim();
+            const fBanco = document.getElementById('f_banco').value.toUpperCase().trim();
+            const fTipoLiq = document.getElementById('f_tipoliq').value;
+
+            filteredData = rawData.filter(r => {
+                if (!checkDate(extrairStr(r, 'datadeemissao', 'emissao', 'Data de Emissao'), 'emis')) return false;
+                if (!checkDate(extrairStr(r, 'venctotitulo', 'vencimentotitulo', 'Vencto Titulo'), 'venc_orig')) return false;
+                if (!checkDate(extrairStr(r, 'venctoreal', 'vencimentoreal', 'Vencto Real'), 'venc_real')) return false;
+                if (!checkDate(extrairStr(r, 'databaixa', 'datadabaixa', 'baixa', 'Data da Baixa'), 'baixa')) return false;
+
+                const rNatureza = extrairStr(r, 'natureza');
+                if (naturezasSelecionadas.size > 0 && !naturezasSelecionadas.has(rNatureza)) return false;
+
+                const rStatus = extrairStr(r, 'status').toUpperCase();
+                if (fStatus) {
+                    if (fStatus === 'VENCIDOS/A VENCER') {
+                        if (rStatus === 'BAIXADO' || rStatus === 'PAGO' || rStatus === 'PAGO_ATRASO') return false;
+                    } else if (rStatus !== fStatus) {
+                        return false;
+                    }
+                }
+
+                const rNome = extrairStr(r, 'nome', 'fornecedor', 'razaosocial').toUpperCase();
+                if (fCliente && !rNome.includes(fCliente)) return false;
+
+                const rCnpj = extrairStr(r, 'cnpjcpf', 'cnpj', 'cgc').toUpperCase();
+                const rCod = extrairStr(r, 'codigo', 'cod').toUpperCase();
+                if (fCodCli && !rCnpj.includes(fCodCli) && !rCod.includes(fCodCli)) return false;
+
+                const rFantasia = extrairStr(r, 'nfantasia', 'fantasia').toUpperCase();
+                if (fFantasia && !rFantasia.includes(fFantasia)) return false;
+
+                const rTitulo = extrairStr(r, 'notitulo', 'titulo', 'documento').toUpperCase();
+                if (fTitulo && !rTitulo.includes(fTitulo)) return false;
+
+                const rTipo = extrairStr(r, 'tp', 'tipo').toUpperCase();
+                if (fTipo && !rTipo.includes(fTipo)) return false;
+
+                const rBco = extrairStr(r, 'bco', 'banco', 'numbanco').toUpperCase();
+                if (fBanco && !rBco.includes(fBanco)) return false;
+                
+                const tipoLiqVal = extrairStr(r, 'tipoliq', 'Tipo Liq').toUpperCase();
+                if (fTipoLiq === 'SIM' && tipoLiqVal !== 'LIQ') return false;
+                if (fTipoLiq === 'NAO' && tipoLiqVal === 'LIQ') return false;
+
+                return true;
+            });
+
+            renderizarTabela();
+        }
+
+        function checkDate(dateStr, type) {
+            const de = document.getElementById(`exato_de_${type}`).value;
+            const ate = document.getElementById(`exato_ate_${type}`).value;
+            const mesesChecked = document.querySelectorAll(`.chk-m-${type}:checked`);
+            
+            if (!de && !ate && mesesChecked.length === 0) return true;
+            if (!dateStr || dateStr === '---' || dateStr.length < 10) return false;
+
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return false;
+            
+            const numData = parseInt(parts[2] + parts[1] + parts[0]);
+
+            if (de && de.length === 10) {
+                const deParts = de.split('/');
+                const numDe = parseInt(deParts[2] + deParts[1] + deParts[0]);
+                if (numData < numDe) return false;
+            }
+
+            if (ate && ate.length === 10) {
+                const ateParts = ate.split('/');
+                const numAte = parseInt(ateParts[2] + ateParts[1] + ateParts[0]);
+                if (numData > numAte) return false;
+            }
+
+            if (mesesChecked.length > 0) {
+                const yearMonth = parts[2] + '-' + parts[1];
+                let isMesSelected = false;
+                mesesChecked.forEach(cb => {
+                    if (cb.value === yearMonth) isMesSelected = true;
+                });
+                if (!isMesSelected) return false;
+            }
+
+            return true;
+        }
+
+        function renderizarTabela() {
+            const tbody = document.getElementById('tbodyTitulos');
+            let html = '';
+            
+            let sumOrig = 0, sumCorr = 0, sumBaixado = 0, sumJuros = 0;
+
+            const dataSource = filteredData.length > 0 || (document.getElementById('f_tipoliq').value !== 'AMBOS') ? filteredData : rawData;
+
+            if (dataSource.length === 0) {
+                html = `<tr><td colspan="16" class="text-center py-16 text-slate-400 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="search-x" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Nenhum titulo atende aos filtros atuais.</td></tr>`;
+            } else {
+                const limiteDisplay = dataSource.slice(0, 1000);
+
+                html = limiteDisplay.map(r => {
+                    const valOrig = extrairNum(r, 'valororiginal', 'valoriginal', 'val', 'e2valor', 'Valor Original');
+                    const valJuros = extrairNum(r, 'juroscalculados', 'juros', 'jurosfinal', 'vlrjurosoupermanencia', 'totaljuros', 'e5vljuros');
+                    let valBaixado = extrairNum(r, 'valorbaixadofinal', 'e5valor', 'valorbaixado', 'totalbaixado', 'valbaixado', 'ValorBaixadoFinal');
+                    
+                    const statusStr = extrairStr(r, 'status').toUpperCase();
+                    
+                    let valCorrRaw = extrairNum(r, 'vencidosvencer', 'valorcorrigido', 'valorcorrigidofinal', 'saldoapagar', '(Vencidos+Vencer)');
+                    let valCorr = valCorrRaw;
+                    
+                    if (statusStr === 'BAIXADO' || statusStr === 'PAGO' || statusStr === 'PAGO_ATRASO') {
+                        valCorr = 0;
+                    } else if (valCorrRaw === 0) {
+                        valCorr = valOrig; 
+                    }
+
+                    sumOrig += valOrig;
+                    sumCorr += valCorr;
+                    sumBaixado += valBaixado;
+                    sumJuros += valJuros;
+
+                    let badgeStatus = '';
+                    if (statusStr === 'VENCIDO') {
+                        badgeStatus = `<span class="bg-rose-50 text-rose-600 border border-rose-200 px-2.5 py-1 rounded font-bold text-[9px] uppercase tracking-widest shadow-sm">Vencido</span>`;
+                    } else if (statusStr === 'A VENCER') {
+                        badgeStatus = `<span class="bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded font-bold text-[9px] uppercase tracking-widest shadow-sm">A Vencer</span>`;
+                    } else {
+                        badgeStatus = `<span class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded font-bold text-[9px] uppercase tracking-widest shadow-sm">Baixado</span>`;
+                    }
+
+                    const diasAtraso = parseInt(extrairNum(r, 'diasatraso', 'Dias Atraso')) || 0;
+                    const classAtraso = diasAtraso > 0 ? 'text-rose-600 font-black' : 'text-slate-400 font-medium';
+
+                    const natCod = extrairStr(r, 'natureza', 'Natureza') || '--';
+                    const natDesc = extrairStr(r, 'descnatureza', 'eddescric', 'descric', 'descricao') || '--';
+
+                    return `
+                    <tr>
+                        <td class="text-center font-bold text-slate-400 tabular-nums">${extrairStr(r, 'filial', 'Filial')}</td>
+                        <td class="font-black text-rose-700 tabular-nums">${extrairStr(r, 'notitulo', 'titulo', 'documento', 'No. Titulo')}</td>
+                        <td class="text-center font-bold text-slate-500 tabular-nums">${extrairStr(r, 'parcela', 'Parcela')}</td>
+                        <td class="text-center font-bold text-slate-600">${extrairStr(r, 'tp', 'tipo', 'TP')}</td>
+                        <td class="text-center font-mono font-medium text-slate-500">${extrairStr(r, 'datadeemissao', 'emissao', 'Data de Emissao') || '--'}</td>
+                        <td class="text-center font-mono font-medium text-slate-500">${extrairStr(r, 'venctotitulo', 'vencimentotitulo', 'Vencto Titulo') || '--'}</td>
+                        <td class="text-center font-mono font-bold text-slate-700">${extrairStr(r, 'venctoreal', 'vencimentoreal', 'Vencto Real') || '--'}</td>
+                        <td class="text-center font-mono font-medium text-emerald-600">${extrairStr(r, 'databaixa', 'datadabaixa', 'baixa', 'Data da Baixa') || '--/--/----'}</td>
+                        <td class="max-w-[200px] truncate" title="${extrairStr(r, 'nome', 'fornecedor', 'razaosocial', 'Nome')}">
+                            <span class="font-black text-slate-800 uppercase block leading-tight">${extrairStr(r, 'nome', 'fornecedor', 'razaosocial', 'Nome')}</span>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mt-0.5">${extrairStr(r, 'cnpjcpf', 'cnpj', 'cgc', 'CNPJ/CPF')}</span>
+                        </td>
+                        <td class="font-bold text-slate-600 text-[11px] uppercase truncate max-w-[150px]" title="${natCod} - ${natDesc}">
+                            <span class="block font-mono text-xs text-rose-600">${natCod}</span>
+                            <span class="block text-[9px] text-slate-500 truncate">${natDesc}</span>
+                        </td>
+                        
+                        <td class="text-right font-bold text-slate-600 tabular-nums">${fmtCurrDisplay(valOrig)}</td>
+                        <td class="text-right font-bold text-rose-500 tabular-nums">${fmtCurrDisplay(valJuros)}</td>
+                        <td class="text-right font-bold text-emerald-600 tabular-nums">${fmtCurrDisplay(valBaixado)}</td>
+                        <td class="text-right font-black text-rose-600 tabular-nums text-sm">${fmtCurrDisplay(valCorr)}</td>
+                        
+                        <td class="text-center tabular-nums ${classAtraso}">${diasAtraso}</td>
+                        <td class="text-center">${badgeStatus}</td>
+                    </tr>
+                    `;
+                }).join('');
+                
+                if (dataSource.length > 1000) {
+                    html += `<tr><td colspan="16" class="text-center py-4 text-amber-600 font-bold uppercase tracking-widest text-[10px] bg-amber-50">Visualização limitada a 1000 registros. Exporte para Tabela Excel para ver os ${dataSource.length} resultados completos.</td></tr>`;
+                    sumOrig = 0; sumCorr = 0; sumBaixado = 0; sumJuros = 0;
+                    dataSource.forEach(r => {
+                        const vo = extrairNum(r, 'valororiginal', 'valoriginal', 'val', 'e2valor', 'Valor Original');
+                        sumOrig += vo;
+                        sumJuros += extrairNum(r, 'juroscalculados', 'juros', 'jurosfinal', 'vlrjurosoupermanencia', 'totaljuros', 'e5vljuros');
+                        sumBaixado += extrairNum(r, 'valorbaixado', 'totalbaixado', 'valbaixado', 'valorbaixadofinal', 'ValorBaixadoFinal');
+                        
+                        const st = extrairStr(r, 'status').toUpperCase();
+                        let vc = extrairNum(r, 'vencidosvencer', 'valorcorrigido', 'valorcorrigidofinal', 'saldoapagar', '(Vencidos+Vencer)');
+                        if (st === 'BAIXADO' || st === 'PAGO' || st === 'PAGO_ATRASO') vc = 0;
+                        else if (vc === 0) vc = vo;
+                        
+                        sumCorr += vc;
+                    });
+                }
+            }
+
+            document.getElementById('tbodyTitulos').innerHTML = html;
+            document.getElementById('lblCount').innerText = dataSource.length;
+            document.getElementById('totOrig').innerText = fmtCurrDisplay(sumOrig);
+            document.getElementById('totJuros').innerText = fmtCurrDisplay(sumJuros);
+            document.getElementById('totBaixado').innerText = fmtCurrDisplay(sumBaixado);
+            document.getElementById('totCorrigido').innerText = fmtCurrDisplay(sumCorr);
+            
+            lucide.createIcons({root: document.getElementById('tbodyTitulos')});
+        }
+
+        function exportarExcelTabela() {
+            const dataSource = filteredData.length > 0 || (document.getElementById('f_tipoliq').value !== 'AMBOS') ? filteredData : rawData;
+
+            if (dataSource.length === 0) {
+                showToast("Não há dados para exportar.", true);
+                return;
+            }
+
+            const exportArr = dataSource.map(r => {
+                let rowExport = { ...r };
+                
+                const valOrig = extrairNum(r, 'valororiginal', 'valoriginal', 'val', 'e2valor', 'Valor Original');
+                const st = extrairStr(r, 'status').toUpperCase();
+                
+                let valCorrRaw = extrairNum(r, 'vencidosvencer', 'valorcorrigido', 'valorcorrigidofinal', 'saldoapagar', '(Vencidos+Vencer)');
+                let valCorr = valCorrRaw;
+                if (st === 'BAIXADO' || st === 'PAGO' || st === 'PAGO_ATRASO') { valCorr = 0; } 
+                else if (valCorrRaw === 0) { valCorr = valOrig; }
+
+                rowExport['Saldo a Pagar (Corrigido)'] = valCorr;
+
+                return rowExport;
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(exportArr);
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            worksheet['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Contas a Pagar");
+
+            const dataAtual = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(workbook, `Contas_Pagar_Completo_${dataAtual}.xlsx`);
+            
+            showToast("Tabela de Excel gerada com sucesso!");
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultor Virtual IA - Comlub Intelligence</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'], mono: ['"Fira Code"', 'monospace'] },
+                    colors: {
+                        comlub: { blue: '#003865', yellow: '#FFCB05', slate: '#0f172a' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0B0E14; font-family: 'Inter', sans-serif; overflow: hidden; color: #E2E8F0; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        
+        .panel { background-color: #121822; border-radius: 12px; border: 1px solid #1E293B; overflow: hidden; }
+        
+        .neon-border { position: relative; }
+        .neon-border::before { content: ''; position: absolute; inset: -1px; border-radius: 12px; padding: 1px; background: linear-gradient(135deg, #FFCB05, #003865); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0.5; z-index: 0; pointer-events: none; }
+
+        .typewriter-text { font-family: 'Fira Code', monospace; line-height: 1.7; font-size: 13px; color: #94A3B8; }
+        .typewriter-text b, .typewriter-text strong { color: #E2E8F0; font-family: 'Inter', sans-serif; font-weight: 800; }
+        .typewriter-text .highlight { color: #FFCB05; background: rgba(255, 203, 5, 0.1); padding: 0 4px; border-radius: 4px; font-weight: 700; }
+        .typewriter-text .action-box { background: rgba(0, 56, 101, 0.4); border-left: 3px solid #0ea5e9; padding: 12px 18px; margin: 18px 0; border-radius: 0 8px 8px 0; color: #bae6fd; font-family: 'Inter', sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.2);}
+
+        .cursor-blink { animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+        
+        .loader-spin { animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Estilo da Evolução da Semana */
+        .week-progress { display: flex; gap: 4px; margin-top: 4px; }
+        .week-bar { height: 4px; border-radius: 2px; flex: 1; background-color: #1E293B; transition: all 0.3s; }
+        .week-bar.active { background-color: #FFCB05; box-shadow: 0 0 5px rgba(255,203,5,0.5); }
+        .week-bar.passed { background-color: #0ea5e9; }
+    </style>
+</head>
+<body class="h-screen flex flex-col antialiased relative">
+
+    <!-- CABEÇALHO SUPREME -->
+    <header class="bg-[#0B0E14] border-b border-[#1E293B] px-6 py-4 flex items-center justify-between shrink-0 z-20">
+        <div class="flex items-center gap-6">
+            <div class="flex flex-col items-end w-fit select-none">
+                <div class="flex items-baseline" style="line-height: 1;">
+                    <span class="text-white font-black text-2xl">c</span><span class="text-white font-black text-2xl relative">o<svg class="absolute w-1.5 h-1.5 text-[#FFCB05]" style="top: 45%; left: 50%; transform: translate(-50%, -50%);" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></span><span class="text-white font-black text-2xl pr-0.5">m</span><span class="text-[#FFCB05] font-black text-2xl">lub</span>
+                </div>
+            </div>
+            <div class="h-8 w-px bg-[#1E293B]"></div>
+            <div>
+                <h1 class="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="bot" class="w-5 h-5 text-[#FFCB05]"></i> Consultoria Estratégica <span class="text-[#FFCB05]">IA</span>
+                </h1>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <!-- EVOLUÇÃO DA SEMANA E MÊS ATUAL -->
+            <div class="flex flex-col items-end mr-2 bg-[#121822] border border-[#1E293B] px-4 py-2 rounded-lg shadow-inner">
+                <div class="flex justify-between w-full items-end gap-4 mb-0.5">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest" id="lblMesAtual">Mês Atual</span>
+                    <span class="text-[10px] font-black text-[#0ea5e9] uppercase tracking-widest" id="lblSemanaAtual">Semana 1</span>
+                </div>
+                <div class="week-progress w-full min-w-[120px]" id="weekProgressBars">
+                    <div class="week-bar active"></div>
+                    <div class="week-bar"></div>
+                    <div class="week-bar"></div>
+                    <div class="week-bar"></div>
+                </div>
+            </div>
+
+            <div class="h-8 w-px bg-[#1E293B]"></div>
+
+            <button onclick="gerarConsultoria()" class="bg-[#FFCB05] hover:bg-yellow-400 text-[#0B0E14] px-4 py-2.5 text-xs font-black uppercase tracking-widest rounded transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,203,5,0.3)]">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Re-Analisar Dados
+            </button>
+            <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-rose-500 transition-colors bg-[#121822] border border-[#1E293B] p-2.5 rounded" title="Fechar Módulo"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-hidden p-6 flex flex-col md:flex-row gap-6 bg-[#05070a] relative">
+        <!-- Partículas de fundo para ar tecnológico -->
+        <div class="absolute inset-0 z-0 opacity-[0.03]" style="background-image: radial-gradient(#FFCB05 1px, transparent 1px); background-size: 30px 30px;"></div>
+
+        <!-- ESQUERDA: O PAINEL DE INSIGHTS DA IA (MÁQUINA DE ESCREVER) -->
+        <div class="w-full md:w-[60%] flex flex-col gap-4 z-10 relative">
+            <div class="flex items-center gap-3 mb-2 shrink-0">
+                <div class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] animate-pulse"></div>
+                <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Motor de Inferência Ativo</span>
+            </div>
+            
+            <div class="panel neon-border flex-1 p-8 overflow-y-auto relative bg-gradient-to-b from-[#121822] to-[#0a0d13]">
+                
+                <div id="aiStatus" class="flex flex-col items-center justify-center h-full text-slate-500">
+                    <i data-lucide="cpu" class="w-16 h-16 text-[#003865] mb-4 loader-spin"></i>
+                    <h2 class="text-sm font-bold uppercase tracking-widest">A compilar Data Warehouse (6 Meses)...</h2>
+                    <p class="text-xs mt-2 font-mono">Cruzando SX5, SC6, SA1 e E4...</p>
+                </div>
+
+                <div id="aiOutput" class="typewriter-text hidden pb-10"></div>
+                <span id="aiCursor" class="inline-block w-2 h-4 bg-[#FFCB05] align-middle cursor-blink hidden"></span>
+
+            </div>
+        </div>
+
+        <!-- DIREITA: DASHBOARD GRÁFICO DE APOIO -->
+        <div class="w-full md:w-[40%] flex flex-col gap-4 z-10">
+            
+            <div class="panel p-5 shrink-0 flex items-center justify-between bg-[#121822]">
+                <div>
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Volume 6 Meses</p>
+                    <h3 class="text-2xl font-black text-white tabular-nums" id="kpiVolTotal">0 L</h3>
+                </div>
+                <div class="h-10 w-px bg-[#1E293B]"></div>
+                <div>
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Mês de Pico</p>
+                    <h3 class="text-2xl font-black text-[#FFCB05] tabular-nums" id="kpiPico">--</h3>
+                </div>
+                <div class="h-10 w-px bg-[#1E293B]"></div>
+                <div>
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Segmento Destaque</p>
+                    <h3 class="text-xl font-black text-[#0ea5e9] tabular-nums mt-1 truncate max-w-[150px]" id="kpiClasse" title="Calculado via SX5">--</h3>
+                </div>
+            </div>
+
+            <!-- Gráfico 1: Tendência 6 Meses -->
+            <div class="panel p-5 flex-1 flex flex-col">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-[#1E293B] pb-2">
+                    <i data-lucide="trending-up" class="w-3.5 h-3.5 text-[#0ea5e9]"></i> Evolução de Escoamento (Litragem / Mês)
+                </h3>
+                <div class="relative flex-1 w-full">
+                    <canvas id="chartTrend"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico 2: Mix de Tipos de Produto -->
+            <div class="panel p-5 flex-1 flex flex-col">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-[#1E293B] pb-2">
+                    <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-[#FFCB05]"></i> Share de Faturamento por Grupo (Top 4)
+                </h3>
+                <div class="relative flex-1 w-full">
+                    <canvas id="chartMix"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let chartTrendInst = null;
+        let chartMixInst = null;
+        let rawData = [];
+        let stringSemanaGlobal = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            Chart.defaults.color = '#64748b';
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            
+            calcularEvolucaoSemana();
+            gerarConsultoria();
+        });
+
+        // Atualiza a interface gráfica do topo-direito com a Semana e Mês
+        function calcularEvolucaoSemana() {
+            const dataHoje = new Date();
+            const diaAtual = dataHoje.getDate();
+            // Pega o nome do mês usando a localização do navegador
+            const mesAtualNome = dataHoje.toLocaleString('pt-BR', { month: 'long' });
+            const anoAtual = dataHoje.getFullYear();
+
+            // Uma aproximação corporativa comercial de semanas (dias 1-7, 8-14, 15-21, 22-fim)
+            let semanaAtual = 1;
+            if (diaAtual > 7 && diaAtual <= 14) semanaAtual = 2;
+            else if (diaAtual > 14 && diaAtual <= 21) semanaAtual = 3;
+            else if (diaAtual > 21) semanaAtual = 4;
+
+            document.getElementById('lblMesAtual').innerText = `${mesAtualNome} / ${anoAtual}`;
+            document.getElementById('lblSemanaAtual').innerText = `Semana ${semanaAtual}`;
+            
+            // Variável global para ser usada no texto da IA
+            stringSemanaGlobal = `Semana ${semanaAtual}`;
+
+            // Preenche as barras de progresso visual
+            const bars = document.querySelectorAll('.week-bar');
+            bars.forEach((bar, idx) => {
+                bar.className = 'week-bar'; // reset
+                if (idx + 1 < semanaAtual) bar.classList.add('passed');
+                else if (idx + 1 === semanaAtual) bar.classList.add('active');
+            });
+        }
+
+        const formatNumber = (val) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val || 0);
+        const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+
+        async function gerarConsultoria() {
+            document.getElementById('aiStatus').classList.remove('hidden');
+            document.getElementById('aiOutput').classList.add('hidden');
+            document.getElementById('aiCursor').classList.add('hidden');
+            document.getElementById('aiOutput').innerHTML = '';
+
+            try {
+                const res = await fetch('http://localhost:3000/api/supreme-consultor-vendas');
+                if(!res.ok) throw new Error("API Offline");
+                rawData = await res.json();
+            } catch (e) {
+                console.warn("API Offline. Gerando Mock S&OP Analítico para Demonstração (com Segmento SX5).");
+                rawData = gerarMockDados();
+            }
+
+            // ==========================================
+            // MOTOR DE INFERÊNCIA E AGRUPAMENTO IA
+            // ==========================================
+            let totLitros = 0;
+            const mapMeses = {};
+            const mapGrupos = {};
+            const mapPrazos = {};
+            const mapSegmentos = {}; 
+
+            rawData.forEach(r => {
+                const l = parseFloat(r.LitrosTotal) || 0;
+                const v = parseFloat(r.ValorTotal) || 0;
+                const mes = r.MesAno;
+                const prazo = parseInt(r.PrazoMedio) || 0;
+                const segNome = r.Segmento || 'NÃO ESPECIFICADO';
+
+                totLitros += l;
+
+                if(!mapMeses[mes]) mapMeses[mes] = { vol: 0, val: 0 };
+                mapMeses[mes].vol += l; mapMeses[mes].val += v;
+
+                if(!mapGrupos[r.GrupoProduto]) mapGrupos[r.GrupoProduto] = { vol: 0, val: 0 };
+                mapGrupos[r.GrupoProduto].vol += l; mapGrupos[r.GrupoProduto].val += v;
+
+                if(!mapPrazos[r.CondPagamento]) mapPrazos[r.CondPagamento] = { vol: 0, val: 0, dias: prazo };
+                mapPrazos[r.CondPagamento].vol += l; mapPrazos[r.CondPagamento].val += v;
+
+                // Mapeamento do Segmento de Cliente (SX5 - T3)
+                if(!mapSegmentos[segNome]) mapSegmentos[segNome] = { vol: 0, val: 0 };
+                mapSegmentos[segNome].vol += l; mapSegmentos[segNome].val += v;
+            });
+
+            const arrMeses = Object.keys(mapMeses).map(k => ({ mes: k, ...mapMeses[k] })).sort((a,b) => a.mes.localeCompare(b.mes));
+            const arrGrupos = Object.keys(mapGrupos).map(k => ({ nome: k, ...mapGrupos[k] })).sort((a,b) => b.vol - a.vol);
+            const arrPrazos = Object.keys(mapPrazos).map(k => ({ nome: k, ...mapPrazos[k] })).sort((a,b) => b.vol - a.vol);
+            
+            // Identificação de Padrões e Picos globais
+            const mesPicoObj = [...arrMeses].sort((a,b) => b.vol - a.vol)[0];
+            const grupoTop = arrGrupos[0];
+            const grupoPior = arrGrupos.length > 1 ? arrGrupos[arrGrupos.length-1] : grupoTop;
+            const prazoTop = arrPrazos[0];
+
+            // =============================================================
+            // LÓGICA DE DRILL-DOWN: O CASE DE SUCESSO DO MÊS DE PICO
+            // Cruzando Mês Pico -> Segmento Top -> Produtos desse Segmento
+            // =============================================================
+            let caseSegmentoNome = "N/A";
+            let topProduto1 = "Produto Não Identificado";
+            let topProduto2 = "";
+
+            if (mesPicoObj) {
+                // Filtra as vendas só do mês que bateu o recorde
+                const vendasMesPico = rawData.filter(r => r.MesAno === mesPicoObj.mes);
+                
+                // 1. Acha o Segmento que mais comprou NESSE mês
+                const segPicoMap = {};
+                vendasMesPico.forEach(r => {
+                    const sn = r.Segmento || 'NÃO ESPECIFICADO';
+                    if(!segPicoMap[sn]) segPicoMap[sn] = 0;
+                    segPicoMap[sn] += (parseFloat(r.LitrosTotal) || 0);
+                });
+                
+                const arrSegPico = Object.keys(segPicoMap).map(k => ({ nome: k, vol: segPicoMap[k] })).sort((a,b) => b.vol - a.vol);
+                
+                if (arrSegPico.length > 0) {
+                    caseSegmentoNome = arrSegPico[0].nome;
+                    
+                    // 2. Acha os produtos mais comprados POR ESSE SEGMENTO, NESSE MÊS
+                    const prodSegMap = {};
+                    const vendasCase = vendasMesPico.filter(r => (r.Segmento || 'NÃO ESPECIFICADO') === caseSegmentoNome);
+                    
+                    vendasCase.forEach(r => {
+                        const pn = r.DescProduto;
+                        if(!prodSegMap[pn]) prodSegMap[pn] = 0;
+                        prodSegMap[pn] += (parseFloat(r.LitrosTotal) || 0);
+                    });
+
+                    const arrProdsCase = Object.keys(prodSegMap).map(k => ({ nome: k, vol: prodSegMap[k] })).sort((a,b) => b.vol - a.vol);
+                    
+                    if (arrProdsCase.length > 0) topProduto1 = arrProdsCase[0].nome;
+                    if (arrProdsCase.length > 1) topProduto2 = arrProdsCase[1].nome;
+                }
+            }
+
+            // Atualiza KPIs do Canto Superior Direito (Tela de Apoio)
+            document.getElementById('kpiVolTotal').innerText = formatNumber(totLitros) + ' L';
+            document.getElementById('kpiPico').innerText = mesPicoObj ? formatarMes(mesPicoObj.mes) : '--';
+            document.getElementById('kpiClasse').innerText = caseSegmentoNome;
+
+            renderizarGraficos(arrMeses, arrGrupos);
+
+            // ==========================================
+            // GERAÇÃO DO TEXTO ESTRATÉGICO (COM O CASE DO SEGMENTO)
+            // ==========================================
+            const textoCaseDesc = topProduto2 !== "" ? `<b>${topProduto1}</b> combinado com <b>${topProduto2}</b>` : `<b>${topProduto1}</b>`;
+
+            const textoConsultoria = `
+Olá Diretoria. Após compilar o nosso <i>Data Warehouse</i> financeiro, auditei o volume histórico de <b>${formatNumber(totLitros)} Litros</b> escoados pela nossa operação nos últimos 6 meses.
+
+🥇 <b>O Case de Sucesso (Benchmark de Mix):</b>
+O nosso pico de eficiência de vendas ocorreu inequivocamente em <span class="highlight">${formatarMes(mesPicoObj.mes)}</span>, ultrapassando os ${formatNumber(mesPicoObj.vol)} L. Mergulhando nos dados (Drill-down das tabelas SX5 e SC6), detetei que o segmento de clientes <b>${caseSegmentoNome}</b> foi o grande impulsionador deste mês. O <i>Winning Mix</i> (Mix ideal de produtos) consumido massivamente por este setor foi composto exatamente por ${textoCaseDesc}.
+
+<div class="action-box"><b>[AÇÃO 1] RECOMENDAÇÃO DE CAMPANHA:</b> Estamos na <b>${stringSemanaGlobal}</b> do mês. Para atingirmos as metas com segurança, acesse o painel de Regras e crie uma "Campanha Comercial" focada no segmento <b>${caseSegmentoNome}</b>, oferecendo condições especiais para este mix de produtos exato. Isto irá replicar matematicamente o nosso melhor mês do semestre.</div>
+
+⚠️ <b>Análise de Mix Ocioso:</b>
+Apesar do nosso carro-chefe global ser a família <b>${grupoTop.nome}</b>, a linha <b>${grupoPior.nome}</b> está a comprometer o nosso <i>Share of Wallet</i> e a prender capital de giro no armazém.
+
+<div class="action-box"><b>[AÇÃO 2] REGRA DE RENTABILIDADE:</b> Crie uma "Regra Comercial Padrão" no ERP vinculada à linha de produtos <b>${grupoPior.nome}</b>, libertando uma margem de aprovação automática de desconto de até 15% para acelerar a queima de stock.</div>
+
+💳 <b>Contenção Financeira e Prazos:</b>
+Globalmente, a maior fatia do fluxo de recebíveis está concentrada na condição de pagamento <b>${prazoTop.nome}</b> (${prazoTop.dias} dias). Financiar o mercado neste prazo tem um alto custo de oportunidade para a tesouraria (SE5). É imperativo travar os descontos comerciais agressivos quando o cliente exige prazo alongado.
+
+🎯 <b>Definição de Objetivos (S&OP):</b>
+<div class="action-box"><b>[AÇÃO 3] DEFINIÇÃO DE METAS:</b> Aceda ao Cadastro de Estratégias e registe um "Objetivo Comercial" para o grupo <b>${grupoTop.nome}</b>, impondo um <b>Crescimento Esperado de 10%</b>. Clique no botão "Analisar Histórico" na tela para que o sistema traduza essa percentagem numa meta real em litros, ajustando a sua projeção de compras.</div>
+
+O motor de inferência continuará a monitorizar a base do Protheus em tempo real. Estou pronto para recalcular a rota sempre que novas faturas forem emitidas.
+            `;
+
+            // Ocultar loader e começar a datilografar
+            document.getElementById('aiStatus').classList.add('hidden');
+            const outputEl = document.getElementById('aiOutput');
+            outputEl.classList.remove('hidden');
+            document.getElementById('aiCursor').classList.remove('hidden');
+
+            typeWriterEffect(textoConsultoria, outputEl);
+        }
+
+        // Efeito de Máquina de Escrever com parsing de HTML seguro
+        function typeWriterEffect(text, element) {
+            let i = 0;
+            element.innerHTML = '';
+            
+            let isTag = false;
+            let currentHTML = "";
+
+            function type() {
+                if (i < text.length) {
+                    let char = text.charAt(i);
+                    currentHTML += char;
+                    element.innerHTML = currentHTML;
+                    
+                    if (char === '<') isTag = true;
+                    if (char === '>') isTag = false;
+
+                    i++;
+                    
+                    // Se estiver dentro de uma tag HTML (ex: <b> ou <div class="action-box">), não pausa o tempo
+                    if (isTag) {
+                        type();
+                    } else {
+                        // Faz scroll para o fundo automaticamente conforme vai escrevendo
+                        element.parentElement.scrollTop = element.parentElement.scrollHeight;
+                        // Velocidade ultra-rápida mas legível para o efeito terminal hacker
+                        setTimeout(type, Math.random() * 8 + 2);
+                    }
+                }
+            }
+            type();
+        }
+
+        function formatarMes(mesAno) {
+            if(!mesAno || mesAno.length !== 6) return mesAno;
+            const m = parseInt(mesAno.substring(4,6));
+            const a = mesAno.substring(0,4);
+            const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            return `${meses[m-1]}/${a}`;
+        }
+
+        function renderizarGraficos(arrMeses, arrGrupos) {
+            if(chartTrendInst) chartTrendInst.destroy();
+            const ctxT = document.getElementById('chartTrend').getContext('2d');
+            
+            chartTrendInst = new Chart(ctxT, {
+                type: 'line',
+                data: {
+                    labels: arrMeses.map(m => formatarMes(m.mes)),
+                    datasets: [{
+                        label: 'Litragem',
+                        data: arrMeses.map(m => m.vol),
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#FFCB05',
+                        pointBorderColor: '#000',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1E293B', titleColor: '#fff', bodyColor: '#0ea5e9', callbacks: { label: c => formatNumber(c.raw) + ' L' } } },
+                    scales: {
+                        y: { display: false, beginAtZero: true },
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: {family: 'Inter', weight: 'bold', size: 10} } }
+                    }
+                }
+            });
+
+            if(chartMixInst) chartMixInst.destroy();
+            const ctxM = document.getElementById('chartMix').getContext('2d');
+            
+            const top4 = arrGrupos.slice(0, 4);
+            
+            chartMixInst = new Chart(ctxM, {
+                type: 'doughnut',
+                data: {
+                    labels: top4.map(g => g.nome),
+                    datasets: [{
+                        data: top4.map(g => g.val),
+                        backgroundColor: ['#003865', '#0ea5e9', '#FFCB05', '#1E293B'],
+                        borderWidth: 2,
+                        borderColor: '#121822'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '65%',
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#94a3b8', usePointStyle: true, boxWidth: 8, font: {size: 9, family: 'Inter'} } },
+                        tooltip: { backgroundColor: '#1E293B', callbacks: { label: c => ' ' + formatCurrency(c.raw) } }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // MOCK GERATOR PARA QUANDO API ESTIVER OFFLINE
+        // ==========================================
+        function gerarMockDados() {
+            const mock = [];
+            const tCli = ['F', 'R', 'I'];
+            const segs = ['POSTO DE COMBUSTÍVEL', 'AUTO CENTER E MECÂNICA', 'USINA DE ETANOL', 'TRANSPORTADORA RODOVIÁRIA', 'CONCESSIONÁRIA AUT.'];
+            const pz = [{c:'A', d:'À VISTA'}, {c:'B', d:'30 DIAS'}, {c:'C', d:'30/60 DIAS'}];
+            const grp = ['0100 - AUTOMOTIVO LIGEIRO', '0150 - INDUSTRIAL PESADO', '0200 - GRAXAS COMPLEXAS'];
+            
+            for (let i = 1; i <= 400; i++) {
+                const m = Math.floor(Math.random() * 6) + 1; // Meses 1 a 6
+                const mesStr = '2026' + String(m).padStart(2, '0');
+                const t = tCli[Math.floor(Math.random() * tCli.length)];
+                const p = pz[Math.floor(Math.random() * pz.length)];
+                const g = grp[Math.floor(Math.random() * grp.length)];
+                
+                // Força um mês de pico artificial para Mês 4 (Abril) no Segmento 'AUTO CENTER E MECÂNICA'
+                let sg = segs[Math.floor(Math.random() * segs.length)];
+                let l = Math.floor(Math.random() * 500) + 50;
+                
+                if (m === 4 && Math.random() > 0.4) {
+                    sg = 'AUTO CENTER E MECÂNICA';
+                    l = l * 2.5; 
+                }
+                
+                mock.push({
+                    MesAno: mesStr,
+                    TipoCliente: t,
+                    Segmento: sg,
+                    TipoProduto: 'R1',
+                    GrupoProduto: g,
+                    CondPagamento: p.d,
+                    PrazoMedio: p.d === 'À VISTA' ? '0' : '30',
+                    SKU: 'LUB00' + (Math.floor(Math.random() * 8)+1),
+                    DescProduto: (g.includes('AUTO') ? 'OLEO SINTÉTICO 5W30' : 'GRAXA LITIO AZUL') + ' ' + (Math.random() > 0.5 ? '20L' : '200L'),
+                    ValorTotal: l * 25.50,
+                    LitrosTotal: l
+                });
+            }
+            return mock;
+        }
+
+    </script>
+</body>
+</html>

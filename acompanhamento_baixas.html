@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Acompanhamento de Baixas (SE5) - LEME ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['"Inter"', 'sans-serif'], mono: ['"Fira Code"', 'monospace'] } } }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+
+        .corp-input { background-color: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 600; outline: none; transition: border-color 0.2s; width: 100%;}
+        .corp-input:focus { border-color: #38bdf8; }
+        .erp-label { display: block; font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+
+        .dre-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        .dre-table th { background-color: #1e293b; border-bottom: 1px solid #334155; border-top: 1px solid #334155; font-weight: 800; color: #94a3b8; padding: 10px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 20; text-align: left; white-space: nowrap;}
+        .dre-table td { padding: 8px 12px; font-size: 11px; border-bottom: 1px solid #1e293b; background-color: #0f172a; color: #cbd5e1; transition: background-color 0.15s; white-space: nowrap;}
+        .dre-table tbody tr:hover td { background-color: #1e293b; }
+    </style>
+</head>
+<body class="flex flex-col h-screen antialiased relative">
+
+    <div id="toastNotification" class="fixed top-5 right-5 z-[300] bg-[#1e293b] text-white text-xs font-bold uppercase tracking-widest px-5 py-4 rounded-xl shadow-2xl border border-[#334155] flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="info" class="w-5 h-5 text-sky-400" id="toastIcon"></i>
+        <span id="toastMessage">Mensagem</span>
+    </div>
+
+    <header class="bg-[#0f172a] border-b border-[#1e293b] px-6 py-4 flex items-center justify-between shrink-0 shadow-sm z-30">
+        <div class="flex items-center gap-4">
+            <div class="flex items-baseline select-none">
+                <span class="text-white font-bold text-xl tracking-tight">LEME</span>
+                <span class="text-[#cbd5e1] font-bold text-xl tracking-tight ml-1">SUPREME</span>
+            </div>
+            <div class="h-5 w-px bg-[#334155] ml-2"></div>
+            <div class="flex items-center gap-3 ml-2">
+                <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                    <i data-lucide="check-square" class="w-3 h-3"></i> Gestão Financeira
+                </span>
+                <h1 class="text-xs font-semibold text-slate-300 uppercase tracking-wider hidden sm:block">Acompanhamento de Baixas (SE5)</h1>
+            </div>
+        </div>
+        <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-white transition-colors p-1.5 rounded hover:bg-[#1e293b]">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <section class="bg-[#1e293b] border-b border-[#334155] px-6 py-4 shrink-0 z-20 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xs font-black text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="filter" class="w-4 h-4 text-amber-400"></i> Filtros de Movimentação
+            </h2>
+            <div class="flex items-center gap-3">
+                <button onclick="limparFiltros()" class="text-[10px] font-bold text-slate-400 hover:text-slate-200 uppercase tracking-widest transition-colors cursor-pointer underline">Limpar Filtros</button>
+                <button onclick="exportarExcelTabela()" class="bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center gap-2">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar
+                </button>
+                <button onclick="carregarDados()" id="btnConsultar" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center gap-2">
+                    <i data-lucide="search" class="w-4 h-4"></i> Consultar Baixas
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4" id="areaFiltros">
+            
+            <div class="col-span-1 lg:col-span-2 relative">
+                <label class="erp-label text-emerald-400">Período da Baixa (SE5)</label>
+                <div class="flex items-center gap-2 bg-[#0f172a] border border-[#334155] rounded-lg px-2 py-1">
+                    <input type="date" id="f_de_baixa" class="bg-transparent text-[11px] font-bold text-slate-200 outline-none w-full [color-scheme:dark]">
+                    <span class="text-[10px] text-slate-500 font-bold">A</span>
+                    <input type="date" id="f_ate_baixa" class="bg-transparent text-[11px] font-bold text-slate-200 outline-none w-full [color-scheme:dark]">
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-2 relative">
+                <label class="erp-label">Período Vencimento Orig.</label>
+                <div class="flex items-center gap-2 bg-[#0f172a] border border-[#334155] rounded-lg px-2 py-1">
+                    <input type="date" id="f_de_venc" class="bg-transparent text-[11px] font-bold text-slate-200 outline-none w-full [color-scheme:dark]">
+                    <span class="text-[10px] text-slate-500 font-bold">A</span>
+                    <input type="date" id="f_ate_venc" class="bg-transparent text-[11px] font-bold text-slate-200 outline-none w-full [color-scheme:dark]">
+                </div>
+            </div>
+
+            <div class="col-span-1">
+                <label class="erp-label">Filial</label>
+                <select id="f_filial" class="corp-input cursor-pointer py-1.5">
+                    <option value="consolidado">Consolidado</option>
+                    <option value="01">01 - ALAGOAS</option>
+                    <option value="02">02 - PERNAMBUCO</option>
+                    <option value="03">03 - SERGIPE</option>
+                </select>
+            </div>
+
+            <div class="col-span-1 lg:col-span-2">
+                <label class="erp-label">Cliente (Razão Social)</label>
+                <input type="text" id="f_cliente" class="corp-input uppercase py-1.5" placeholder="Parte do nome...">
+            </div>
+
+            <div class="col-span-1">
+                <label class="erp-label">Nº Título / Doc</label>
+                <input type="text" id="f_titulo" class="corp-input uppercase font-mono py-1.5" placeholder="Ex: 000123">
+            </div>
+            
+            <div class="col-span-1">
+                <label class="erp-label">Cód. Cliente</label>
+                <input type="text" id="f_cod_cliente" class="corp-input uppercase font-mono py-1.5" placeholder="Ex: 000123">
+            </div>
+
+            <div class="col-span-1">
+                <label class="erp-label">Banco / Portador</label>
+                <input type="text" id="f_banco" class="corp-input uppercase font-mono py-1.5" placeholder="Ex: 341">
+            </div>
+
+            <div class="col-span-1 lg:col-span-2">
+                <label class="erp-label">Vendedor / Gestor</label>
+                <input type="text" id="f_vendedor" class="corp-input uppercase py-1.5" placeholder="Nome do vendedor...">
+            </div>
+
+            <div class="col-span-1 lg:col-span-2 flex items-end">
+                <div class="bg-sky-500/10 border border-sky-500/20 p-1.5 rounded-lg w-full flex items-center justify-between shadow-sm">
+                    <span class="text-[9px] font-black text-sky-400 uppercase tracking-widest pl-2">Total Operações</span>
+                    <span id="lblCount" class="text-sm font-black text-white pr-2">0</span>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ÁREA DA TABELA -->
+    <main class="flex-1 overflow-auto bg-[#0f172a] relative custom-scroll">
+        <table class="dre-table">
+            <thead>
+                <tr>
+                    <th class="w-16 text-center">Filial</th>
+                    <th class="w-24">Documento</th>
+                    <th class="w-16 text-center">Prc</th>
+                    <th class="w-24 text-center text-emerald-400">Data Baixa</th>
+                    <th>Cliente / Razão Social</th>
+                    <th class="w-24 text-right">Vlr Original</th>
+                    <th class="w-28 text-right text-sky-400">Saldo Anterior</th>
+                    <th class="w-28 text-right text-emerald-400">Amortizado</th>
+                    <th class="w-24 text-right">Multa/Juros (+)</th>
+                    <th class="w-32 text-right text-white font-black">Total Pago</th>
+                    <th class="w-28 text-right text-slate-300">Saldo Atual</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyBaixas">
+                <tr><td colspan="11" class="text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="database" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Preencha os filtros e clique em "Consultar Baixas".</td></tr>
+            </tbody>
+        </table>
+    </main>
+
+    <!-- FOOTER DE TOTAIS -->
+    <footer class="bg-[#1e293b] border-t border-[#334155] px-6 py-3 flex justify-between items-center shrink-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div class="flex items-center gap-2">
+            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Resumo das Baixas Visíveis</span>
+        </div>
+        <div class="flex gap-6 flex-wrap justify-end">
+            <div class="text-right pl-6 border-l border-[#334155] hidden sm:block">
+                <span class="block text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Amortizado (Princ)</span>
+                <span class="text-sm font-black text-emerald-400 tabular-nums" id="totBase">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-[#334155] hidden sm:block">
+                <span class="block text-[9px] font-bold text-amber-500 uppercase tracking-widest">Multas Somadas</span>
+                <span class="text-sm font-black text-amber-500 tabular-nums" id="totMulta">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-[#334155] hidden sm:block">
+                <span class="block text-[9px] font-bold text-rose-400 uppercase tracking-widest">Juros Somados</span>
+                <span class="text-sm font-black text-rose-400 tabular-nums" id="totJuros">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-[#334155] hidden sm:block">
+                <span class="block text-[9px] font-bold text-sky-400 uppercase tracking-widest">Descontos</span>
+                <span class="text-sm font-black text-sky-400 tabular-nums" id="totDesconto">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-[#334155]">
+                <span class="block text-[9px] font-bold text-white uppercase tracking-widest">Total Líquido Recebido</span>
+                <span class="text-lg font-black text-white tabular-nums" id="totRecebido">R$ 0,00</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        let rawData = [];
+        let filteredData = [];
+
+        let currentHost = window.location.hostname;
+        if (!currentHost || currentHost.includes('goog') || currentHost === 'localhost') { currentHost = '177.70.102.16'; }
+        const API_BASE_URL = `http://${currentHost}:3001/api`;
+        
+        const extrairNum = (row, key) => {
+            if (!row || row[key] === undefined || row[key] === null) return 0;
+            const val = row[key];
+            if (typeof val === 'number') return val;
+            let s = String(val).replace(/[^0-9,\.-]/g, '');
+            if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+            const n = parseFloat(s);
+            return isNaN(n) ? 0 : n;
+        };
+
+        const extrairStr = (row, key) => row && row[key] !== undefined && row[key] !== null ? String(row[key]) : '';
+
+        const fmtCurr = v => {
+            let n = parseFloat(v);
+            return isNaN(n) ? 'R$ 0,00' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = msg;
+            const icon = document.getElementById('toastIcon');
+            
+            if(isError) {
+                toast.classList.replace('border-[#334155]', 'border-rose-500/50');
+                icon.setAttribute('data-lucide', 'alert-triangle');
+                icon.classList.replace('text-sky-400', 'text-rose-500');
+            } else {
+                toast.classList.replace('border-rose-500/50', 'border-[#334155]');
+                icon.setAttribute('data-lucide', 'check-circle');
+                icon.classList.replace('text-rose-500', 'text-emerald-400');
+            }
+            lucide.createIcons({root: toast});
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-[-100px]', 'opacity-0'); }, 3500);
+        }
+
+        function limparFiltros() {
+            document.getElementById('f_de_baixa').value = '';
+            document.getElementById('f_ate_baixa').value = '';
+            document.getElementById('f_de_venc').value = '';
+            document.getElementById('f_ate_venc').value = '';
+            document.getElementById('f_cliente').value = '';
+            document.getElementById('f_cod_cliente').value = '';
+            document.getElementById('f_vendedor').value = '';
+            document.getElementById('f_titulo').value = '';
+            document.getElementById('f_banco').value = '';
+            aplicarFiltrosFrontEnd();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const hoje = new Date();
+            document.getElementById('f_ate_baixa').valueAsDate = hoje;
+            document.getElementById('f_de_baixa').valueAsDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+
+            const areaFiltros = document.getElementById('areaFiltros');
+            if (areaFiltros) {
+                areaFiltros.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        carregarDados();
+                    }
+                });
+            }
+        });
+
+        async function carregarDados() {
+            const deBaixa = document.getElementById('f_de_baixa').value.replace(/-/g, '');
+            const ateBaixa = document.getElementById('f_ate_baixa').value.replace(/-/g, '');
+            
+            if (!deBaixa || !ateBaixa) {
+                showToast("Preencha o período inicial e final da Baixa.", true);
+                return;
+            }
+
+            const filial = document.getElementById('f_filial').value;
+            const btn = document.getElementById('btnConsultar');
+            const originalHTML = btn.innerHTML;
+            
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> Buscando...`;
+            btn.disabled = true;
+            lucide.createIcons({root: btn});
+
+            const tbody = document.getElementById('tbodyBaixas');
+            tbody.innerHTML = `<tr><td colspan="11" class="text-center py-20 text-sky-400 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-3"></i> Lendo Movimentações (SE5)...</td></tr>`;
+            lucide.createIcons({root: tbody});
+
+            try {
+                const endpoint = `${API_BASE_URL}/acompanhamento-baixas/${filial}?_t=${new Date().getTime()}`;
+                
+                // Envia os filtros de texto para a API também, evitando sobrecarga
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        deBaixa: deBaixa,
+                        ateBaixa: ateBaixa,
+                        titulo: document.getElementById('f_titulo').value.toUpperCase().trim(),
+                        cliente: document.getElementById('f_cliente').value.toUpperCase().trim(),
+                        cod_cliente: document.getElementById('f_cod_cliente').value.toUpperCase().trim(),
+                        vendedor: document.getElementById('f_vendedor').value.toUpperCase().trim(),
+                        banco: document.getElementById('f_banco').value.toUpperCase().trim()
+                    })
+                });
+                
+                const contentType = response.headers.get("content-type");
+                let resData;
+
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    resData = await response.json();
+                } else {
+                    const errText = await response.text();
+                    const cleanErr = errText.substring(0, 150).replace(/\n/g, ' '); 
+                    throw new Error(`Servidor devolveu HTML. O Node.js não foi reiniciado.<br><br>Detalhe: ${cleanErr}`);
+                }
+                
+                if (!response.ok || resData.error) {
+                    throw new Error(resData.error || `Erro HTTP ${response.status}`);
+                }
+                
+                rawData = Array.isArray(resData) ? resData : (resData.data || []);
+
+                if (rawData.length > 0) {
+                    showToast(`Sucesso! ${rawData.length} baixas localizadas.`);
+                } else {
+                    showToast("Nenhuma baixa encontrada no período.", false);
+                }
+
+                aplicarFiltrosFrontEnd();
+
+            } catch (err) {
+                console.error(err);
+                rawData = [];
+                filteredData = [];
+                
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="11" class="text-center py-20">
+                            <div class="flex flex-col items-center justify-center text-rose-500">
+                                <i data-lucide="server-crash" class="w-10 h-10 mb-3 opacity-80"></i>
+                                <h3 class="text-sm font-black uppercase tracking-widest">Falha de Conexão com a API</h3>
+                                <div class="bg-rose-500/10 text-rose-400 p-4 rounded-xl mt-3 border border-rose-500/30 text-left max-w-2xl text-[11px] font-mono leading-relaxed">
+                                    ${err.message}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                lucide.createIcons({root: tbody});
+                showToast("Falha na extração de dados.", true);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                lucide.createIcons({root: btn});
+            }
+        }
+
+        // Filtro rápido no front-end para refinar ainda mais os resultados da API
+        const inputsFiltro = ['f_cliente', 'f_cod_cliente', 'f_vendedor', 'f_titulo', 'f_banco', 'f_de_venc', 'f_ate_venc'];
+        inputsFiltro.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.addEventListener('input', () => {
+                    if(rawData.length > 0) aplicarFiltrosFrontEnd();
+                });
+            }
+        });
+
+        function aplicarFiltrosFrontEnd() {
+            const fCliente = document.getElementById('f_cliente').value.toUpperCase().trim();
+            const fCodCli = document.getElementById('f_cod_cliente').value.toUpperCase().trim();
+            const fVend = document.getElementById('f_vendedor').value.toUpperCase().trim();
+            const fTitulo = document.getElementById('f_titulo').value.toUpperCase().trim();
+            const fBanco = document.getElementById('f_banco').value.toUpperCase().trim();
+            const deVenc = document.getElementById('f_de_venc').value.replace(/-/g, '');
+            const ateVenc = document.getElementById('f_ate_venc').value.replace(/-/g, '');
+
+            filteredData = rawData.filter(r => {
+                const rCliente = extrairStr(r, 'NomeCliente').toUpperCase();
+                if (fCliente && !rCliente.includes(fCliente)) return false;
+
+                const rCnpj = extrairStr(r, 'CnpjCliente').toUpperCase();
+                const rCod = extrairStr(r, 'CodCliente').toUpperCase();
+                if (fCodCli && !rCnpj.includes(fCodCli) && !rCod.includes(fCodCli)) return false;
+
+                const rVend = extrairStr(r, 'Vendedor').toUpperCase();
+                if (fVend && !rVend.includes(fVend)) return false;
+
+                const rTitulo = extrairStr(r, 'Documento').toUpperCase();
+                if (fTitulo && !rTitulo.includes(fTitulo)) return false;
+
+                const rBco = extrairStr(r, 'Banco').toUpperCase();
+                if (fBanco && !rBco.includes(fBanco)) return false;
+
+                const vData = extrairStr(r, 'VenctoRealRaw'); 
+                if (deVenc && vData < deVenc) return false;
+                if (ateVenc && vData > ateVenc) return false;
+
+                return true;
+            });
+
+            renderizarTabela();
+        }
+
+        function renderizarTabela() {
+            const tbody = document.getElementById('tbodyBaixas');
+            let html = '';
+            
+            let sumBase = 0, sumJuros = 0, sumMulta = 0, sumDesconto = 0, sumRecebido = 0;
+
+            if (filteredData.length === 0) {
+                html = `<tr><td colspan="11" class="text-center py-16 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="search-x" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Nenhuma baixa atende aos filtros atuais.</td></tr>`;
+            } else {
+                const limiteDisplay = filteredData.slice(0, 1000);
+
+                html = limiteDisplay.map(r => {
+                    const valOriginal = extrairNum(r, 'ValorOriginal');
+                    const amortAnterior = extrairNum(r, 'AmortizadoAnterior');
+                    
+                    const valAmortizado = extrairNum(r, 'Amortizado'); // Principal Amortizado da Baixa
+                    const valMulta = extrairNum(r, 'Multa');
+                    const valJuros = extrairNum(r, 'Juros');
+                    const valDesconto = extrairNum(r, 'Desconto');
+                    const valRecebido = extrairNum(r, 'TotalRecebido'); // Recebido Final Bruto
+
+                    const saldoAnterior = valOriginal - amortAnterior;
+                    const saldoRestante = saldoAnterior - valAmortizado;
+
+                    // Somatórios
+                    sumBase += valAmortizado;
+                    sumMulta += valMulta;
+                    sumJuros += valJuros;
+                    sumDesconto += valDesconto;
+                    sumRecebido += valRecebido;
+
+                    return `
+                    <tr>
+                        <td class="text-center font-bold text-slate-400 tabular-nums">${extrairStr(r, 'Filial')}</td>
+                        <td class="font-black text-sky-400 tabular-nums">${extrairStr(r, 'Documento')}</td>
+                        <td class="text-center font-bold text-slate-500 tabular-nums">${extrairStr(r, 'Parcela')}</td>
+                        <td class="text-center font-mono font-bold text-emerald-400 border-x border-[#334155] bg-[#0f172a]">${extrairStr(r, 'DataBaixa')}</td>
+                        <td class="max-w-[180px] truncate" title="${extrairStr(r, 'NomeCliente')}">
+                            <span class="font-bold text-slate-200 uppercase block leading-tight">${extrairStr(r, 'NomeCliente')}</span>
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono mt-0.5">VENC. ${extrairStr(r, 'VenctoReal')}</span>
+                        </td>
+                        
+                        <td class="text-right font-medium text-slate-500 tabular-nums">${fmtCurr(valOriginal)}</td>
+                        <td class="text-right font-black text-sky-400 tabular-nums">${fmtCurr(saldoAnterior)}</td>
+                        <td class="text-right font-black text-emerald-400 tabular-nums border-l border-[#334155] pl-2">${fmtCurr(valAmortizado)}</td>
+                        <td class="text-right font-bold text-rose-400 tabular-nums">${fmtCurr(valMulta + valJuros)}</td>
+                        <td class="text-right font-black text-white tabular-nums text-sm bg-slate-800/50">${fmtCurr(valRecebido)}</td>
+                        
+                        <td class="text-right font-black text-slate-300 tabular-nums border-l border-[#334155]">${fmtCurr(saldoRestante)}</td>
+                    </tr>
+                    `;
+                }).join('');
+                
+                if (filteredData.length > 1000) {
+                    html += `<tr><td colspan="11" class="text-center py-4 text-amber-500 font-bold uppercase tracking-widest text-[10px] bg-amber-500/10 border-t border-amber-500/20">Visualização limitada a 1000 registros. Exporte para Excel para ver os ${filteredData.length} resultados completos.</td></tr>`;
+                    
+                    sumBase = 0; sumJuros = 0; sumMulta = 0; sumDesconto = 0; sumRecebido = 0;
+                    filteredData.forEach(r => {
+                        sumBase += extrairNum(r, 'Amortizado');
+                        sumMulta += extrairNum(r, 'Multa');
+                        sumJuros += extrairNum(r, 'Juros');
+                        sumDesconto += extrairNum(r, 'Desconto');
+                        sumRecebido += extrairNum(r, 'TotalRecebido');
+                    });
+                }
+            }
+
+            document.getElementById('tbodyBaixas').innerHTML = html;
+            document.getElementById('lblCount').innerText = filteredData.length;
+            document.getElementById('totBase').innerText = fmtCurr(sumBase);
+            document.getElementById('totMulta').innerText = fmtCurr(sumMulta);
+            document.getElementById('totJuros').innerText = fmtCurr(sumJuros);
+            document.getElementById('totDesconto').innerText = fmtCurr(sumDesconto);
+            document.getElementById('totRecebido').innerText = fmtCurr(sumRecebido);
+            
+            lucide.createIcons({root: document.getElementById('tbodyBaixas')});
+        }
+
+        function exportarExcelTabela() {
+            if (filteredData.length === 0) {
+                showToast("Não há dados para exportar.", true);
+                return;
+            }
+
+            const exportArr = filteredData.map(r => {
+                const valOriginal = extrairNum(r, 'ValorOriginal');
+                const amortAnterior = extrairNum(r, 'AmortizadoAnterior');
+                const valAmortizado = extrairNum(r, 'Amortizado');
+                const saldoAnterior = valOriginal - amortAnterior;
+                
+                return {
+                    "Filial": extrairStr(r, 'Filial'),
+                    "Documento": extrairStr(r, 'Documento'),
+                    "Parcela": extrairStr(r, 'Parcela'),
+                    "Data Vencimento": extrairStr(r, 'VenctoReal'),
+                    "Data Baixa": extrairStr(r, 'DataBaixa'),
+                    "Cliente": extrairStr(r, 'NomeCliente'),
+                    "CNPJ": extrairStr(r, 'CnpjCliente'),
+                    "Vendedor": extrairStr(r, 'Vendedor'),
+                    "Valor Original (Título)": valOriginal,
+                    "Saldo Antes da Baixa": saldoAnterior,
+                    "Amortizado (Base abatida)": valAmortizado,
+                    "Juros": extrairNum(r, 'Juros'),
+                    "Multa": extrairNum(r, 'Multa'),
+                    "Desconto": extrairNum(r, 'Desconto'),
+                    "Total Pago pelo Cliente": extrairNum(r, 'TotalRecebido'),
+                    "Saldo Restante": saldoAnterior - valAmortizado,
+                    "Banco": extrairStr(r, 'Banco')
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(exportArr);
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            worksheet['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Baixas SE5");
+
+            const dt = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(workbook, `Acompanhamento_Baixas_SE5_${dt}.xlsx`);
+            showToast("Exportação Excel concluída!");
+        }
+    </script>
+</body>
+</html>

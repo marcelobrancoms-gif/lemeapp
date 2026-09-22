@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    
+    <title>Gestão de Acessos - LEME Supreme</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['"Inter"', 'sans-serif'], mono: ['"Fira Code"', 'monospace'] } } }
+        }
+    </script>
+
+    <style>
+        body { background-color: #050914; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+
+        /* Estética Supreme Slate-3D */
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.9) 0%, rgba(8, 15, 26, 0.95) 100%);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+            border-radius: 12px;
+        }
+
+        .corp-input { 
+            width: 100%; background-color: #0b1120; border: 1px solid #1e293b; color: #f8fafc; 
+            border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 600; outline: none; 
+            transition: all 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .corp-input:focus { border-color: #38bdf8; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 0 2px rgba(56,189,248,0.3); }
+        .corp-input:disabled { background-color: #0f172a; color: #64748b; cursor: not-allowed; }
+        
+        .form-label { display: block; font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+
+        /* Botões Executivos */
+        .btn-3d { transition: all 0.15s ease-in-out; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15); }
+        .btn-3d:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 8px -2px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.25); }
+        .btn-3d:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 3px 6px rgba(0,0,0,0.5); }
+
+        /* Tabela Supreme */
+        .supreme-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .supreme-table th { 
+            background-color: #0f172a; border-bottom: 2px solid #1e293b; padding: 14px 16px; 
+            font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; 
+            text-align: left; position: sticky; top: 0; z-index: 10;
+        }
+        .supreme-table td { padding: 14px 16px; font-size: 11px; font-weight: 500; border-bottom: 1px solid #151e2d; color: #cbd5e1; }
+        .supreme-table tr:hover td { background-color: #1e293b; }
+
+        /* Custom Checkbox Otimizado */
+        .check-box-module { appearance: none; width: 16px; height: 16px; border: 2px solid #334155; border-radius: 4px; background: #0b1120; cursor: pointer; position: relative; transition: all 0.2s; }
+        .check-box-module:checked { background: #0ea5e9; border-color: #0ea5e9; box-shadow: 0 0 10px rgba(14,165,233,0.4); }
+        .check-box-module:checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+        /* Modal Overlay Transition */
+        .modal-overlay { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { transform: scale(0.95) translateY(10px); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
+    </style>
+</head>
+<body class="flex flex-col h-screen antialiased">
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-[3000] bg-[#1e293b] text-white text-xs font-bold uppercase tracking-widest px-5 py-4 rounded-xl shadow-[0_15px_30px_rgba(0,0,0,0.6)] border border-[#334155] flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="info" class="w-5 h-5 text-sky-400" id="toastIcon"></i>
+        <span id="toastMessage">Operação Executada.</span>
+    </div>
+
+    <!-- CABEÇALHO (COMMAND CENTER) -->
+    <header class="bg-[#0f172a] border-b border-[#1e293b] px-6 py-4 flex items-center justify-between shrink-0 shadow-xl z-30">
+        <div class="flex items-center gap-4">
+            <div class="flex items-baseline select-none">
+                <span class="text-slate-100 font-black text-2xl tracking-tighter">LEME</span>
+                <span class="text-sky-500 font-black text-2xl tracking-tighter ml-1 drop-shadow-[0_0_10px_rgba(14,165,233,0.3)]">SUPREME</span>
+            </div>
+            <div class="h-6 w-px bg-[#334155] ml-2 hidden sm:block"></div>
+            <div class="hidden sm:flex items-center gap-3 ml-2">
+                <span class="bg-[#1e293b] text-slate-300 border border-[#334155] px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-inner">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i> Módulo de Segurança
+                </span>
+                <h1 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center">
+                    Governança de Acessos & Perfis
+                    <!-- TAG DE VERSÃO V9.0 -->
+                    <span class="bg-indigo-600 text-white px-3 py-1 rounded-md text-[10px] font-black tracking-widest ml-4 shadow-lg border border-indigo-400 animate-pulse">
+                        VERSÃO V9.0-SUPREME ACESSOS
+                    </span>
+                </h1>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <span id="cloudStatus" class="bg-[#1e293b] text-slate-400 border border-[#334155] px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-inner">
+                <div class="w-2 h-2 rounded-full bg-slate-500"></div> API Desconectada
+            </span>
+            <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-white transition-colors bg-[#1e293b] p-2 rounded-lg border border-[#334155] hover:border-slate-500 btn-3d">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col p-4 lg:p-8 bg-[#050914] relative overflow-hidden">
+        <div class="max-w-[1400px] mx-auto w-full h-full flex flex-col gap-6">
+            
+            <!-- Barra de Ações -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+                <div class="flex flex-col">
+                    <h2 class="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4 text-sky-400"></i> Painel de Utilizadores
+                    </h2>
+                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Conectado ao Database Central (Google Sheets)</p>
+                </div>
+
+                <div class="flex items-center gap-4 w-full sm:w-auto">
+                    <div class="relative w-full sm:w-64">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                        <input type="text" id="inputPesquisa" oninput="renderTable()" placeholder="Pesquisar utilizador..." class="corp-input !pl-9 py-2">
+                    </div>
+                    <button onclick="fetchUsuarios()" class="btn-3d bg-[#1e293b] hover:bg-[#334155] text-slate-300 p-2 rounded-lg border border-[#334155]">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="abrirModal()" class="btn-3d bg-gradient-to-b from-sky-600 to-sky-700 hover:from-sky-500 hover:to-sky-600 text-white px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg flex items-center gap-2 border border-sky-800 border-t-sky-500 shadow-[0_4px_10px_rgba(14,165,233,0.2)]">
+                        <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Novo Acesso
+                    </button>
+                </div>
+            </div>
+
+            <!-- Container da Tabela -->
+            <div class="glass-panel flex-1 flex flex-col overflow-hidden">
+                <div class="flex-1 overflow-auto custom-scroll">
+                    <table class="supreme-table">
+                        <thead>
+                            <tr>
+                                <th class="w-16">ID</th>
+                                <th>Identificação (Nome / Login)</th>
+                                <th>Perfil & Filial</th>
+                                <th>Vínculo ERP (Vendedor)</th>
+                                <th>Status</th>
+                                <th class="text-right w-24">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+                                    <i data-lucide="loader-2" class="w-8 h-8 animate-spin text-sky-400 mx-auto mb-3"></i>
+                                    A ler registos do Google Sheets...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Rodapé da Tabela -->
+                <div class="bg-[#0b1120] border-t border-[#1e293b] px-6 py-3 flex justify-between items-center shrink-0">
+                    <span id="rodapeContador" class="text-[10px] font-black text-slate-400 uppercase tracking-widest">0 Registo(s)</span>
+                    <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Auditoria Rigorosa LEME ERP</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- OVERLAY MODAL (NOVO PADRÃO EXECUTIVO)      -->
+    <!-- ========================================== -->
+    <div id="modalOverlay" class="fixed inset-0 z-[100] bg-[#050914]/80 backdrop-blur-sm flex justify-center items-start pt-10 pb-10 overflow-y-auto modal-overlay custom-scroll">
+        <div class="glass-panel w-full max-w-4xl flex flex-col modal-content relative my-auto shadow-[-20px_20px_60px_rgba(0,0,0,0.8)]">
+            
+            <div class="bg-[#0b1120] px-8 py-5 border-b border-[#1e293b] flex justify-between items-center shrink-0 rounded-t-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center border border-sky-500/20 shadow-inner">
+                        <i data-lucide="shield" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="text-sm font-black text-white uppercase tracking-widest" id="modalTitle">Ficha de Utilizador</h3>
+                </div>
+                <button type="button" onclick="fecharModal()" class="text-slate-400 hover:text-rose-400 transition-colors p-1.5 rounded bg-[#1e293b] hover:bg-[#334155] border border-[#334155]">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <form id="formUsuario" onsubmit="salvarUsuario(event)" class="flex-1 flex flex-col">
+                <input type="hidden" id="f_id">
+                
+                <div class="p-8 space-y-8">
+                    <!-- Seção 1: Credenciais -->
+                    <div>
+                        <h4 class="text-[10px] font-black text-sky-400 uppercase tracking-widest border-b border-[#1e293b] pb-2 mb-4">1. Credenciais de Acesso</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div><label class="form-label">Nome Completo</label><input type="text" id="f_nome" required class="corp-input uppercase" autocomplete="off"></div>
+                            <div><label class="form-label">E-mail Corporativo</label><input type="email" id="f_email" required class="corp-input" autocomplete="off"></div>
+                            <div><label class="form-label">Login (Utilizador)</label><input type="text" id="f_login" required class="corp-input font-mono text-emerald-400" autocomplete="off"></div>
+                            <div><label class="form-label">Senha de Segurança</label><input type="text" id="f_senha" required class="corp-input font-mono" placeholder="Definir Senha Forte" autocomplete="off"></div>
+                        </div>
+                    </div>
+
+                    <!-- Seção 2: Governança Operacional -->
+                    <div>
+                        <h4 class="text-[10px] font-black text-sky-400 uppercase tracking-widest border-b border-[#1e293b] pb-2 mb-4">2. Governança e Regras de Negócio</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                            <div>
+                                <label class="form-label">Nível / Cargo</label>
+                                <select id="f_role" class="corp-input cursor-pointer">
+                                    <option value="Operacional">Operacional</option>
+                                    <option value="Gestor">Gestor (Tático)</option>
+                                    <option value="Diretoria">Diretoria (C-Level)</option>
+                                    <option value="Admin">Administrador (TI)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">Base/Filial (ERP)</label>
+                                <select id="f_filial" class="corp-input cursor-pointer">
+                                    <option value="Todas">Global (Todas)</option>
+                                    <option value="01">01 - Alagoas</option>
+                                    <option value="02">02 - Pernambuco</option>
+                                    <option value="03">03 - Sergipe</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">Status do Acesso</label>
+                                <select id="f_status" class="corp-input cursor-pointer">
+                                    <option value="Ativo" class="text-emerald-500 font-bold">● Ativo</option>
+                                    <option value="Bloqueado" class="text-rose-500 font-bold">● Bloqueado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">Vínculo ERP (Opcional)</label>
+                                <input type="text" id="f_vendedor" class="corp-input uppercase" placeholder="Cód/Nome Vendedor ERP" title="Restringe análises a este vendedor">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção 3: Permissões de Módulos (Matriz Hub Principal) -->
+                    <div>
+                        <div class="flex justify-between items-center border-b border-[#1e293b] pb-2 mb-4">
+                            <h4 class="text-[10px] font-black text-sky-400 uppercase tracking-widest">3. Matriz de Autorização (Módulos)</h4>
+                            <label class="flex items-center gap-2 cursor-pointer bg-rose-500/10 px-3 py-1 rounded border border-rose-500/30 hover:bg-rose-500/20 transition-colors">
+                                <input type="checkbox" id="chkMaster" onchange="toggleMasterAccess()" class="check-box-module !border-rose-500 checked:!bg-rose-500 shadow-sm">
+                                <span class="text-[9px] font-black text-rose-400 uppercase tracking-widest mt-0.5">Conceder Acesso Master</span>
+                            </label>
+                        </div>
+                        
+                        <div id="permissionsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            <!-- Gerado via JS mapeando os módulos do hub -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#0b1120] border-t border-[#1e293b] px-8 py-5 flex justify-end gap-4 rounded-b-xl shrink-0">
+                    <button type="button" onclick="fecharModal()" class="btn-3d bg-[#1e293b] text-slate-300 hover:text-white px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border border-[#334155]">Cancelar</button>
+                    <button type="submit" id="btnSalvar" class="btn-3d bg-gradient-to-b from-sky-600 to-sky-700 hover:from-sky-500 hover:to-sky-600 text-white px-8 py-2 rounded-lg text-xs font-black uppercase tracking-widest border border-sky-800 border-t-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)] flex items-center gap-2">
+                        <i data-lucide="save" class="w-4 h-4"></i> Salvar na Nuvem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPTS CORE -->
+    <script>
+        // =========================================================================
+        // ENDPOINT DE PRODUÇÃO: GOOGLE APPS SCRIPT (DATABASE CENTRAL)
+        // =========================================================================
+        const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbxT_yHWov6Xjm7aMGPeYdOZn09C_vG-VuwnXfn38vIEUceU_lsed1WhN1kOQtwqt2xQ/exec";
+
+        // Matriz baseada fielmente no hub_principal_2.html
+        const modulosOrganizados = {
+            "Logística": ["Formação de Carga (OMS)", "Controle de Frota"],
+            "Comercial": ["Liberação V8", "Aprovação Comercial", "Formação de Preços", "Pesquisa Concorrência", "Pedidos Externos"],
+            "Financeiro": ["Contas a Receber (SE1)", "Gestão de Cobrança", "Contas a Pagar (SE2)", "Extrato Bancário (SE5)", "Acompanhamento Baixas"],
+            "Supreme Info (BI)": ["Painel CFO Supreme", "Consultor S&OP", "Painel de Metas", "Radar Executivo", "D.R.E. Analítica", "D.R.E. Caixa Dinâmica", "Fluxo de Caixa", "Curva ABC", "Análise Comercial", "Auditoria Fiscal", "Visão de Ruptura"],
+            "Sistema": ["Gestão de Acessos", "Regras Comerciais"]
+        };
+
+        let usuariosDB = [];
+        let modulosSelecionados = new Set();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderPermissionsGrid();
+            fetchUsuarios();
+        });
+
+        // Controle de Notificação (Toast)
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            document.getElementById('toastMessage').innerText = msg;
+            
+            if(isError) {
+                toast.classList.replace('border-[#334155]', 'border-rose-500/50');
+                toastIcon.setAttribute('data-lucide', 'alert-triangle'); toastIcon.classList.replace('text-sky-400', 'text-rose-500');
+            } else {
+                toast.classList.replace('border-rose-500/50', 'border-[#334155]');
+                toastIcon.setAttribute('data-lucide', 'check-circle'); toastIcon.classList.replace('text-rose-500', 'text-emerald-400');
+            }
+            
+            lucide.createIcons({root: toast});
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-[-100px]', 'opacity-0'); }, 3500);
+        }
+
+        // Renderiza Checkboxes Dinamicamente
+        function renderPermissionsGrid() {
+            const container = document.getElementById('permissionsGrid');
+            let html = '';
+            
+            for (const [categoria, modulos] of Object.entries(modulosOrganizados)) {
+                let subsHtml = '';
+                modulos.forEach(mod => {
+                    subsHtml += `
+                        <label class="flex items-center gap-3 cursor-pointer py-1.5 group">
+                            <input type="checkbox" value="${mod}" onchange="atualizarSelecao(this)" class="check-box-module chk-mod shrink-0">
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-sky-400 transition-colors uppercase tracking-wider mt-0.5 truncate" title="${mod}">${mod}</span>
+                        </label>
+                    `;
+                });
+
+                html += `
+                    <div class="bg-[#0f172a] border border-[#1e293b] p-4 rounded-xl shadow-inner">
+                        <h5 class="text-[10px] font-black text-sky-500 uppercase tracking-widest mb-3 pb-2 border-b border-[#1e293b]">${categoria}</h5>
+                        <div class="flex flex-col gap-1 pl-1">
+                            ${subsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function atualizarSelecao(chk) {
+            if (chk.checked) modulosSelecionados.add(chk.value);
+            else modulosSelecionados.delete(chk.value);
+            
+            if(document.getElementById('chkMaster').checked) {
+                document.getElementById('chkMaster').checked = false;
+                modulosSelecionados.delete('Acesso Total (Admin)');
+            }
+        }
+
+        function toggleMasterAccess() {
+            const isMaster = document.getElementById('chkMaster').checked;
+            const checkboxes = document.querySelectorAll('.chk-mod');
+            
+            modulosSelecionados.clear();
+            if (isMaster) {
+                modulosSelecionados.add('Acesso Total (Admin)');
+                checkboxes.forEach(chk => { chk.checked = true; chk.disabled = true; });
+            } else {
+                checkboxes.forEach(chk => { chk.checked = false; chk.disabled = false; });
+            }
+        }
+
+        // COMUNICAÇÃO COM O GOOGLE SHEETS (FETCH API SEM CORS PREFLIGHT)
+        async function fetchUsuarios() {
+            const statusBadge = document.getElementById('cloudStatus');
+            const tbody = document.getElementById('usersTableBody');
+            
+            statusBadge.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Sincronizando...`;
+            statusBadge.className = "bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]";
+            lucide.createIcons();
+
+            try {
+                // A requisição GET pura para o WebApp devolve JSON
+                const response = await fetch(GOOGLE_SHEETS_API);
+                const resData = await response.json();
+                
+                if (resData.success) {
+                    usuariosDB = resData.data;
+                    renderTable();
+                    statusBadge.innerHTML = `<div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div> Nuvem Ativa`;
+                    statusBadge.className = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)]";
+                } else {
+                    throw new Error("Erro lógico no Sheets.");
+                }
+            } catch (error) {
+                console.error(error);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-20 text-rose-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="server-crash" class="w-8 h-8 mx-auto mb-3 opacity-80"></i>Falha de comunicação com o Google Sheets.</td></tr>`;
+                statusBadge.innerHTML = `<div class="w-2 h-2 rounded-full bg-rose-500"></div> Offline`;
+                statusBadge.className = "bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_10px_rgba(244,63,94,0.2)]";
+            }
+            lucide.createIcons();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('usersTableBody');
+            const search = document.getElementById('inputPesquisa').value.toLowerCase().trim();
+            
+            let filtrados = usuariosDB;
+            if (search) {
+                filtrados = filtrados.filter(u => 
+                    (u.Nome || '').toLowerCase().includes(search) || 
+                    (u.Login || '').toLowerCase().includes(search)
+                );
+            }
+
+            document.getElementById('rodapeContador').innerText = `${filtrados.length} Registo(s) Encontrado(s)`;
+
+            if (filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-slate-500 font-bold uppercase tracking-widest text-[10px]">Nenhum acesso registado.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtrados.map(u => {
+                const statusHtml = u.Status === 'Bloqueado' 
+                    ? `<span class="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest flex items-center w-fit gap-1"><div class="w-1.5 h-1.5 rounded-full bg-rose-500"></div> Bloqueado</span>`
+                    : `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest flex items-center w-fit gap-1"><div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Ativo</span>`;
+                
+                const roleHtml = `<span class="text-xs font-bold text-sky-400">${u.Role || '--'}</span> <span class="text-[9px] text-slate-500 uppercase tracking-widest">| Filial: ${u.Filial || 'Global'}</span>`;
+                
+                const vendHtml = u.Vendedor ? `<span class="text-[10px] font-mono bg-[#1e293b] px-2 py-0.5 rounded text-slate-300 border border-[#334155]"><i data-lucide="link" class="inline w-3 h-3 mr-1 text-slate-500"></i>${u.Vendedor}</span>` : `<span class="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Sem Vínculo</span>`;
+
+                return `
+                <tr>
+                    <td class="font-mono font-bold text-slate-500 text-[10px]">#${u.ID}</td>
+                    <td>
+                        <div class="flex flex-col">
+                            <span class="font-black text-slate-100 uppercase tracking-wide text-xs">${u.Nome}</span>
+                            <span class="text-[10px] text-slate-400 font-mono mt-0.5">${u.Login}</span>
+                        </div>
+                    </td>
+                    <td><div class="flex flex-col">${roleHtml}</div></td>
+                    <td>${vendHtml}</td>
+                    <td>${statusHtml}</td>
+                    <td>
+                        <div class="flex items-center justify-end gap-2">
+                            <button onclick="abrirModal('${u.ID}')" class="text-slate-400 hover:text-sky-400 bg-[#1e293b] border border-[#334155] hover:border-sky-500/50 p-1.5 rounded-lg transition-all btn-3d" title="Editar">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="excluirUsuario('${u.ID}', '${u.Login}')" class="text-slate-400 hover:text-rose-400 bg-[#1e293b] border border-[#334155] hover:border-rose-500/50 p-1.5 rounded-lg transition-all btn-3d" title="Remover" ${u.Login === 'admin' ? 'disabled style="opacity:0.3"' : ''}>
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+            
+            lucide.createIcons({ root: tbody });
+        }
+
+        // GESTÃO DO MODAL
+        function abrirModal(id = null) {
+            document.getElementById('formUsuario').reset();
+            document.getElementById('f_id').value = '';
+            document.getElementById('modalTitle').innerText = 'Criar Ficha de Acesso';
+            
+            modulosSelecionados.clear();
+            document.getElementById('chkMaster').checked = false;
+            document.querySelectorAll('.chk-mod').forEach(chk => { chk.checked = false; chk.disabled = false; });
+            document.getElementById('f_login').readOnly = false;
+            document.getElementById('f_login').classList.remove('opacity-50');
+
+            if (id) {
+                const user = usuariosDB.find(u => String(u.ID) === String(id));
+                if (user) {
+                    document.getElementById('modalTitle').innerText = `Editar Acesso: ${user.Nome}`;
+                    document.getElementById('f_id').value = user.ID;
+                    document.getElementById('f_nome').value = user.Nome;
+                    document.getElementById('f_email').value = user.Email;
+                    document.getElementById('f_login').value = user.Login;
+                    document.getElementById('f_senha').value = user.Senha;
+                    document.getElementById('f_role').value = user.Role;
+                    document.getElementById('f_filial').value = user.Filial;
+                    document.getElementById('f_status').value = user.Status;
+                    document.getElementById('f_vendedor').value = user.Vendedor;
+
+                    if (user.Login === 'admin') {
+                        document.getElementById('f_login').readOnly = true;
+                        document.getElementById('f_login').classList.add('opacity-50');
+                    }
+
+                    if (user.Modulos && Array.isArray(user.Modulos)) {
+                        user.Modulos.forEach(m => modulosSelecionados.add(m));
+                        if (modulosSelecionados.has('Acesso Total (Admin)')) {
+                            document.getElementById('chkMaster').checked = true;
+                            toggleMasterAccess();
+                        } else {
+                            document.querySelectorAll('.chk-mod').forEach(chk => {
+                                if (modulosSelecionados.has(chk.value)) chk.checked = true;
+                            });
+                        }
+                    }
+                }
+            }
+
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.remove('hidden');
+            // Force reflow
+            void overlay.offsetWidth;
+            overlay.classList.add('active');
+        }
+
+        function fecharModal() {
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.remove('active');
+            setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+        }
+
+        // SALVAR DADOS (POST FETCH)
+        async function salvarUsuario(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('btnSalvar');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> Processando Nuvem...`;
+            btn.disabled = true;
+            lucide.createIcons({root: btn});
+
+            const id = document.getElementById('f_id').value;
+            const login = document.getElementById('f_login').value.trim();
+
+            const checkLogin = usuariosDB.find(u => u.Login === login && String(u.ID) !== String(id));
+            if(checkLogin) {
+                alert("Restrição de Integridade: Este Login já existe cadastrado.");
+                btn.innerHTML = originalHTML; btn.disabled = false; lucide.createIcons({root: btn});
+                return;
+            }
+
+            const payload = {
+                action: 'salvar',
+                id: id,
+                nome: document.getElementById('f_nome').value.trim().toUpperCase(),
+                email: document.getElementById('f_email').value.trim(),
+                login: login,
+                senha: document.getElementById('f_senha').value,
+                role: document.getElementById('f_role').value,
+                filial: document.getElementById('f_filial').value,
+                status: document.getElementById('f_status').value,
+                vendedor: document.getElementById('f_vendedor').value.trim().toUpperCase(),
+                modulos: Array.from(modulosSelecionados)
+            };
+
+            try {
+                // Utilizando fetch text/plain para evitar bloqueios CORS de Preflight (Options)
+                const res = await fetch(GOOGLE_SHEETS_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const resposta = await res.json();
+                
+                if (resposta.success) {
+                    showToast("Autorização gravada com sucesso no Database Central.");
+                    fecharModal();
+                    fetchUsuarios(); // Recarrega a tabela limpa da nuvem
+                } else {
+                    throw new Error(resposta.error || resposta.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Falha de Comunicação: " + err.message);
+                showToast("Erro ao gravar na Nuvem.", true);
+            } finally {
+                btn.innerHTML = originalHTML; btn.disabled = false; lucide.createIcons({root: btn});
+            }
+        }
+
+        // EXCLUIR DADOS (POST FETCH)
+        async function excluirUsuario(id, login) {
+            if (login === 'admin') return;
+            if (!confirm(`Ação Destrutiva: Deseja revogar permanentemente o acesso do utilizador ${login}?`)) return;
+
+            try {
+                const payload = { action: 'excluir', id: id };
+                
+                const res = await fetch(GOOGLE_SHEETS_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const resposta = await res.json();
+                
+                if (resposta.success) {
+                    showToast("Acesso revogado com sucesso.");
+                    fetchUsuarios();
+                } else {
+                    throw new Error(resposta.error || resposta.message);
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Falha na remoção: " + e.message);
+                showToast("Erro de comunicação.", true);
+            }
+        }
+    </script>
+</body>
+</html>

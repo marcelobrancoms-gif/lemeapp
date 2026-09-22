@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aprovação Comercial - LEME ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            background-color: #0f172a; 
+            color: #e2e8f0; 
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; 
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+
+        .dash-card {
+            background-color: #1e293b; 
+            border: 1px solid #334155; 
+            border-radius: 8px;
+        }
+
+        .corp-input {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .corp-input:focus { border-color: #64748b; }
+
+        .table-slate { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .table-slate th { 
+            background-color: #1e293b; 
+            border-bottom: 2px solid #334155; 
+            color: #94a3b8; 
+            padding: 12px 16px; 
+            font-size: 10px; 
+            font-weight: 700;
+            text-transform: uppercase; 
+            letter-spacing: 0.05em; 
+            text-align: left; 
+            position: sticky; 
+            top: 0; 
+            z-index: 10; 
+        }
+        .table-slate td { 
+            padding: 12px 16px; 
+            font-size: 11px; 
+            border-bottom: 1px solid #1e293b; 
+            background-color: #0f172a;
+            color: #cbd5e1;
+            transition: background-color 0.15s; 
+            white-space: nowrap;
+        }
+        .table-slate tbody tr:hover td { background-color: #1e293b; }
+
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .badge-rose { background-color: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2); }
+        .badge-amber { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
+
+        .modal-overlay { transition: opacity 0.2s ease; opacity: 0; pointer-events: none; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { transition: transform 0.2s ease; transform: translateY(20px) scale(0.95); }
+        .modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
+    </style>
+</head>
+
+<body class="h-screen w-screen flex flex-col antialiased">
+
+    <!-- CABEÇALHO -->
+    <header class="h-14 px-6 flex items-center justify-between border-b border-[#1e293b] bg-[#0f172a] shrink-0 z-20">
+        <div class="flex items-center gap-4">
+            <div class="flex items-baseline select-none">
+                <span class="text-white font-bold text-lg tracking-tight">LEME</span>
+                <span class="text-[#cbd5e1] font-bold text-lg tracking-tight ml-1">SUPREME</span>
+            </div>
+            <div class="h-4 w-px bg-[#334155]"></div>
+            <div>
+                <h1 class="text-xs font-semibold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                    Auditoria e Aprovação de Descontos
+                </h1>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div class="hidden sm:flex flex-col text-right">
+                <span id="syncStatus" class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 justify-end">
+                    <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Sincronizando...
+                </span>
+                <span id="regraAtivaStatus" class="text-[9px] text-sky-500 font-medium mt-0.5">Buscando Limite de Desconto...</span>
+            </div>
+            <div class="h-5 w-px bg-[#334155] hidden sm:block"></div>
+            <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-slate-200 transition-colors p-1.5 rounded" title="Fechar Módulo">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- BARRA DE FILTROS -->
+    <div class="bg-[#1e293b] border-b border-[#334155] px-6 py-3 flex flex-col sm:flex-row items-center gap-4 shrink-0 z-10">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Filial:</label>
+            <select id="filterFilial" class="corp-input py-1.5" onchange="fetchPedidosAprovacao()">
+                <option value="consolidado" selected>Consolidado (Todas)</option>
+                <option value="01">01 - Alagoas</option>
+                <option value="02">02 - Pernambuco</option>
+                <option value="03">03 - Sergipe</option>
+            </select>
+        </div>
+
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Período:</label>
+            <select id="filterPeriodo" class="corp-input py-1.5" onchange="fetchPedidosAprovacao()">
+                <option value="1">Últimos 30 Dias</option>
+                <option value="2" selected>Últimos 60 Dias</option>
+                <option value="6">Últimos 6 Meses</option>
+                <option value="12">Últimos 12 Meses</option>
+                <option value="999">Todo o Histórico</option>
+            </select>
+        </div>
+
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Risco Margem:</label>
+            <select id="filterRisco" class="corp-input py-1.5" onchange="aplicarFiltrosFront()">
+                <option value="TODOS">Todos os Pedidos com Desconto</option>
+                <option value="ALTO">Fora da Alçada</option>
+                <option value="MEDIO">Dentro da Alçada Padrão</option>
+            </select>
+        </div>
+
+        <div class="flex-1 flex justify-end w-full sm:w-auto gap-2">
+            <div class="relative w-full sm:w-64">
+                <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                <input type="text" id="filterBusca" oninput="aplicarFiltrosFront()" class="corp-input !pl-8 w-full py-1.5" placeholder="Cliente, pedido, vendedor...">
+            </div>
+            <button onclick="fetchPedidosAprovacao()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 border border-[#334155] px-3 py-1.5 rounded text-[10px] font-semibold uppercase tracking-wide flex items-center gap-2 transition-colors">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Atualizar Base
+            </button>
+        </div>
+    </div>
+
+    <main class="flex-1 flex flex-col p-5 lg:p-6 w-full max-w-[1600px] mx-auto overflow-hidden gap-5">
+        
+        <!-- KPIs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+            <div class="dash-card p-4 flex flex-col justify-between">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Pedidos c/ Desconto Base</p>
+                <h3 class="text-2xl font-bold text-slate-100 tabular-nums" id="kpiQtd">0</h3>
+            </div>
+            
+            <div class="dash-card p-4 flex flex-col justify-between">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Valor Venda (Praticado)</p>
+                <h3 class="text-2xl font-bold text-sky-400 tabular-nums" id="kpiVenda">R$ 0,00</h3>
+            </div>
+
+            <div class="dash-card p-4 flex flex-col justify-between">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Valor Tabela (Base DA1)</p>
+                <h3 class="text-2xl font-bold text-slate-100 tabular-nums" id="kpiBase">R$ 0,00</h3>
+            </div>
+
+            <div class="dash-card p-4 flex flex-col justify-between border-t-2 border-t-rose-500">
+                <div class="flex justify-between items-start">
+                    <p class="text-[10px] font-semibold text-rose-400 uppercase tracking-widest mb-2">Erosão Comercial (Loss)</p>
+                    <div class="badge badge-rose" id="kpiErosaoPerc">0.0%</div>
+                </div>
+                <h3 class="text-2xl font-bold text-rose-500 tabular-nums" id="kpiErosaoValor">R$ 0,00</h3>
+            </div>
+        </div>
+
+        <!-- TABELA DE FILA -->
+        <div class="dash-card flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div class="px-5 py-3 border-b border-[#334155] flex justify-between items-center bg-[#1e293b] shrink-0">
+                <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="list-checks" class="w-4 h-4 text-slate-400"></i> Trilha de Descontos Aplicados
+                </h3>
+                <span class="text-[9px] font-medium text-slate-500">Diferença baseada na Tabela de Preço Vigente (DA1)</span>
+            </div>
+            
+            <div class="flex-1 overflow-auto custom-scroll relative bg-[#0f172a]">
+                <table class="table-slate">
+                    <thead>
+                        <tr>
+                            <th class="w-20">Pedido</th>
+                            <th class="w-24">Emissão</th>
+                            <th>Cliente / Status de Regra</th>
+                            <th>Vendedor</th>
+                            <th class="text-center">Cond. Pgto</th>
+                            <th class="text-center">Tabela</th>
+                            <th class="text-right">V. Tabela Base</th>
+                            <th class="text-right">V. Venda Proposto</th>
+                            <th class="text-center">Desc. Médio</th>
+                            <th class="text-center w-28">Drill-Down (Itens)</th>
+                            <th class="text-center w-28">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyPedidos">
+                        <!-- Injetado via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL DRILL-DOWN DE ITENS -->
+    <div id="modalItens" class="fixed inset-0 bg-[#0f172a]/90 z-[100] modal-overlay flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="w-full max-w-5xl bg-[#1e293b] border border-[#334155] rounded-xl flex flex-col modal-content shadow-2xl max-h-[90vh]">
+            <div class="p-5 border-b border-[#334155] flex items-center justify-between shrink-0 bg-[#0f172a]">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-200" id="modalTitle">Detalhes do Pedido: --</h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5" id="modalSubtitle">Cliente: --</p>
+                </div>
+                <button onclick="fecharModalItens()" class="text-slate-400 hover:text-slate-200 p-1 rounded transition-colors bg-[#1e293b] border border-[#334155]">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-auto p-5 custom-scroll bg-[#1e293b]">
+                <table class="table-slate w-full">
+                    <thead>
+                        <tr>
+                            <th class="w-24">SKU</th>
+                            <th>Descrição</th>
+                            <th class="text-center">Qtd</th>
+                            <th class="text-right text-slate-400">Total Tabela Base</th>
+                            <th class="text-right text-sky-400">Total Vendido</th>
+                            <th class="text-center">Erosão/Desconto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyItensModal">
+                        <!-- Injetado via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-5 border-t border-[#334155] bg-[#0f172a] flex justify-end gap-3 shrink-0">
+                <button onclick="rejeitarPedidoAtual()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 px-6 py-2 rounded text-xs font-semibold uppercase tracking-wider transition-colors">
+                    Rejeitar (Bloqueio V8)
+                </button>
+                <button onclick="aprovarPedidoAtual()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded text-xs font-semibold uppercase tracking-wider transition-colors shadow-lg">
+                    Aprovar (Liberação Comercial)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÃO SUPABASE PARA LER AS REGRAS CADASTRADAS NA OUTRA TELA
+        const SUPABASE_URL = 'https://qfgyduhvqtcrnvzydrup.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZ3lkdWh2cXRjcm52enlkcnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3ODYyNjYsImV4cCI6MjA5ODM2MjI2Nn0.b4hYKE4S1Kkxe_oDygbM8C_RZFqJKxhN6MtDN6rh5vE';
+        let supabaseClient = null;
+
+        let apiHost = window.location.hostname;
+        if (!apiHost || apiHost.includes('goog') || apiHost === 'localhost' || apiHost === '') {
+            apiHost = '177.70.102.16'; 
+        }
+        const API_BASE_URL = `http://${apiHost}:3001/api`;
+
+        let pedidosMapeados = []; 
+        let filteredPedidos = [];
+        let pedidoSelecionadoParaAcao = null;
+        let limiteDescontoPermitido = 10; // Fallback inicial caso não encontre regras
+
+        const formatMoney = (v) => {
+            const n = parseFloat(v) || 0;
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+        };
+
+        const extrairStr = (obj, keys) => {
+            if(!obj) return '';
+            const objKeys = Object.keys(obj);
+            for(let k of keys) {
+                const trg = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+                const fd = objKeys.find(x => String(x).toLowerCase().replace(/[^a-z0-9]/g, '') === trg);
+                if(fd !== undefined && obj[fd] !== null) return String(obj[fd]).trim();
+            }
+            return '';
+        };
+
+        const extrairNum = (obj, keys) => {
+            if(!obj) return 0;
+            const objKeys = Object.keys(obj);
+            for(let k of keys) {
+                const trg = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+                const fd = objKeys.find(x => String(x).toLowerCase().replace(/[^a-z0-9]/g, '') === trg);
+                if(fd !== undefined && obj[fd] !== null) {
+                    const v = obj[fd];
+                    if(typeof v === 'number') return v;
+                    let s = String(v).replace(/[^0-9,\.-]/g, '');
+                    if(s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+                    const n = parseFloat(s);
+                    if(!isNaN(n)) return n;
+                }
+            }
+            return 0;
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            
+            try {
+                if (typeof window.supabase !== 'undefined') {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                } 
+            } catch (err) {}
+
+            await carregarRegraDeDescontoMaximo();
+            fetchPedidosAprovacao();
+        });
+
+        // ==========================================
+        // LEITURA DINÂMICA DA REGRA DE DESCONTO DA NUVEM
+        // ==========================================
+        async function carregarRegraDeDescontoMaximo() {
+            const lblRegra = document.getElementById('regraAtivaStatus');
+            try {
+                let regraAtivaEncontrada = null;
+
+                if (supabaseClient) {
+                    const { data, error } = await supabaseClient
+                        .from('politicas_regras')
+                        .select('*')
+                        .eq('tipo', 'Trava Desconto')
+                        .eq('status', true)
+                        .order('created_at', { ascending: false });
+                    
+                    if (data && data.length > 0) {
+                        regraAtivaEncontrada = data[0];
+                    }
+                }
+
+                // Fallback para cache local se nuvem falhar
+                if (!regraAtivaEncontrada) {
+                    const localRules = JSON.parse(localStorage.getItem('comlub_regras_db') || '[]');
+                    regraAtivaEncontrada = localRules.find(r => r.tipo === 'Trava Desconto' && r.status === true);
+                }
+
+                if (regraAtivaEncontrada && regraAtivaEncontrada.valor_alvo) {
+                    limiteDescontoPermitido = parseFloat(regraAtivaEncontrada.valor_alvo);
+                    lblRegra.innerHTML = `Alçada: Diretoria | Teto Desconto: <b>${limiteDescontoPermitido.toFixed(1)}%</b>`;
+                } else {
+                    lblRegra.innerHTML = `Alçada: Diretoria | Teto Padrão: <b>${limiteDescontoPermitido.toFixed(1)}%</b> (Nenhuma regra cadastrada)`;
+                }
+
+            } catch (error) {
+                console.error("Erro ao ler regra de desconto:", error);
+                lblRegra.innerHTML = `Alçada: Diretoria | Teto Padrão: <b>${limiteDescontoPermitido.toFixed(1)}%</b> (Offline)`;
+            }
+        }
+
+        // ==========================================
+        // FETCH E AGREGAÇÃO DOS DADOS REAIS DO ERP
+        // ==========================================
+        async function fetchPedidosAprovacao() {
+            const syncStatus = document.getElementById('syncStatus');
+            syncStatus.innerHTML = '<i data-lucide="loader-2" class="w-3 h-3 animate-spin text-sky-400"></i> Sincronizando...';
+            lucide.createIcons({root: syncStatus.parentElement});
+            
+            const filial = document.getElementById('filterFilial').value;
+            const meses = document.getElementById('filterPeriodo').value;
+
+            try {
+                const url = `${API_BASE_URL}/analise-comercial/${filial}?meses=${meses}&_t=${new Date().getTime()}`;
+                const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+                if(!res.ok) throw new Error("A API Node.js retornou erro.");
+                
+                const dataRaw = await res.json();
+                let rows = Array.isArray(dataRaw) ? dataRaw : (dataRaw.data || dataRaw.recordset || []);
+                
+                let mapPedidos = new Map();
+                
+                rows.forEach(r => {
+                    const descGeral = extrairNum(r, ['DescGeral', 'desc_geral', 'desconto']);
+                    if (descGeral <= 0) return; 
+
+                    const numPedido = extrairStr(r, ['NumPedido', 'num_pedido', 'pedido', 'c5_num']);
+                    if(!numPedido) return;
+
+                    if(!mapPedidos.has(numPedido)) {
+                        mapPedidos.set(numPedido, {
+                            pedido: numPedido,
+                            emissao: extrairStr(r, ['Emissao', 'emissao', 'c5_emissao', 'data']),
+                            cliente: extrairStr(r, ['Cliente', 'cliente', 'nome']),
+                            vendedor: extrairStr(r, ['Vendedor', 'vendedor', 'vend']),
+                            condPgto: extrairStr(r, ['CondPagto', 'CondPagtoCod', 'cond', 'cond_pgto']),
+                            tabela: extrairStr(r, ['TabelaERP', 'tabela', 'tab']),
+                            valBase: 0,
+                            valProposto: 0,
+                            itens: []
+                        });
+                    }
+                    
+                    const pedObj = mapPedidos.get(numPedido);
+                    const vTabelaBase = extrairNum(r, ['ValorTabelaBase', 'valortabela', 'valbase']);
+                    const vVendaReal = extrairNum(r, ['Valor', 'valor', 'val', 'valvenda']);
+                    
+                    pedObj.valBase += vTabelaBase;
+                    pedObj.valProposto += vVendaReal;
+
+                    pedObj.itens.push({
+                        sku: extrairStr(r, ['CodProduto', 'codigo', 'produto']),
+                        descricao: extrairStr(r, ['Produto', 'desc', 'descricao']),
+                        qtd: extrairNum(r, ['QtdItens', 'qtd', 'quantidade']),
+                        prcTabela: vTabelaBase,
+                        prcVenda: vVendaReal,
+                        descPerc: vTabelaBase > 0 ? ((vTabelaBase - vVendaReal) / vTabelaBase) * 100 : 0
+                    });
+                });
+
+                pedidosMapeados = Array.from(mapPedidos.values()).map(p => {
+                    p.descMedio = p.valBase > 0 ? ((p.valBase - p.valProposto) / p.valBase) * 100 : 0;
+                    
+                    // APLICAÇÃO DA REGRA DE NEGÓCIO LIDA DO SUPABASE/JSON
+                    p.regraViolada = p.descMedio > limiteDescontoPermitido ? `Fora da Alçada (> ${limiteDescontoPermitido}%)` : `Desconto Padrão (≤ ${limiteDescontoPermitido}%)`;
+                    
+                    return p;
+                });
+
+                syncStatus.innerHTML = '<span class="text-emerald-500 flex items-center gap-1.5"><i data-lucide="check-circle" class="w-3 h-3"></i> Tabela DA1 Lida</span>';
+
+            } catch (err) {
+                console.error("Erro na Consulta Comercial:", err);
+                
+                syncStatus.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-rose-500 flex items-center gap-1.5"><i data-lucide="alert-triangle" class="w-3 h-3"></i> API Offline</span>
+                        <button onclick="fetchPedidosAprovacao()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-2 py-1 rounded border border-rose-500/30 flex items-center gap-1 transition-colors text-[10px]">
+                            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Tentar Novamente
+                        </button>
+                    </div>
+                `;
+                pedidosMapeados = []; 
+            } finally {
+                lucide.createIcons({root: syncStatus.parentElement});
+                aplicarFiltrosFront();
+            }
+        }
+
+        // ==========================================
+        // FILTRAGEM FRONT-END E RENDERIZAÇÃO
+        // ==========================================
+        function aplicarFiltrosFront() {
+            const risco = document.getElementById('filterRisco').value;
+            const busca = document.getElementById('filterBusca').value.toLowerCase().trim();
+
+            filteredPedidos = pedidosMapeados.filter(p => {
+                if(risco === 'ALTO' && p.descMedio <= limiteDescontoPermitido) return false;
+                if(risco === 'MEDIO' && p.descMedio > limiteDescontoPermitido) return false;
+
+                if(busca) {
+                    const str = `${p.pedido} ${p.cliente} ${p.vendedor}`.toLowerCase();
+                    if(!str.includes(busca)) return false;
+                }
+                return true;
+            });
+
+            filteredPedidos.sort((a, b) => b.descMedio - a.descMedio);
+
+            renderKPIs();
+            renderTabela();
+        }
+
+        function renderKPIs() {
+            const qtd = filteredPedidos.length;
+            let sumBase = 0;
+            let sumVenda = 0;
+
+            filteredPedidos.forEach(p => {
+                sumBase += p.valBase;
+                sumVenda += p.valProposto;
+            });
+
+            const erosaoValor = sumBase - sumVenda;
+            const erosaoPerc = sumBase > 0 ? (erosaoValor / sumBase) * 100 : 0;
+
+            document.getElementById('kpiQtd').innerText = qtd;
+            document.getElementById('kpiVenda').innerText = formatMoney(sumVenda);
+            document.getElementById('kpiBase').innerText = formatMoney(sumBase);
+            document.getElementById('kpiErosaoValor').innerText = formatMoney(erosaoValor);
+            document.getElementById('kpiErosaoPerc').innerText = erosaoPerc.toFixed(1) + '%';
+        }
+
+        function renderTabela() {
+            const tbody = document.getElementById('tbodyPedidos');
+            let html = '';
+
+            if(filteredPedidos.length === 0) {
+                html = `<tr><td colspan="11" class="text-center py-20 text-slate-500 font-bold tracking-widest uppercase text-[10px]"><i data-lucide="check-square" class="w-8 h-8 mx-auto mb-3 opacity-30 text-emerald-400"></i>A Fila de Aprovação Comercial está vazia.</td></tr>`;
+            } else {
+                filteredPedidos.forEach(p => {
+                    
+                    let dataFormatada = p.emissao;
+                    if(p.emissao.length === 8 && !p.emissao.includes('/')) {
+                        dataFormatada = `${p.emissao.substring(6,8)}/${p.emissao.substring(4,6)}/${p.emissao.substring(0,4)}`;
+                    }
+
+                    const badgeClass = p.descMedio > limiteDescontoPermitido ? 'badge-rose' : 'badge-amber';
+                    
+                    html += `
+                    <tr>
+                        <td class="font-bold text-sky-400 tabular-nums">${p.pedido}</td>
+                        <td class="text-slate-400 tabular-nums font-mono">${dataFormatada}</td>
+                        <td>
+                            <div class="font-bold text-slate-200 truncate max-w-[200px]" title="${p.cliente}">${p.cliente}</div>
+                            <div class="mt-1"><span class="badge ${badgeClass} truncate max-w-[250px] inline-block" title="${p.regraViolada}">${p.regraViolada}</span></div>
+                        </td>
+                        <td class="text-slate-400 truncate max-w-[150px] font-bold">${p.vendedor}</td>
+                        <td class="text-center text-slate-300 font-mono text-[10px]">${p.condPgto}</td>
+                        <td class="text-center text-slate-500 text-[10px] font-bold border border-[#334155] rounded bg-[#1e293b]">${p.tabela || '--'}</td>
+                        <td class="text-right text-slate-400 tabular-nums line-through decoration-rose-500/50">${formatMoney(p.valBase)}</td>
+                        <td class="text-right font-black text-emerald-400 tabular-nums">${formatMoney(p.valProposto)}</td>
+                        <td class="text-center font-black text-rose-400 tabular-nums text-sm">${p.descMedio.toFixed(1)}%</td>
+                        <td class="text-center">
+                            <button onclick="abrirModalItens('${p.pedido}')" class="bg-[#1e293b] hover:bg-[#334155] border border-[#334155] text-sky-400 px-3 py-1.5 rounded text-[9px] font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1">
+                                <i data-lucide="search" class="w-3 h-3"></i> Itens
+                            </button>
+                        </td>
+                        <td class="text-center">
+                            <div class="flex gap-2 justify-center">
+                                <button onclick="acaoRapida('${p.pedido}', 'aprovar')" class="w-7 h-7 flex items-center justify-center rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-colors" title="Aprovar e Liberar Pedido">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="acaoRapida('${p.pedido}', 'rejeitar')" class="w-7 h-7 flex items-center justify-center rounded bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-colors" title="Manter Retido / Rejeitar">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    `;
+                });
+            }
+
+            tbody.innerHTML = html;
+            lucide.createIcons({ root: tbody });
+        }
+
+        // ==========================================
+        // DRILL-DOWN MODAL E AÇÕES
+        // ==========================================
+        function abrirModalItens(numPedido) {
+            const pedido = pedidosMapeados.find(p => p.pedido === numPedido);
+            if(!pedido) return;
+
+            pedidoSelecionadoParaAcao = numPedido;
+            document.getElementById('modalTitle').innerText = `Pedido de Venda: ${pedido.pedido}`;
+            document.getElementById('modalSubtitle').innerText = `Cliente: ${pedido.cliente} | Consultor: ${pedido.vendedor}`;
+
+            const tbody = document.getElementById('tbodyItensModal');
+            let html = '';
+
+            pedido.itens.forEach(it => {
+                const itemBadgeClass = it.descPerc > limiteDescontoPermitido ? 'text-rose-400 font-bold' : 'text-amber-400 font-bold';
+                
+                html += `
+                <tr>
+                    <td class="text-slate-400 font-mono text-[10px]">${it.sku}</td>
+                    <td class="font-semibold text-slate-200">${it.descricao}</td>
+                    <td class="text-center text-slate-300 tabular-nums">${it.qtd}</td>
+                    <td class="text-right text-slate-500 tabular-nums line-through decoration-rose-500/30">${formatMoney(it.prcTabela)}</td>
+                    <td class="text-right font-semibold text-sky-400 tabular-nums">${formatMoney(it.prcVenda)}</td>
+                    <td class="text-center ${itemBadgeClass} tabular-nums">${it.descPerc.toFixed(1)}% OFF</td>
+                </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('modalItens').classList.add('active');
+        }
+
+        function fecharModalItens() {
+            document.getElementById('modalItens').classList.remove('active');
+            pedidoSelecionadoParaAcao = null;
+        }
+
+        function acaoRapida(numPedido, acao) {
+            pedidosMapeados = pedidosMapeados.filter(p => p.pedido !== numPedido);
+            aplicarFiltrosFront();
+        }
+
+        function aprovarPedidoAtual() {
+            if(pedidoSelecionadoParaAcao) {
+                acaoRapida(pedidoSelecionadoParaAcao, 'aprovar');
+                fecharModalItens();
+            }
+        }
+
+        function rejeitarPedidoAtual() {
+            if(pedidoSelecionadoParaAcao) {
+                acaoRapida(pedidoSelecionadoParaAcao, 'rejeitar');
+                fecharModalItens();
+            }
+        }
+
+    </script>
+</body>
+</html>
