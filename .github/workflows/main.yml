@@ -1,29 +1,26 @@
 name: Executar Script Node.js
 
-# Define quando o script será acionado
 on:
   push:
-    branches: [ "main" ] # Executa ao enviar código para a branch main
-  workflow_dispatch:      # Adiciona um botão para rodar manualmente pela interface
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   run-node:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Baixa o código do seu repositório para a máquina virtual
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      # 2. Configura a versão do Node.js
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 3. Instala dependências (descomente a linha abaixo se usar package.json)
-      # - run: npm ci
+      # PASSO ADICIONADO: Instala o dotenv (e outras dependências necessárias)
+      - name: Instalar dependências
+        run: npm install dotenv
 
-      # 4. Executa o seu arquivo JavaScript
       - name: Executar script JS
         run: node api_comlub.js
