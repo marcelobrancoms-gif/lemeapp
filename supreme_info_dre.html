@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supreme Info DRE - Comlub ERP</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        comlub: { blue: '#003865', yellow: '#FFCB05', slate: '#0f172a' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f8fafc; overflow: hidden; font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .btn-solid { background-color: #003865; color: #ffffff; border: 1px solid #00284a; transition: all 0.15s ease; border-radius: 4px; }
+        .btn-solid:hover { background-color: #002b4d; }
+        .btn-outline { background-color: #ffffff; border: 1px solid #cbd5e1; color: #475569; transition: all 0.15s ease; border-radius: 4px; }
+        .btn-outline:hover { background-color: #f8fafc; border-color: #94a3b8; color: #1e293b; }
+
+        /* Tabela DRE Hierárquica */
+        .dre-table { border-collapse: collapse; width: 100%; }
+        .dre-table th { background-color: #ffffff; border-bottom: 2px solid #e2e8f0; font-weight: 800; color: #64748b; padding: 12px 16px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; text-align: left; position: sticky; top: 0; z-index: 10; }
+        .dre-table td { padding: 10px 16px; font-size: 12px; border-bottom: 1px solid #f1f5f9; transition: background-color 0.2s; }
+        
+        .lvl-parent { font-weight: 800; color: #1e293b; cursor: pointer; user-select: none; }
+        .lvl-parent:hover td { background-color: #f8fafc; }
+        .lvl-child { background-color: #f8fafc; display: none; }
+        .lvl-child td:first-child { padding-left: 40px; position: relative; }
+        
+        .lvl-child td:first-child::before { content: ''; position: absolute; left: 22px; top: 0; bottom: 0; width: 1px; background-color: #cbd5e1; }
+        .lvl-child td:first-child::after { content: ''; position: absolute; left: 22px; top: 50%; width: 10px; height: 1px; background-color: #cbd5e1; }
+        .lvl-child.is-last-child td:first-child::before { bottom: 50%; }
+
+        .lvl-child td { font-size: 11px; color: #64748b; font-weight: 500; }
+        .lvl-child:hover td { background-color: #f1f5f9; }
+
+        .lvl-total { background-color: #f1f5f9; font-weight: 900; color: #003865; }
+        .lvl-total td { border-bottom: 2px solid #e2e8f0; }
+
+        .val-positive { color: #059669; }
+        .val-negative { color: #dc2626; }
+        
+        .loader-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Cards Insights */
+        .insight-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); transition: all 0.2s; border-left: 4px solid transparent; }
+        .insight-card:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transform: translateY(-2px); }
+        .insight-critical { border-left-color: #dc2626; }
+        .insight-warning { border-left-color: #f59e0b; }
+        .insight-success { border-left-color: #059669; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col font-sans relative antialiased">
+
+    <!-- OVERLAY DE CARREGAMENTO -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex flex-col items-center justify-center hidden">
+        <div class="bg-white px-8 py-6 rounded shadow-xl flex items-center gap-4 min-w-[320px] border border-slate-200">
+            <i data-lucide="loader-2" class="w-6 h-6 text-comlub-blue loader-spin"></i>
+            <div>
+                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">A Compilar Dados Financeiros</h3>
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">Calculando matriz de resultados (P&L)...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CABEÇALHO -->
+    <header class="bg-[#0f172a] border-b border-slate-800 sticky top-0 z-40 px-6 py-3 flex items-center justify-between shrink-0 shadow-md">
+        <div class="flex items-center gap-4">
+            <div class="flex flex-col items-end w-fit select-none">
+                <div class="flex items-baseline" style="font-family: 'Inter', sans-serif; letter-spacing: -0.05em; line-height: 1;">
+                    <span class="text-white font-black text-xl">c</span>
+                    <span class="text-white font-black text-xl relative">
+                        o
+                        <svg class="absolute w-1.5 h-1.5 text-comlub-yellow" style="top: 45%; left: 50%; transform: translate(-50%, -50%);" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                    </span>
+                    <span class="text-white font-black text-xl pr-0.5">m</span>
+                    <span class="text-comlub-yellow font-black text-xl">lub</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 border-l border-slate-700 pl-4 ml-1">
+                <div class="bg-white/10 text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <i data-lucide="cpu" class="w-3 h-3 text-comlub-yellow"></i> Supreme Info
+                </div>
+                <h1 class="text-sm font-bold text-slate-200 uppercase tracking-wider hidden sm:block">Demonstração de Resultados (D.R.E.)</h1>
+            </div>
+        </div>
+        <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-white transition-all p-1.5 rounded hover:bg-slate-800" title="Fechar Módulo">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <!-- BARRA DE SELEÇÃO E CONTROLES -->
+    <div class="bg-white border-b border-slate-200 px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 relative z-30">
+        
+        <div class="flex items-center gap-3 w-full sm:w-auto bg-slate-50 border border-slate-200 p-1.5 rounded-md">
+            <i data-lucide="calendar" class="w-4 h-4 text-slate-400 ml-2"></i>
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Período Fiscal:</span>
+            
+            <select id="selectMes" class="bg-white border border-slate-300 rounded px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-comlub-blue shadow-sm cursor-pointer">
+                <option value="1">Janeiro</option>
+                <option value="2">Fevereiro</option>
+                <option value="3">Março</option>
+                <option value="4">Abril</option>
+                <option value="5" selected>Maio</option>
+                <option value="6">Junho</option>
+                <option value="7">Julho</option>
+                <option value="8">Agosto</option>
+                <option value="9">Setembro</option>
+                <option value="10">Outubro</option>
+                <option value="11">Novembro</option>
+                <option value="12">Dezembro</option>
+            </select>
+            
+            <select id="selectAno" class="bg-white border border-slate-300 rounded px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-comlub-blue shadow-sm cursor-pointer">
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026</option>
+            </select>
+
+            <button onclick="gerarDRE()" class="bg-comlub-blue hover:bg-blue-900 text-white px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest shadow-sm rounded transition-colors ml-1 flex items-center gap-1.5">
+                <i data-lucide="play" class="w-3 h-3"></i> Processar
+            </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button onclick="expandirTodos()" class="text-[10px] font-bold text-slate-500 hover:text-comlub-blue uppercase tracking-widest px-2 py-1 transition-colors">Expandir Tudo</button>
+            <span class="text-slate-300">|</span>
+            <button onclick="recolherTodos()" class="text-[10px] font-bold text-slate-500 hover:text-comlub-blue uppercase tracking-widest px-2 py-1 transition-colors">Recolher Tudo</button>
+            <div class="w-px h-4 bg-slate-300 mx-2"></div>
+            <button onclick="window.print()" class="btn-outline px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide shadow-sm flex items-center gap-1.5 rounded">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i> Imprimir DRE
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 overflow-hidden flex flex-col relative w-full bg-slate-50">
+        
+        <div class="flex-1 flex flex-col xl:flex-row overflow-hidden max-w-[1600px] mx-auto w-full p-4 lg:p-6 gap-6">
+            
+            <!-- ESQUERDA: DEMONSTRATIVO DE RESULTADO (DRE DRILLDOWN) -->
+            <div class="w-full xl:w-[55%] flex flex-col overflow-hidden bg-white border border-slate-200 rounded-lg shadow-sm">
+                <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center shrink-0">
+                    <div>
+                        <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Estrutura D.R.E.</h2>
+                        <p class="text-[10px] text-slate-500 font-semibold uppercase mt-0.5">Visão Analítica e Sintética - <span id="lblPeriodoDRE" class="text-comlub-blue font-bold">Maio/2026</span></p>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto relative">
+                    <table class="dre-table w-full">
+                        <thead>
+                            <tr>
+                                <th class="w-10"></th>
+                                <th class="w-24">Conta</th>
+                                <th>Descrição / Categoria</th>
+                                <th class="text-right w-36">Mês Atual (R$)</th>
+                                <th class="text-right w-20">AV (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDRE">
+                            <!-- Injetado via Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- DIREITA: DASHBOARD E SUPREME INSIGHTS -->
+            <div class="w-full xl:w-[45%] flex flex-col overflow-y-auto gap-6 pr-2">
+                
+                <!-- KPIs Financeiros (Clean) -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 xl:gap-4 shrink-0">
+                    <div class="bg-white border border-slate-200 p-3 xl:p-4 rounded-lg shadow-sm min-w-0">
+                        <span class="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 truncate" title="Receita Líquida">Receita Líquida</span>
+                        <h3 id="kpiRecLiq" class="text-base xl:text-lg font-black text-slate-800 tabular-nums truncate">R$ 0,00</h3>
+                    </div>
+                    <div class="bg-white border border-slate-200 p-3 xl:p-4 rounded-lg shadow-sm min-w-0">
+                        <span class="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 truncate" title="Margem de Contribuição">Margem Bruta (MC)</span>
+                        <h3 id="kpiMargemCont" class="text-base xl:text-lg font-black text-comlub-blue tabular-nums truncate">0.0%</h3>
+                    </div>
+                    <div class="bg-white border border-slate-200 p-3 xl:p-4 rounded-lg shadow-sm min-w-0">
+                        <span class="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 truncate" title="Margem EBITDA">Margem EBITDA</span>
+                        <h3 id="kpiEbitda" class="text-base xl:text-lg font-black text-slate-800 tabular-nums truncate">0.0%</h3>
+                    </div>
+                    <div class="bg-white border border-slate-200 p-3 xl:p-4 rounded-lg shadow-sm min-w-0">
+                        <span class="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 truncate" title="Margem Líquida">Margem Líquida</span>
+                        <h3 id="kpiLucro" class="text-base xl:text-lg font-black tabular-nums truncate">0.0%</h3>
+                    </div>
+                </div>
+
+                <!-- Gráfico Resumo -->
+                <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm shrink-0 flex flex-col md:flex-row items-center gap-6">
+                    <div class="relative w-full md:w-1/2 h-40">
+                        <canvas id="chartDRE"></canvas>
+                    </div>
+                    <div class="w-full md:w-1/2 flex flex-col justify-center">
+                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2">Indicadores Estratégicos</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-1">
+                                    <span class="text-slate-500">Ponto de Equilíbrio (Break-Even)</span>
+                                    <span class="text-slate-800" id="lblBreakEven">R$ 0,00</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-1.5"><div id="barBreakEven" class="bg-blue-500 h-1.5 rounded-full" style="width: 0%"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-1">
+                                    <span class="text-slate-500">Índice de Custo Fixo (SG&A)</span>
+                                    <span class="text-rose-600" id="lblOpexRatio">0.0%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-1.5"><div id="barOpexRatio" class="bg-rose-500 h-1.5 rounded-full" style="width: 0%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Supreme Insights Gerenciais -->
+                <div class="bg-[#0f172a] border border-slate-800 rounded-lg flex flex-col flex-1 shadow-xl overflow-hidden min-h-[350px]">
+                    <div class="px-5 py-4 border-b border-slate-800 bg-[#0b1121] flex items-center justify-between shrink-0">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="brain-circuit" class="w-5 h-5 text-comlub-yellow"></i>
+                            <h3 class="text-xs font-black text-white uppercase tracking-widest">Painel Consultivo CFO (IA)</h3>
+                        </div>
+                        <span class="text-[8px] font-bold text-slate-400 border border-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">Análise Preditiva</span>
+                    </div>
+                    <div class="p-5 overflow-y-auto space-y-4 bg-[#0f172a]" id="notasContainer">
+                        <div class="text-center text-slate-500 text-xs font-bold py-12 uppercase tracking-widest animate-pulse">
+                            <i data-lucide="radar" class="w-8 h-8 mx-auto mb-3 opacity-50"></i>
+                            Aguardando processamento contábil...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let chartInstancia = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            gerarDRE(); 
+        });
+
+        const formatCurrency = (val) => {
+            let n = typeof val === 'number' ? val : parseFloat(val);
+            if (isNaN(n)) return 'R$ 0,00';
+            const formatted = Math.abs(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            return n < 0 ? `(${formatted})` : formatted;
+        };
+
+        const formatAV = (val, recLiq) => {
+            if (!recLiq || recLiq === 0 || !val || val === 0) return '0.0%';
+            const perc = (val / recLiq) * 100;
+            return `${Math.abs(perc).toFixed(1)}%`;
+        };
+
+        function toggleGroup(groupId, iconElement) {
+            const children = document.querySelectorAll(`.${groupId}`);
+            if (children.length === 0) return;
+            
+            let isExpanding = children[0].style.display === 'none' || children[0].style.display === '';
+            
+            children.forEach(child => {
+                child.style.display = isExpanding ? 'table-row' : 'none';
+            });
+
+            if (iconElement) {
+                if (isExpanding) {
+                    iconElement.setAttribute('data-lucide', 'chevron-down');
+                } else {
+                    iconElement.setAttribute('data-lucide', 'chevron-right');
+                }
+                lucide.createIcons({ root: iconElement.parentElement });
+            }
+        }
+
+        function expandirTodos() {
+            document.querySelectorAll('.lvl-child').forEach(el => el.style.display = 'table-row');
+            document.querySelectorAll('.lvl-parent i').forEach(icon => {
+                icon.setAttribute('data-lucide', 'chevron-down');
+                lucide.createIcons({ root: icon.parentElement });
+            });
+        }
+
+        function recolherTodos() {
+            document.querySelectorAll('.lvl-child').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.lvl-parent i').forEach(icon => {
+                icon.setAttribute('data-lucide', 'chevron-right');
+                lucide.createIcons({ root: icon.parentElement });
+            });
+        }
+
+        // ==========================================
+        // MOCK GERATOR: BALANÇO FINANCEIRO DINÂMICO
+        // ==========================================
+        function gerarMockArvoreDRE(mes, ano) {
+            const semente = parseInt(mes) * parseInt(ano);
+            const rdm = (variacao) => (((semente * Math.random()) % 100) / 100) * variacao; 
+
+            // Base de Receita Flutuante
+            const recBruta = 1800000 + rdm(700000);
+            const rbLubrificantes = recBruta * 0.70;
+            const rbFiltros = recBruta * 0.20;
+            const rbAditivos = recBruta * 0.10;
+            
+            const impostos = recBruta * -(0.15 + rdm(0.03));
+            const devolucoes = recBruta * -(0.01 + rdm(0.02));
+            const dedutivelTotal = impostos + devolucoes;
+            const recLiquida = recBruta + dedutivelTotal;
+
+            // CMV Varia de forma perigosa (de 65% a 85%) dependendo do mês (meses de crise 2 e 8)
+            let fatorCusto = 0.65 + rdm(0.12);
+            if (mes === '2' || mes === '8') fatorCusto = 0.82; 
+            const cmvTotal = recLiquida * -fatorCusto;
+
+            const cmvLubrificantes = cmvTotal * 0.75;
+            const cmvFiltros = cmvTotal * 0.20;
+            const cmvAditivos = cmvTotal * 0.05;
+
+            const lucroBruto = recLiquida + cmvTotal;
+
+            // Despesas
+            const despVendas = recLiquida * -(0.05 + rdm(0.02));
+            let despAdmin = recLiquida * -(0.08 + rdm(0.03));
+            // Mês 4 tem SG&A estourado artificialmente
+            if(mes === '4') despAdmin = recLiquida * -0.18; 
+
+            const opexTotal = despVendas + despAdmin;
+            const ebitda = lucroBruto + opexTotal;
+
+            const depreciacao = -15000;
+            const ebit = ebitda + depreciacao;
+
+            // Custo de Capital: Dívida alta em meses ímpares
+            const despFinanceira = (parseInt(mes) % 2 !== 0) ? -(60000 + rdm(30000)) : -(15000 + rdm(10000));
+            const recFinanceira = 5000 + rdm(3000);
+            const resFinanceiro = despFinanceira + recFinanceira;
+
+            const lair = ebit + resFinanceiro;
+
+            const irpjCsll = lair > 0 ? lair * -0.34 : 0;
+            const lucroLiquido = lair + irpjCsll;
+
+            return {
+                recLiquida: recLiquida,
+                dados: [
+                    { id: 'g3', cod: '3', desc: 'RECEITA BRUTA DE VENDAS', val: recBruta, isTotal: false, analiticas: [
+                        { cod: '3.1.1.01', desc: 'Venda de Lubrificantes Industriais', val: rbLubrificantes * 0.6 },
+                        { cod: '3.1.1.02', desc: 'Venda de Lubrificantes Automotivos', val: rbLubrificantes * 0.4 },
+                        { cod: '3.1.1.03', desc: 'Venda de Filtros Automotivos', val: rbFiltros },
+                        { cod: '3.1.1.04', desc: 'Venda de Aditivos e Químicos', val: rbAditivos },
+                        { cod: '3.1.1.05', desc: 'Outras Receitas Operacionais', val: recBruta * 0.05 }
+                    ]},
+                    { id: 'g31', cod: '3.1', desc: '(-) DEDUÇÕES DA RECEITA BRUTA', val: dedutivelTotal, isTotal: false, analiticas: [
+                        { cod: '3.1.2.01', desc: 'ICMS s/ Vendas', val: impostos * 0.6 },
+                        { cod: '3.1.2.02', desc: 'PIS/COFINS s/ Vendas', val: impostos * 0.4 },
+                        { cod: '3.1.2.03', desc: 'Devoluções e Abatimentos Concedidos', val: devolucoes }
+                    ]},
+                    { id: 't4', cod: '4', desc: '(=) RECEITA LÍQUIDA', val: recLiquida, isTotal: true, analiticas: []},
+                    { id: 'g41', cod: '4.1', desc: '(-) CUSTO DAS MERCADORIAS VENDIDAS', val: cmvTotal, isTotal: false, analiticas: [
+                        { cod: '4.1.1.01', desc: 'CMV - Lubrificantes', val: cmvLubrificantes },
+                        { cod: '4.1.1.02', desc: 'CMV - Filtros Automotivos', val: cmvFiltros },
+                        { cod: '4.1.1.03', desc: 'CMV - Aditivos e Químicos', val: cmvAditivos }
+                    ]},
+                    { id: 't5', cod: '5', desc: '(=) LUCRO BRUTO (MARGEM CONTRIBUIÇÃO)', val: lucroBruto, isTotal: true, analiticas: []},
+                    { id: 'g51', cod: '5.1', desc: '(-) DESPESAS COM VENDAS', val: despVendas, isTotal: false, analiticas: [
+                        { cod: '5.1.1.01', desc: 'Comissões sobre Vendas (Representantes)', val: despVendas * 0.4 },
+                        { cod: '5.1.1.02', desc: 'Fretes e Entregas (Logística Própria)', val: despVendas * 0.35 },
+                        { cod: '5.1.1.03', desc: 'Despesas com Marketing e Publicidade', val: despVendas * 0.15 },
+                        { cod: '5.1.1.04', desc: 'Brindes e Bonificações Comerciais', val: despVendas * 0.10 }
+                    ]},
+                    { id: 'g52', cod: '5.2', desc: '(-) DESPESAS ADMINISTRATIVAS (SG&A)', val: despAdmin, isTotal: false, analiticas: [
+                        { cod: '5.2.1.01', desc: 'Ordenados e Encargos (Administrativo)', val: despAdmin * 0.45 },
+                        { cod: '5.2.1.02', desc: 'Ocupação (Aluguel, Água, Energia)', val: despAdmin * 0.25 },
+                        { cod: '5.2.1.03', desc: 'Despesas Tributárias e Taxas Municipais', val: despAdmin * 0.15 },
+                        { cod: '5.2.1.04', desc: 'Honorários Contábeis e Jurídicos', val: despAdmin * 0.10 },
+                        { cod: '5.2.1.05', desc: 'Material de Consumo e Escritório', val: despAdmin * 0.05 }
+                    ]},
+                    { id: 't6', cod: '6', desc: '(=) EBITDA', val: ebitda, isTotal: true, analiticas: []},
+                    { id: 'g61', cod: '6.1', desc: '(-) DEPRECIAÇÃO E AMORTIZAÇÃO', val: depreciacao, isTotal: false, analiticas: [
+                        { cod: '6.1.1.01', desc: 'Depreciação de Frota Logística', val: depreciacao * 0.7 },
+                        { cod: '6.1.1.02', desc: 'Amortização de Equipamentos e Software', val: depreciacao * 0.3 }
+                    ]},
+                    { id: 't62', cod: '6.2', desc: '(=) EBIT (RESULTADO OPERACIONAL)', val: ebit, isTotal: true, analiticas: []},
+                    { id: 'g63', cod: '6.3', desc: '(+/-) RESULTADO FINANCEIRO LÍQUIDO', val: resFinanceiro, isTotal: false, analiticas: [
+                        { cod: '6.3.1.01', desc: 'Receitas Financeiras (Juros Recebidos)', val: recFinanceira },
+                        { cod: '6.3.2.01', desc: 'Despesas Financeiras (Juros Pagos)', val: despFinanceira }
+                    ]},
+                    { id: 't7', cod: '7', desc: '(=) LAIR (RES. ANTES DOS TRIBUTOS)', val: lair, isTotal: true, analiticas: []},
+                    { id: 'g71', cod: '7.1', desc: '(-) IRPJ E CSLL', val: irpjCsll, isTotal: false, analiticas: [
+                        { cod: '7.1.1.01', desc: 'Provisão de IRPJ', val: irpjCsll * 0.7 },
+                        { cod: '7.1.1.02', desc: 'Provisão de CSLL', val: irpjCsll * 0.3 }
+                    ]},
+                    { id: 't8', cod: '8', desc: '(=) RESULTADO LÍQUIDO DO EXERCÍCIO', val: lucroLiquido, isTotal: true, analiticas: []}
+                ],
+                metricas: {
+                    recLiquida: recLiquida,
+                    lucroBruto: lucroBruto,
+                    ebitda: ebitda,
+                    lucroLiquido: lucroLiquido,
+                    cmv: Math.abs(cmvTotal),
+                    opexFixo: Math.abs(despAdmin) + Math.abs(depreciacao),
+                    opexVariavel: Math.abs(despVendas),
+                    resFinanceiro: resFinanceiro
+                }
+            };
+        }
+
+        function gerarDRE() {
+            const btn = document.querySelector('button[onclick="gerarDRE()"]');
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-3 h-3 animate-spin inline-block"></i> Processando...';
+            lucide.createIcons({root: btn.parentElement});
+            
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+
+            const mes = document.getElementById('selectMes').value;
+            const mesNome = document.getElementById('selectMes').options[document.getElementById('selectMes').selectedIndex].text;
+            const ano = document.getElementById('selectAno').value;
+
+            document.getElementById('lblPeriodoDRE').innerText = `${mesNome}/${ano}`;
+
+            setTimeout(() => {
+                const pacote = gerarMockArvoreDRE(mes, ano);
+                renderizarArvoreDRE(pacote);
+                renderizarPainelDireito(pacote.metricas);
+                
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                btn.innerHTML = '<i data-lucide="play" class="w-3 h-3"></i> Processar';
+                lucide.createIcons({root: btn.parentElement});
+            }, 600);
+        }
+
+        function renderizarArvoreDRE(pacote) {
+            const tbody = document.getElementById('tbodyDRE');
+            let html = '';
+            const recLiq = pacote.recLiquida;
+
+            pacote.dados.forEach(linha => {
+                const valClass = linha.val >= 0 ? (linha.isTotal ? 'text-slate-800' : 'text-slate-700') : 'text-rose-600';
+                const av = formatAV(linha.val, recLiq);
+                
+                if (linha.isTotal) {
+                    html += `
+                        <tr class="lvl-total bg-slate-100">
+                            <td></td>
+                            <td class="tabular-nums font-mono">${linha.cod}</td>
+                            <td class="uppercase tracking-widest">${linha.desc}</td>
+                            <td class="text-right tabular-nums ${valClass}">${formatCurrency(linha.val)}</td>
+                            <td class="text-right tabular-nums text-slate-500">${av}</td>
+                        </tr>
+                    `;
+                } else {
+                    html += `
+                        <tr class="lvl-parent hover:bg-slate-50" onclick="toggleGroup('child-${linha.id}', this.querySelector('i'))">
+                            <td class="text-center"><i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 mx-auto transition-transform"></i></td>
+                            <td class="tabular-nums font-mono">${linha.cod}</td>
+                            <td>${linha.desc}</td>
+                            <td class="text-right tabular-nums ${valClass}">${formatCurrency(linha.val)}</td>
+                            <td class="text-right tabular-nums text-slate-500">${av}</td>
+                        </tr>
+                    `;
+                    
+                    linha.analiticas.forEach((filha, index) => {
+                        const childValClass = filha.val >= 0 ? 'text-slate-600' : 'text-rose-500';
+                        const isLastClass = index === linha.analiticas.length - 1 ? 'is-last-child' : '';
+                        
+                        html += `
+                            <tr class="lvl-child child-${linha.id} ${isLastClass}">
+                                <td></td>
+                                <td class="tabular-nums font-mono pl-4">${filha.cod}</td>
+                                <td>${filha.desc}</td>
+                                <td class="text-right tabular-nums ${childValClass}">${formatCurrency(filha.val)}</td>
+                                <td class="text-right tabular-nums text-slate-400">${formatAV(filha.val, recLiq)}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+
+            tbody.innerHTML = html;
+            lucide.createIcons({ root: tbody });
+        }
+
+        // ==========================================
+        // SUPREME INSIGHTS: CONSULTORIA FINANCEIRA CFO
+        // ==========================================
+        function renderizarPainelDireito(m) {
+            // 1. Cálculos de Performance
+            const margemBruta = (m.lucroBruto / m.recLiquida) * 100;
+            const margemEbitda = (m.ebitda / m.recLiquida) * 100;
+            const margemLiquida = (m.lucroLiquido / m.recLiquida) * 100;
+            
+            // Break-Even Point (Ponto de Equilíbrio) -> Custos Fixos / Margem de Contribuição (%)
+            const margemContV = m.recLiquida - m.cmv - m.opexVariavel;
+            const percMargemCont = (margemContV / m.recLiquida) * 100;
+            
+            let breakEven = 0;
+            let percentBreakEven = 0;
+            if (percMargemCont > 0) {
+                breakEven = m.opexFixo / (percMargemCont / 100);
+                percentBreakEven = Math.min((m.recLiquida / breakEven) * 100, 100); 
+            }
+
+            const opexRatio = ((m.opexFixo + m.opexVariavel) / m.recLiquida) * 100;
+            const pesoFinanceiro = m.ebitda > 0 ? (Math.abs(m.resFinanceiro) / m.ebitda) * 100 : 0;
+
+            // 2. Atualização dos Elementos Gráficos
+            document.getElementById('kpiRecLiq').innerText = formatCurrency(m.recLiquida);
+            document.getElementById('kpiMargemCont').innerText = `${margemBruta.toFixed(1)}%`;
+            document.getElementById('kpiEbitda').innerText = `${margemEbitda.toFixed(1)}%`;
+            
+            const elLucro = document.getElementById('kpiLucro');
+            elLucro.innerText = `${margemLiquida.toFixed(1)}%`;
+            elLucro.className = `text-base xl:text-lg font-black tabular-nums truncate ${margemLiquida >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+
+            document.getElementById('lblBreakEven').innerText = formatCurrency(breakEven);
+            document.getElementById('barBreakEven').style.width = `${percentBreakEven}%`;
+            document.getElementById('barBreakEven').className = `h-1.5 rounded-full ${m.recLiquida >= breakEven ? 'bg-emerald-500' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]'}`;
+
+            document.getElementById('lblOpexRatio').innerText = `${opexRatio.toFixed(1)}%`;
+            document.getElementById('barOpexRatio').style.width = `${Math.min(opexRatio, 100)}%`;
+            document.getElementById('barOpexRatio').className = `h-1.5 rounded-full ${opexRatio > 15 ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]' : 'bg-sky-500'}`;
+
+            if (chartInstancia) chartInstancia.destroy();
+            const ctx = document.getElementById('chartDRE').getContext('2d');
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            chartInstancia = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['CMV (Custo Direto)', 'Opex (Despesas Oper.)', 'Lucro Líquido'],
+                    datasets: [{
+                        data: [m.cmv, m.opexFixo + m.opexVariavel, Math.max(m.lucroLiquido, 0)],
+                        backgroundColor: ['#475569', '#f43f5e', '#10b981'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: '#0f172a', padding: 10, cornerRadius: 4, bodyFont: { size: 11 }, callbacks: { label: c => ' R$ ' + (c.raw/1000).toFixed(0) + 'k' } }
+                    }
+                }
+            });
+
+            // 3. MOTOR DE DIAGNÓSTICO E PRESCRIÇÃO CFO
+            let htmlNotas = '';
+
+            const addNota = (tipo, titulo, diagnostico, acao) => {
+                let badgeClass = 'bg-slate-800/50 border border-slate-700';
+                let icon = 'info'; let iconColor = 'text-sky-400'; let borderAcao = 'border-sky-500';
+                
+                if (tipo === 'critical') { badgeClass = 'bg-rose-950/20 border border-rose-900/50'; icon = 'alert-octagon'; iconColor = 'text-rose-500'; borderAcao = 'border-rose-500';}
+                if (tipo === 'warning') { badgeClass = 'bg-amber-950/20 border border-amber-900/50'; icon = 'alert-triangle'; iconColor = 'text-amber-500'; borderAcao = 'border-amber-500';}
+                if (tipo === 'success') { badgeClass = 'bg-emerald-950/20 border border-emerald-900/50'; icon = 'check-circle-2'; iconColor = 'text-emerald-500'; borderAcao = 'border-emerald-500';}
+
+                htmlNotas += `
+                    <div class="${badgeClass} p-4 rounded-lg shadow-sm transition-all hover:bg-slate-800/80">
+                        <h4 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 mb-2.5">
+                            <i data-lucide="${icon}" class="w-4 h-4 ${iconColor}"></i> ${titulo}
+                        </h4>
+                        <p class="text-[11px] text-slate-300 font-medium leading-relaxed mb-3"><b>Diagnóstico:</b> ${diagnostico}</p>
+                        <div class="bg-black/30 border border-slate-800 p-3 rounded-md text-[10px] text-slate-300 font-semibold border-l-2 ${borderAcao}">
+                            <span class="block text-[9px] font-black uppercase tracking-widest mb-1.5 opacity-60">Plano de Ação Sugerido:</span>
+                            ${acao}
+                        </div>
+                    </div>
+                `;
+            };
+
+            // A. Pricing Power e Margem Bruta
+            if (margemBruta < 20) {
+                addNota('critical', 'Crise de Precificação e Custo Direto', 
+                    `A Margem Bruta encontra-se em estado crítico (${margemBruta.toFixed(1)}%). O custo de aquisição da mercadoria (CMV) está a asfixiar a operação antes mesmo da dedução das despesas logísticas. A empresa não possui "pricing power" neste momento.`, 
+                    `Bloquear sistematicamente a concessão de descontos acima de 5% no Motor V8. Acionar a equipa de Suprimentos (SC7) para renegociação imediata de fretes CIF/FOB com as refinarias e focar as vendas exclusivas em produtos R2/R3 (maior valor acrescentado).`
+                );
+            } else if (margemBruta > 28) {
+                addNota('success', 'Eficiência de Pricing Confirmada', 
+                    `A Margem Bruta atingiu sólidos ${margemBruta.toFixed(1)}%. A política de preços de tabela (DA0) aliada ao controlo rigoroso de devoluções gerou um colchão de segurança excelente para a operação.`, 
+                    `Aproveitar a elasticidade da margem para realizar campanhas de *Sell-out* pontuais em Curva A. Investir margem excedente em comodato de equipamentos para amarrar clientes de grande volume a contratos de fidelidade (Take-or-Pay).`
+                );
+            } else {
+                addNota('warning', 'Zona de Alerta de Mark-up', 
+                    `A rentabilidade bruta está em ${margemBruta.toFixed(1)}%, sustentável mas altamente vulnerável a picos inflacionários ou aumentos de tabela por parte do fabricante.`, 
+                    `Rever a política de comissionamento de vendas: pagar maiores comissões não pelo volume global faturado, mas pela venda de Mix (Graxas, Aditivos e Semissintéticos), abandonando a dependência do óleo mineral a granel.`
+                );
+            }
+
+            // B. Alavancagem Operacional (Custo Fixo SG&A)
+            if (opexRatio > 18) {
+                addNota('warning', 'Alavancagem Operacional Negativa', 
+                    `O Custo Fixo (SG&A) consumiu ${opexRatio.toFixed(1)}% das receitas no período. A estrutura administrativa e logística está demasiado pesada (Burn Rate alto) para a escala de faturamento apresentada.`, 
+                    `Aplicar a metodologia de Orçamento Base Zero (OBZ) de imediato. Congelar contratações, aprovações de verbas de marketing B2B (fora de contrato) e rever a viabilidade da frota própria vs. terceirização logística.`
+                );
+            }
+
+            // C. Custo de Capital e Endividamento
+            if (m.resFinanceiro < 0 && pesoFinanceiro > 35) {
+                addNota('critical', 'Asfixia por Custo de Capital', 
+                    `As despesas financeiras "engoliram" ${pesoFinanceiro.toFixed(1)}% de todo o caixa gerado pela operação (EBITDA). A rentabilidade da Distribuidora está a ser transferida para o pagamento do serviço de dívida e juros bancários.`, 
+                    `Encurtar agressivamente o Prazo Médio de Recebimento (SE1). Vetar a condição de pagamento "30/60 Dias" na tabela SE4. Acelerar o processo de cobrança de títulos vencidos antes de ponderar a antecipação de recebíveis (Factoring).`
+                );
+            }
+
+            // D. Break-Even e Geração de Valor
+            if (m.recLiquida < breakEven) {
+                addNota('critical', 'Risco Operacional (Cash Burn)', 
+                    `A operação faturou menos do que o Ponto de Equilíbrio (Apenas ${percentBreakEven.toFixed(1)}% do necessário). Isto traduz-se em "queima de caixa" direta para manter as portas abertas.`, 
+                    `Foco absoluto no volume para diluição de fixos. Exigir da força de vendas o cumprimento rigoroso da meta de litragem diária e interromper todo e qualquer CAPEX (Investimento em imobilizado) não essencial.`
+                );
+            } else if (m.lucroLiquido > 0 && margemLiquida > 6) {
+                addNota('success', 'Geração Forte de Free Cash Flow', 
+                    `Margem Líquida em confortáveis ${margemLiquida.toFixed(1)}%. Após custear toda a operação, impostos e dívida, o negócio continua gerador de caixa.`, 
+                    `Rever a Provisão de Devedores Duvidosos (PDD) para garantir que este lucro é efetivo em contas bancárias. O cenário permite política de distribuição de lucros sustentável ou M&A tático (expansão de área).`
+                );
+            }
+
+            document.getElementById('notasContainer').innerHTML = htmlNotas;
+            lucide.createIcons({ root: document.getElementById('notasContainer') });
+        }
+    </script>
+</body>
+</html>

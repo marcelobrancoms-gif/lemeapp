@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1780021004508,
+    "nome": "REGRA DESC 0%",
+    "status": "Ativa",
+    "vigencia_ini": "",
+    "vigencia_fim": "",
+    "desc_min": "0",
+    "desc_max": "0",
+    "se4_xclasf": "",
+    "se4_val": "",
+    "se4_clasf": "",
+    "se4_descri": "",
+    "sb1_grupo": "",
+    "sb1_tipo": "",
+    "sc6_min": "",
+    "sc6_max": "999999",
+    "sa1_tipo": ""
+  },
+  {
+    "id": 1780019967293,
+    "nome": "REGRA C3 + R1 E DESC ATÉ 40%",
+    "status": "Inativa",
+    "vigencia_ini": "2026-05-01",
+    "vigencia_fim": "2026-05-31",
+    "desc_min": "15",
+    "desc_max": "17",
+    "se4_xclasf_list": [
+      "C2"
+    ],
+    "se4_val": "",
+    "se4_clasf": "",
+    "se4_descri": "",
+    "sb1_grupo": "",
+    "sb1_tipo": "",
+    "sb1_clasic_list": [],
+    "sb1_prod_list": [
+      "31408053",
+      "31013353"
+    ],
+    "sc6_min": "4",
+    "sc6_max": "25",
+    "sa1_tipo": "",
+    "_autoInativada": true
+  }
+]

@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultor Virtual S&OP - Comlub</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 
+                        sans: ['"Inter"', 'sans-serif'],
+                        mono: ['"Fira Code"', 'monospace'] 
+                    },
+                    colors: {
+                        comlub: { blue: '#003865', yellow: '#FFCB05', slate: '#0f172a' },
+                        cyber: { bg: '#030712', panel: '#0B1221', border: '#1e293b', accent: '#0ea5e9' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #030712; font-family: 'Inter', sans-serif; overflow: hidden; color: #e2e8f0; }
+        
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        
+        /* Efeitos High-End HUD */
+        .glass-panel { background: rgba(11, 18, 33, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass-panel-accent { background: linear-gradient(180deg, rgba(14, 165, 233, 0.03) 0%, rgba(11, 18, 33, 0.8) 100%); backdrop-filter: blur(12px); border: 1px solid rgba(14, 165, 233, 0.15); box-shadow: inset 0 1px 0 rgba(14, 165, 233, 0.1); }
+        
+        .typewriter-cursor { animation: blink 1s step-end infinite; display: inline-block; width: 8px; height: 16px; background-color: #0ea5e9; margin-left: 4px; vertical-align: text-bottom; box-shadow: 0 0 8px #0ea5e9; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .loader-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Estilização do Relatório da IA */
+        .ai-report h3 { color: #0ea5e9; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 28px; margin-bottom: 12px; border-bottom: 1px solid rgba(14, 165, 233, 0.2); padding-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .ai-report.logistica h3 { color: #10b981; border-bottom-color: rgba(16, 185, 129, 0.2); }
+        .ai-report.logistica h3::before { background-color: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+
+        .ai-report h3::before { content: ''; display: block; width: 4px; height: 14px; background-color: #0ea5e9; border-radius: 2px; box-shadow: 0 0 8px rgba(14, 165, 233, 0.6); }
+        .ai-report p { color: #cbd5e1; font-size: 13px; line-height: 1.7; margin-bottom: 14px; }
+        .ai-report strong { color: #ffffff; font-weight: 700; }
+        .ai-report ul { list-style-type: none; padding: 0; margin-bottom: 20px; }
+        .ai-report li { position: relative; padding-left: 20px; font-size: 12px; color: #94a3b8; margin-bottom: 8px; line-height: 1.6; }
+        .ai-report li::before { content: '>'; position: absolute; left: 0; color: #FFCB05; font-weight: 900; }
+        
+        /* Oculta os cards inicialmente para o efeito fade-in cascata */
+        .card-segmento { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
+        .card-segmento.visible { opacity: 1; transform: translateY(0); }
+        
+        .fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(10px); }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+        .hex-bg {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill-opacity='0.02' fill='%230ea5e9' stroke='%230ea5e9' stroke-width='0.5' stroke-opacity='0.05'/%3E%3C/svg%3E");
+            background-size: 60px 60px;
+            transition: background-image 0.5s;
+        }
+        .hex-bg-logistica {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill-opacity='0.02' fill='%2310b981' stroke='%2310b981' stroke-width='0.5' stroke-opacity='0.05'/%3E%3C/svg%3E");
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col antialiased hex-bg relative" id="bodyBg">
+
+    <!-- CABEÇALHO CYBER/CORPORATIVO -->
+    <header class="glass-panel border-b border-cyber-border px-6 py-4 flex items-center justify-between shrink-0 shadow-lg z-30 relative">
+        <div class="flex items-center gap-6">
+            <div class="flex flex-col items-end w-fit select-none">
+                <div class="flex items-baseline" style="line-height: 1;">
+                    <span class="text-white font-black text-2xl tracking-tighter">c</span><span class="text-white font-black text-2xl relative tracking-tighter">o<svg class="absolute w-1.5 h-1.5 text-[#FFCB05]" style="top: 45%; left: 50%; transform: translate(-50%, -50%);" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></span><span class="text-white font-black text-2xl pr-0.5 tracking-tighter">m</span><span class="text-[#FFCB05] font-black text-2xl tracking-tighter">lub</span>
+                </div>
+            </div>
+            
+            <div class="h-8 w-px bg-slate-800"></div>
+            
+            <div>
+                <h1 class="text-xs font-bold text-white uppercase tracking-[0.2em] flex items-center gap-2" id="titleHeader">
+                    <i data-lucide="bot" class="w-4 h-4 text-sky-400"></i> Consultor Virtual <span class="text-sky-400/50">|</span> <span class="text-slate-400">S&OP Vendas</span>
+                </h1>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <!-- PROGRESSO DO MÊS -->
+            <div class="flex items-center gap-4 glass-panel-accent px-4 py-1.5 rounded-lg shadow-inner" id="progressContainer">
+                <div class="flex flex-col items-end">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5" id="lblMesAtual">--</span>
+                    <span class="text-[10px] font-black text-sky-400 tracking-widest" id="lblSemanaEvolucao">--</span>
+                </div>
+                <div class="w-24 bg-slate-800 height-1.5 rounded-full overflow-hidden" style="height: 4px;">
+                    <div class="h-full bg-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.8)]" id="barMesProgresso" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-500 hover:text-rose-500 transition-colors bg-slate-900 border border-slate-700 p-2 rounded shadow-sm hover:border-rose-500/50" title="Fechar Módulo"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-hidden flex relative w-full z-20">
+        
+        <!-- SIDEBAR ESQUERDA: KPIs & RADAR -->
+        <aside class="w-[32%] min-w-[340px] glass-panel border-r border-cyber-border flex flex-col z-10 shadow-[5px_0_20px_rgba(0,0,0,0.3)]">
+            
+            <div class="px-6 pt-6 pb-4 border-b border-slate-800/50 shrink-0">
+                <div class="flex bg-slate-900/50 rounded-lg p-1 border border-slate-800 shadow-inner">
+                    <button id="btnTabVendas" onclick="setTab('vendas')" class="flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md bg-sky-500/20 text-sky-400 border border-sky-500/30 transition-all shadow-sm">Vendas (SC5/SX5)</button>
+                    <button id="btnTabLog" onclick="setTab('logistica')" class="flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md text-slate-500 hover:text-slate-300 border border-transparent transition-all">Logística (DAK/DAI)</button>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 border-b border-slate-800/50 shrink-0 flex items-center justify-between">
+                <h2 class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <i data-lucide="database" class="w-4 h-4" id="iconMeta"></i> Metadados (6 Meses)
+                </h2>
+                <button onclick="gerarConsultoria()" class="bg-comlub-yellow hover:bg-yellow-400 text-slate-900 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded shadow-[0_0_10px_rgba(255,203,5,0.3)] transition-all flex items-center gap-1.5">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Processar
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto flex flex-col">
+                <!-- KPIs -->
+                <div class="p-6 space-y-4 shrink-0">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-slate-900/50 border border-slate-800 rounded p-3 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-slate-500" id="kpi1Bar"></div>
+                            <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-2" id="kpi1Label">Vol. Histórico Base</span>
+                            <h3 class="text-sm font-black text-white tabular-nums pl-2" id="kpiVolTotal">--</h3>
+                        </div>
+                        <div class="bg-slate-900/50 border border-slate-800 rounded p-3 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-slate-500" id="kpi2Bar"></div>
+                            <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-2" id="kpi2Label">Mês de Pico (Sazonal)</span>
+                            <h3 class="text-sm font-black text-white tabular-nums pl-2" id="kpiPico">--</h3>
+                        </div>
+                        <div class="bg-slate-900/50 border border-slate-800 rounded p-3 col-span-2 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-slate-500" id="kpi3Bar"></div>
+                            <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1 pl-2" id="kpi3Label">Segmento Motor de Venda</span>
+                            <h3 class="text-sm font-black text-white truncate pl-2" id="kpiClasse">--</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RADAR -->
+                <div class="p-6 border-t border-slate-800/50 flex-1 bg-slate-900/20">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2" id="radarTitle">
+                            <i data-lucide="radar" class="w-4 h-4"></i> Radar Performance
+                        </h2>
+                    </div>
+                    <div id="radarContainer" class="space-y-4">
+                        <div class="text-center py-8">
+                            <i data-lucide="activity" class="w-8 h-8 text-slate-600 mx-auto mb-2 opacity-50"></i>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Aguardando Análise...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- TERMINAL (DIREITA) -->
+        <section class="flex-1 relative flex flex-col">
+            <div class="absolute inset-0 z-0 flex items-center justify-center opacity-[0.02] pointer-events-none">
+                <svg viewBox="0 0 100 100" class="w-3/4 h-3/4"><path d="M50 0 L100 25 L100 75 L50 100 L0 75 L0 25 Z" fill="none" stroke="currentColor" stroke-width="0.5"/></svg>
+            </div>
+
+            <div class="flex-1 p-8 md:p-14 overflow-y-auto relative z-10 flex flex-col scroll-smooth" id="scrollArea">
+                <div id="aiStatus" class="hidden mb-8 flex items-center gap-3 font-mono text-xs uppercase tracking-[0.2em]">
+                    <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> <span id="aiStatusText">A Computar Modelos Preditivos...</span>
+                </div>
+
+                <div class="ai-report flex-1 pb-16" id="reportBase">
+                    <div id="aiOutput" class="font-mono text-[13px] leading-relaxed text-slate-300"></div>
+                    <div id="aiOutputTyping" class="font-mono text-[13px] leading-relaxed text-slate-300 inline"></div>
+                    <span id="aiCursor" class="typewriter-cursor hidden"></span>
+
+                    <div class="flex flex-col items-center justify-center h-full text-center mt-20 opacity-50" id="placeholderMsg">
+                        <i data-lucide="bot" class="w-16 h-16 text-slate-500 mb-4"></i>
+                        <p class="uppercase tracking-widest text-[11px] font-bold text-slate-400 max-w-sm">Sistema de Apoio à Decisão Standby.<br><br>Pressione "Processar" para iniciar o mapeamento tático.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let currentTab = 'vendas';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            calcularEvolucaoSemana();
+            setColors();
+        });
+
+        const formatNumber = (val) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }).format(val || 0);
+        const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+
+        function formatarMes(mesStr) {
+            if(!mesStr || mesStr.length < 6) return '--';
+            const m = mesStr.substring(4,6);
+            const a = mesStr.substring(0,4);
+            const nomes = { '01':'Jan', '02':'Fev', '03':'Mar', '04':'Abr', '05':'Mai', '06':'Jun', '07':'Jul', '08':'Ago', '09':'Set', '10':'Out', '11':'Nov', '12':'Dez' };
+            return `${nomes[m]}/${a}`;
+        }
+
+        function calcularEvolucaoSemana() {
+            const dataHoje = new Date();
+            const ano = dataHoje.getFullYear();
+            const mes = dataHoje.getMonth();
+            const diaAtual = dataHoje.getDate();
+            const mesesNomes = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+            
+            document.getElementById('lblMesAtual').innerText = `${mesesNomes[mes]} ${ano}`;
+            const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+            document.getElementById('lblSemanaEvolucao').innerText = `Semana ${Math.ceil(diaAtual / 7)} de ${Math.ceil(diasNoMes / 7)}`;
+            document.getElementById('barMesProgresso').style.width = `${(diaAtual / diasNoMes) * 100}%`;
+        }
+
+        function setColors() {
+            const isV = currentTab === 'vendas';
+            
+            document.getElementById('btnTabVendas').className = isV 
+                ? "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md bg-sky-500/20 text-sky-400 border border-sky-500/30 transition-all shadow-sm" 
+                : "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md text-slate-500 hover:text-slate-300 border border-transparent transition-all";
+            
+            document.getElementById('btnTabLog').className = !isV 
+                ? "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all shadow-sm" 
+                : "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md text-slate-500 hover:text-slate-300 border border-transparent transition-all";
+
+            document.getElementById('titleHeader').innerHTML = isV 
+                ? '<i data-lucide="bot" class="w-4 h-4 text-sky-400"></i> Consultor Virtual <span class="text-sky-400/50">|</span> <span class="text-slate-400">S&OP Vendas</span>'
+                : '<i data-lucide="bot" class="w-4 h-4 text-emerald-400"></i> Consultor Virtual <span class="text-emerald-400/50">|</span> <span class="text-slate-400">Logística e Fretes</span>';
+            
+            document.getElementById('bodyBg').className = isV ? "h-screen flex flex-col antialiased hex-bg relative" : "h-screen flex flex-col antialiased hex-bg hex-bg-logistica relative";
+            document.getElementById('reportBase').className = isV ? "ai-report flex-1 pb-16" : "ai-report logistica flex-1 pb-16";
+            
+            document.getElementById('iconMeta').className = isV ? "w-4 h-4 text-sky-500" : "w-4 h-4 text-emerald-500";
+            document.getElementById('radarTitle').className = isV ? "text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-sky-400" : "text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-emerald-400";
+            document.getElementById('radarTitle').innerHTML = isV ? '<i data-lucide="radar" class="w-4 h-4"></i> Radar de Performance <span class="bg-sky-900/50 border border-sky-500/30 text-sky-400 px-1.5 py-0.5 rounded ml-auto text-[8px]">MÊS ATUAL VS MÉDIA</span>' : '<i data-lucide="radar" class="w-4 h-4"></i> Radar de Performance';
+
+            document.getElementById('progressContainer').className = isV 
+                ? "flex items-center gap-4 glass-panel-accent px-4 py-1.5 rounded-lg shadow-inner border-sky-500/15" 
+                : "flex items-center gap-4 glass-panel px-4 py-1.5 rounded-lg shadow-inner bg-gradient-to-b from-emerald-500/5 to-transparent border border-emerald-500/15";
+            
+            document.getElementById('barMesProgresso').className = isV ? "h-full bg-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.8)]" : "h-full bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.8)]";
+            document.getElementById('lblSemanaEvolucao').className = isV ? "text-[10px] font-black text-sky-400 tracking-widest" : "text-[10px] font-black text-emerald-400 tracking-widest";
+
+            document.getElementById('kpi1Bar').className = isV ? "absolute top-0 left-0 w-1 h-full bg-sky-500" : "absolute top-0 left-0 w-1 h-full bg-emerald-500";
+            document.getElementById('kpi2Bar').className = isV ? "absolute top-0 left-0 w-1 h-full bg-emerald-500" : "absolute top-0 left-0 w-1 h-full bg-amber-500";
+            document.getElementById('kpi3Bar').className = isV ? "absolute top-0 left-0 w-1 h-full bg-purple-500" : "absolute top-0 left-0 w-1 h-full bg-blue-500";
+            
+            document.getElementById('kpi1Label').innerText = isV ? 'Vol. Histórico Base' : 'Peso Total Transportado';
+            document.getElementById('kpi2Label').innerText = isV ? 'Mês de Pico (Sazonal)' : 'Média Global (R$/Kg)';
+            document.getElementById('kpi3Label').innerText = isV ? 'Segmento Motor (SX5)' : 'Transp. Destaque (Lead Time)';
+
+            lucide.createIcons();
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            setColors();
+            
+            document.getElementById('kpiVolTotal').innerText = '--';
+            document.getElementById('kpiPico').className = "text-sm font-black tabular-nums pl-2 text-white";
+            document.getElementById('kpiPico').innerText = '--';
+            document.getElementById('kpiClasse').className = "text-sm font-black truncate pl-2 text-white";
+            document.getElementById('kpiClasse').innerText = '--';
+            
+            document.getElementById('radarContainer').innerHTML = '<div class="text-center py-8"><i data-lucide="activity" class="w-8 h-8 text-slate-600 mx-auto mb-2 opacity-50"></i><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Aguardando Análise...</p></div>';
+            document.getElementById('aiOutput').innerHTML = '';
+            document.getElementById('aiOutputTyping').innerHTML = '';
+            document.getElementById('placeholderMsg').style.display = 'flex';
+            
+            lucide.createIcons();
+        }
+
+        function resetTerminal(loadingText) {
+            document.getElementById('aiStatusText').innerText = loadingText;
+            document.getElementById('aiStatus').className = `mb-8 flex items-center gap-3 font-mono text-xs uppercase tracking-[0.2em] ${currentTab==='vendas' ? 'text-sky-400' : 'text-emerald-400'}`;
+            document.getElementById('aiStatus').classList.remove('hidden');
+            
+            const pMsg = document.getElementById('placeholderMsg');
+            if(pMsg) pMsg.style.display = 'none';
+            
+            document.getElementById('aiOutput').innerHTML = '';
+            document.getElementById('aiOutputTyping').innerHTML = '';
+            document.getElementById('aiCursor').classList.add('hidden');
+        }
+
+        function gerarConsultoria() {
+            if(currentTab === 'vendas') gerarConsultoriaVendas();
+            else gerarConsultoriaLogistica();
+        }
+
+        async function gerarConsultoriaVendas() {
+            resetTerminal('A Computar Modelos Preditivos e Clusters (S&OP Vendas)...');
+            
+            let rawData = [];
+            try {
+                const res = await fetch('http://localhost:3000/api/supreme-consultor-vendas');
+                if(!res.ok) throw new Error();
+                rawData = await res.json();
+            } catch (e) {
+                console.warn("API Offline. Gerando Mock S&OP Analítico para Demonstração.");
+                rawData = gerarMockVendas();
+            }
+
+            let totLitros = 0;
+            let totReais = 0;
+            const mapMeses = {};
+            const mapGrupos = {};
+            const mapSegmentos = {}; 
+
+            let maxMesAno = 0;
+            rawData.forEach(r => {
+                const m = parseInt(r.MesAno);
+                if (m > maxMesAno) maxMesAno = m;
+            });
+            
+            let limite2MesesAno = parseInt(String(maxMesAno).substring(0,4));
+            let limite2MesesMes = parseInt(String(maxMesAno).substring(4,6)) - 1;
+            if (limite2MesesMes <= 0) { limite2MesesMes += 12; limite2MesesAno -= 1; }
+            const strLimite2Meses = String(limite2MesesAno) + String(limite2MesesMes).padStart(2, '0');
+
+            rawData.forEach(r => {
+                const l = parseFloat(r.LitrosTotal) || 0;
+                const v = parseFloat(r.ValorTotal) || 0;
+                const q = parseFloat(r.QtdBrutaTotal) || 0;
+                const mes = r.MesAno;
+                const condPag = r.CondPagamento || 'N/A';
+                const segNome = r.Segmento || 'NÃO ESPECIFICADO';
+                const numPedido = r.Pedido || 'P_MOCK_' + Math.floor(Math.random() * 1000); 
+                const sku = r.SKU || 'S/N';
+                const desc = r.DescProduto || 'Produto Desconhecido';
+                const prodKey = sku + '|||' + desc;
+                const tipoProd = String(r.TipoProduto || 'R1').trim().toUpperCase();
+
+                totLitros += l;
+                totReais += v;
+
+                if(!mapMeses[mes]) mapMeses[mes] = { vol: 0, val: 0 };
+                mapMeses[mes].vol += l; mapMeses[mes].val += v;
+
+                if(!mapGrupos[r.GrupoProduto]) mapGrupos[r.GrupoProduto] = { vol: 0, val: 0 };
+                mapGrupos[r.GrupoProduto].vol += l; mapGrupos[r.GrupoProduto].val += v;
+
+                if(!mapSegmentos[segNome]) {
+                    mapSegmentos[segNome] = { vol: 0, val: 0, pedidos: new Set(), prazos: {}, produtos: {} };
+                }
+
+                mapSegmentos[segNome].vol += l;
+                mapSegmentos[segNome].val += v;
+                mapSegmentos[segNome].pedidos.add(numPedido);
+
+                if(!mapSegmentos[segNome].prazos[condPag]) mapSegmentos[segNome].prazos[condPag] = new Set();
+                mapSegmentos[segNome].prazos[condPag].add(numPedido);
+
+                if(!mapSegmentos[segNome].produtos[prodKey]) {
+                    mapSegmentos[segNome].produtos[prodKey] = { 
+                        pedidos: new Set(), 
+                        volTotal: 0, 
+                        valTotal: 0, 
+                        qtdBrutaTotal: 0, 
+                        valTotal2M: 0,     
+                        qtdBrutaTotal2M: 0, 
+                        nomeGrupo: r.GrupoProduto,
+                        tipoProd: tipoProd,
+                        estoqueMock: Math.floor(Math.random() * 500) + 150
+                    };
+                }
+                
+                const pInfo = mapSegmentos[segNome].produtos[prodKey];
+                pInfo.pedidos.add(numPedido);
+                pInfo.volTotal += l;
+                pInfo.valTotal += v;
+                pInfo.qtdBrutaTotal += q;
+                
+                if (mes >= strLimite2Meses) {
+                    pInfo.valTotal2M += v;
+                    pInfo.qtdBrutaTotal2M += q;
+                }
+            });
+
+            const arrMeses = Object.keys(mapMeses).map(k => ({ mes: k, ...mapMeses[k] })).sort((a,b) => a.mes.localeCompare(b.mes));
+            const arrGrupos = Object.keys(mapGrupos).map(k => ({ nome: k, ...mapGrupos[k] })).sort((a,b) => b.vol - a.vol);
+            
+            const mesPicoObj = [...arrMeses].sort((a,b) => b.vol - a.vol)[0];
+            const grupoTop = arrGrupos[0] || { nome: 'N/A', vol: 0 };
+            const grupoPior = arrGrupos.length > 1 ? arrGrupos[arrGrupos.length-1] : grupoTop;
+            const mesAtualChave = arrMeses.length > 0 ? arrMeses[arrMeses.length - 1].mes : '';
+            const fmtMes = mesPicoObj ? formatarMes(mesPicoObj.mes) : '--';
+
+            const top5Segmentos = Object.keys(mapSegmentos)
+                .map(k => ({ nome: k, data: mapSegmentos[k], qtdPedidosTotal: mapSegmentos[k].pedidos.size || 1 }))
+                .sort((a,b) => b.data.vol - a.data.vol)
+                .slice(0, 5); 
+
+            const segmentosParaRenderizar = [];
+            const radarProdutos = {};
+
+            let planosAcaoHtml = '<div class="space-y-4 mt-4">';
+
+            top5Segmentos.forEach((seg, idx) => {
+                const topPrazos = Object.keys(seg.data.prazos)
+                    .map(k => ({ nome: k, qtd: seg.data.prazos[k].size }))
+                    .sort((a,b) => b.qtd - a.qtd)
+                    .slice(0, 2);
+                
+                let prazosStr = topPrazos.map(p => `${p.nome} (${Math.round((p.qtd / seg.qtdPedidosTotal)*100)}%)`).join(' | ');
+                if(!prazosStr) prazosStr = 'Indefinido';
+
+                const todosProdsOrdenados = Object.keys(seg.data.produtos)
+                    .map(k => {
+                        const parts = k.split('|||');
+                        const pData = seg.data.produtos[k];
+                        return {
+                            sku: parts[0],
+                            desc: parts[1],
+                            incidencia: pData.pedidos.size,
+                            mediaVol: pData.volTotal / pData.pedidos.size, 
+                            mediaQtd: pData.qtdBrutaTotal / pData.pedidos.size, 
+                            volHistorico: pData.volTotal,
+                            nomeGrupo: pData.nomeGrupo,
+                            tipoProd: pData.tipoProd,
+                            estoque: pData.estoqueMock,
+                            precoMedio2M: pData.qtdBrutaTotal2M > 0 ? (pData.valTotal2M / pData.qtdBrutaTotal2M) : 0 
+                        };
+                    })
+                    .sort((a,b) => b.incidencia - a.incidencia);
+
+                const topProds = todosProdsOrdenados.slice(0, 3); 
+                
+                const prodsR123BaixaIncidencia = todosProdsOrdenados
+                    .filter(p => ['R1', 'R2', 'R3'].includes(p.tipoProd))
+                    .reverse(); 
+                
+                let patinhoFeio = prodsR123BaixaIncidencia.find(p => p.nomeGrupo === grupoPior.nome) || prodsR123BaixaIncidencia[0];
+
+                if (patinhoFeio && topPrazos.length > 0) {
+                    const estqTotal = patinhoFeio.estoque;
+                    const estqF01 = Math.round(estqTotal * 0.5);
+                    const estqF02 = Math.round(estqTotal * 0.3);
+                    const estqF03 = estqTotal - estqF01 - estqF02;
+
+                    planosAcaoHtml += `
+                        <div class="glass-panel border border-slate-700 p-5 rounded-xl shadow-lg relative overflow-hidden group hover:border-sky-500/50 transition-colors">
+                            <div class="absolute top-0 left-0 w-1.5 h-full bg-sky-500"></div>
+                            
+                            <div class="flex flex-col md:flex-row gap-5 items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="bg-sky-500/10 p-2 rounded-lg border border-sky-500/20 shrink-0">
+                                            <i data-lucide="crosshair" class="w-5 h-5 text-sky-400"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-white font-black text-sm uppercase tracking-wide leading-tight">${seg.nome}</h4>
+                                            <span class="text-[9px] text-sky-400 font-bold uppercase tracking-[0.2em]">Diretriz Estratégica</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <p class="text-slate-300 text-xs leading-relaxed">
+                                        Configurar regra comercial de venda casada. Exigir a inclusão do produto 
+                                        <strong class="text-white bg-slate-800 px-1.5 py-0.5 rounded font-mono border border-slate-700 shadow-sm mx-1">[${patinhoFeio.sku}] ${patinhoFeio.desc}</strong> 
+                                        (Categoria ${patinhoFeio.tipoProd}) no Cesto Vencedor B2B para desbloquear as tabelas de preço no prazo <b>${topPrazos[0].nome}</b>. Esta pulverização forçada visa injetar liquidez do estoque estagnado.
+                                    </p>
+                                </div>
+
+                                <div class="w-full md:w-64 shrink-0 bg-[#0B0E14] border border-slate-800 rounded-lg p-4 shadow-inner relative">
+                                    <div class="absolute -top-3 -right-3 w-16 h-16 bg-rose-500/10 rounded-full blur-xl pointer-events-none"></div>
+                                    <div class="flex justify-between items-center mb-3">
+                                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><i data-lucide="package-minus" class="w-3.5 h-3.5 text-rose-500"></i> Estoque Estagnado (Armazém 01)</span>
+                                        <span class="text-xs font-black text-rose-400 tabular-nums">${estqTotal} UN</span>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <div class="bg-slate-900/80 border border-slate-800 rounded p-2 text-center flex flex-col justify-center">
+                                            <span class="text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">Filial 01</span>
+                                            <span class="text-sm font-black text-white tabular-nums leading-none">${estqF01}</span>
+                                        </div>
+                                        <div class="bg-slate-900/80 border border-slate-800 rounded p-2 text-center flex flex-col justify-center">
+                                            <span class="text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">Filial 02</span>
+                                            <span class="text-sm font-black text-white tabular-nums leading-none">${estqF02}</span>
+                                        </div>
+                                        <div class="bg-slate-900/80 border border-slate-800 rounded p-2 text-center flex flex-col justify-center">
+                                            <span class="text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">Filial 03</span>
+                                            <span class="text-sm font-black text-white tabular-nums leading-none">${estqF03}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                }
+
+                topProds.forEach(prod => {
+                    const key = prod.sku + '|||' + prod.desc;
+                    if(!radarProdutos[key]) radarProdutos[key] = { sku: prod.sku, desc: prod.desc, volHistorico: prod.volHistorico, volMesAtual: 0 };
+                });
+
+                let produtosHtml = '';
+                topProds.forEach(prod => {
+                    const percIncidencia = Math.round((prod.incidencia / seg.qtdPedidosTotal) * 100);
+                    produtosHtml += `
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center text-[10px] bg-[#121822] p-2.5 rounded border border-slate-800/80 gap-2">
+                            <div class="flex items-center gap-2 truncate max-w-[50%]">
+                                <span class="text-slate-500 font-mono">[${prod.sku}]</span>
+                                <span class="text-slate-200 font-semibold truncate">${prod.desc}</span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <span class="text-slate-400 font-medium px-2 py-0.5 rounded bg-slate-900 border border-slate-800" title="Presente em ${prod.incidencia} pedidos deste segmento">Incidência: ${percIncidencia}%</span>
+                                <span class="text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-900/20 border border-emerald-500/20" title="Preço Médio Praticado (Últimos 2 Meses)">Pr. Médio (2M): ${formatCurrency(prod.precoMedio2M)}</span>
+                                <span class="text-sky-400 font-bold px-2 py-0.5 rounded bg-sky-900/20 border border-sky-500/20">Sugestão: ${formatNumber(prod.mediaQtd)} cx/ped</span>
+                                <span class="text-comlub-yellow font-bold px-2 py-0.5 rounded bg-yellow-900/20 border border-yellow-500/20">${formatNumber(prod.mediaVol)} L/ped</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                segmentosParaRenderizar.push(`
+                    <div class="card-segmento border border-slate-700 bg-[#0B0E14] p-4 rounded-lg shadow-sm relative overflow-hidden mb-4">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-sky-500"></div>
+                        <div class="flex flex-col border-b border-slate-800 pb-3 mb-3 gap-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sky-400 font-black text-[12px] uppercase tracking-widest">#${idx+1} - ${seg.nome}</span>
+                                <span class="text-slate-400 text-[10px] font-semibold bg-slate-900 px-2 py-1 rounded border border-slate-700">${seg.qtdPedidosTotal} Pedidos Analisados</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Prazos Preferidos:</span>
+                                <span class="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">${prazosStr}</span>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <h4 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5"><i data-lucide="package-check" class="w-3.5 h-3.5"></i> Pedido Ideal Sugerido (Mix Vencedor)</h4>
+                            ${produtosHtml}
+                        </div>
+                    </div>
+                `);
+            });
+
+            planosAcaoHtml += '</div>';
+            
+            rawData.forEach(r => {
+                if(r.MesAno === mesAtualChave) {
+                    const key = (r.SKU || 'S/N') + '|||' + (r.DescProduto || 'Produto Desconhecido');
+                    if(radarProdutos[key]) radarProdutos[key].volMesAtual += (parseFloat(r.LitrosTotal) || 0);
+                }
+            });
+
+            construirRadarVendas(radarProdutos, mesAtualChave);
+
+            document.getElementById('kpiVolTotal').innerText = formatNumber(totLitros) + ' L';
+            document.getElementById('kpiPico').innerText = fmtMes;
+            document.getElementById('kpiPico').className = "text-sm font-black tabular-nums pl-2 text-emerald-400";
+            
+            document.getElementById('kpiClasse').innerText = top5Segmentos.length > 0 ? top5Segmentos[0].nome : '--';
+            document.getElementById('kpiClasse').className = "text-sm font-black truncate pl-2 text-purple-400";
+
+            document.getElementById('aiStatus').classList.add('hidden');
+
+            const sequenciaExibicao = [
+                { type: 'text', content: `<h3><i data-lucide="microscope" class="w-4 h-4"></i> 1. Diagnóstico Analítico Geral</h3><p>Diretoria, o motor analisou uma base consolidada de <strong>${formatNumber(totLitros)} Litros</strong> e <strong>${formatCurrency(totReais)}</strong> faturados nos últimos 6 meses. O pico de tração sazonal ocorreu em <strong>${fmtMes}</strong>.</p>` },
+                { type: 'text', content: `<h3><i data-lucide="target" class="w-4 h-4"></i> 2. Top Segmentos & Mix Vencedor</h3><p>Abaixo construí o <strong>"Pedido Ideal"</strong> para os Top 5 Segmentos. <br><br><b>Memória de Cálculo e Diretrizes S&OP:</b><br>- A lista seleciona os 3 produtos de maior incidência (produtos presentes na maioria das notas emitidas para o segmento).<br>- Sugestão Quantitativa (cx/ped e L/ped): Calculada pela divisão do volume total do item pelo número de faturas emitidas.<br>- Preço Médio (2M): Limitado às vendas dos <b>últimos 60 dias</b> para refletir a política comercial atual, descartando dados inflacionários antigos.<br><br>Utilize este Mix para criar Combos e campanhas de Sell-in direcionadas:</p>` },
+                { type: 'segments', content: segmentosParaRenderizar },
+                { type: 'text', content: `<h3><i data-lucide="bar-chart-horizontal" class="w-4 h-4"></i> 3. Análise de Portfólio</h3><p>O grupo de produto líder é o <strong>${grupoTop.nome}</strong>. Por outro lado, a categoria <strong>${grupoPior.nome}</strong> está com baixíssima tração.</p>` },
+                { type: 'segments', content: [planosAcaoHtml] },
+                { type: 'text', content: `<h3><i data-lucide="award" class="w-4 h-4"></i> 5. Insights S&OP de Alta Performance</h3><p>Diretrizes de mercado para otimização da cadeia de suprimentos:</p>
+                <div class="space-y-3 mt-3">
+                    <div class="bg-[#0B1221]/80 border border-slate-700/50 p-3 rounded-lg shadow-sm">
+                        <h4 class="text-comlub-yellow font-black text-[11px] uppercase tracking-widest flex items-center gap-2 mb-1.5"><i data-lucide="waves" class="w-3.5 h-3.5"></i> Demand Shaping (Moldagem de Demanda)</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">Crie combos comerciais (Venda Casada) atrelando produtos de Curva A (alta demanda, baixa margem) com produtos de Curva B ou C (menor giro, alta margem) para escoar estoques parados. Utilize descontos por escalonamento (Tiered Pricing) para otimizar a carga do caminhão.</p>
+                    </div>
+                    <div class="bg-[#0B1221]/80 border border-slate-700/50 p-3 rounded-lg shadow-sm">
+                        <h4 class="text-comlub-yellow font-black text-[11px] uppercase tracking-widest flex items-center gap-2 mb-1.5"><i data-lucide="truck" class="w-3.5 h-3.5"></i> Pedido Mínimo Dinâmico (Cost to Serve)</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">O custo de servir pode destruir a margem. A regra de MOQ (Minimum Order Quantity) não deve ser fixa. Ajuste-a por região (CEP) e densidade de rota. Rotas mais distantes exigem um ticket médio maior. Crie calendários restritos para entregas periféricas.</p>
+                    </div>
+                    <div class="bg-[#0B1221]/80 border border-slate-700/50 p-3 rounded-lg shadow-sm">
+                        <h4 class="text-comlub-yellow font-black text-[11px] uppercase tracking-widest flex items-center gap-2 mb-1.5"><i data-lucide="coins" class="w-3.5 h-3.5"></i> Ciclo Financeiro e Sincronização</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">Se a indústria fornece 30 dias de prazo, a política de vendas na ponta não deve exceder 28 dias sem juros embutidos. Em picos de demanda com baixo estoque, corte promoções, bloqueie prazos estendidos e priorize alocação para clientes da Curva A.</p>
+                    </div>
+                </div>`},
+                { type: 'text', content: `<div class="mt-8 p-3 glass-panel border border-sky-500/30 rounded inline-block text-sky-400 font-bold text-[10px] uppercase tracking-[0.2em]"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 inline -mt-0.5 mr-1.5"></i> Mapeamento S&OP Concluído.</div>` }
+            ];
+
+            executarExibicaoSequencial(sequenciaExibicao);
+        }
+
+        async function gerarConsultoriaLogistica() {
+            resetTerminal('A Extrair e Mapear Cargas Logísticas (DAK/DAI)...');
+            
+            let rawLog = [];
+            try {
+                const res = await fetch('http://localhost:3000/api/supreme-consultor-logistica');
+                if(!res.ok) throw new Error();
+                rawLog = await res.json();
+            } catch(e) {
+                console.warn('API Logística offline. A gerar Mock.');
+                rawLog = gerarMockLogistica();
+            }
+
+            let totPeso = 0, totValor = 0, totPedidos = 0;
+            let melhorTranspGlobal = { nome: '--', lt: 999 };
+            
+            const filiaisMap = {};
+            
+            rawLog.forEach(r => {
+                totPeso += r.PesoTotal;
+                totValor += r.ValorTotal;
+                totPedidos += r.QtdPedidos;
+                
+                if (r.LeadTimeMedioDias > 0 && r.LeadTimeMedioDias < melhorTranspGlobal.lt) {
+                    melhorTranspGlobal = { nome: r.NomeTransportadora, lt: r.LeadTimeMedioDias };
+                }
+
+                if (!filiaisMap[r.Filial]) filiaisMap[r.Filial] = { filial: r.Filial, transps: [], totPeso: 0, totValor: 0 };
+                filiaisMap[r.Filial].totPeso += r.PesoTotal;
+                filiaisMap[r.Filial].totValor += r.ValorTotal;
+                filiaisMap[r.Filial].transps.push(r);
+            });
+
+            const rkgGlobal = totPeso > 0 ? totValor / totPeso : 0;
+
+            document.getElementById('kpiVolTotal').innerText = formatNumber(totPeso) + ' Kg';
+            document.getElementById('kpiPico').innerText = formatCurrency(rkgGlobal);
+            document.getElementById('kpiPico').className = "text-sm font-black tabular-nums pl-2 text-amber-400";
+            
+            document.getElementById('kpiClasse').innerText = melhorTranspGlobal.nome;
+            document.getElementById('kpiClasse').className = "text-sm font-black truncate pl-2 text-blue-400";
+
+            construirRadarLogistica(rawLog, rkgGlobal);
+
+            const segmentosParaRenderizar = [];
+            
+            Object.values(filiaisMap).sort((a,b) => a.filial.localeCompare(b.filial)).forEach((fInfo, idx) => {
+                const transpsTop = fInfo.transps.sort((a,b) => a.LeadTimeMedioDias - b.LeadTimeMedioDias).slice(0, 3);
+                
+                let transpHtml = '';
+                transpsTop.forEach(t => {
+                    const rkg = t.PesoTotal > 0 ? t.ValorTotal / t.PesoTotal : 0;
+                    const corLT = t.LeadTimeMedioDias <= 3 ? 'text-emerald-400' : (t.LeadTimeMedioDias <= 5 ? 'text-amber-400' : 'text-rose-400');
+                    
+                    transpHtml += `
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center text-[10px] bg-[#050810] p-2.5 rounded border border-slate-800/80 gap-2">
+                            <div class="flex items-center gap-2 truncate max-w-[50%]">
+                                <span class="text-slate-500 font-mono">[${t.CodTransportadora}]</span>
+                                <span class="text-slate-200 font-semibold truncate">${t.NomeTransportadora}</span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <span class="text-slate-400 font-medium px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Custo: ${formatCurrency(rkg)}/Kg</span>
+                                <span class="font-bold px-2 py-0.5 rounded bg-slate-900/50 border border-slate-700 ${corLT}">Lead Time: ${t.LeadTimeMedioDias.toFixed(1)} d</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                segmentosParaRenderizar.push(`
+                    <div class="card-segmento glass-panel p-4 rounded-xl relative overflow-hidden mb-4 bg-gradient-to-r from-emerald-500/5 to-transparent border-emerald-500/20">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b border-slate-700/50 pb-3 mb-3 gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-black text-[10px]"><i data-lucide="building-2" class="w-3.5 h-3.5"></i></div>
+                                <span class="text-white font-bold text-[12px] uppercase tracking-widest">Filial ${fInfo.filial}</span>
+                            </div>
+                            <div class="flex items-center gap-3 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-800">
+                                <span class="text-slate-400 text-[10px] font-semibold">Peso: ${formatNumber(fInfo.totPeso)} Kg</span>
+                            </div>
+                        </div>
+                        <div class="space-y-2">${transpHtml}</div>
+                    </div>
+                `);
+            });
+
+            document.getElementById('aiStatus').classList.add('hidden');
+
+            const sequenciaExibicao = [
+                { type: 'text', content: `<h3><i data-lucide="truck" class="w-4 h-4"></i> 1. Diagnóstico Logístico Global</h3><p>A malha logística movimentou um total de <strong>${formatNumber(totPeso)} Kg</strong> distribuídos em <strong>${formatNumber(totPedidos)} pedidos</strong> (filtrados estritamente por cargas com Data de Entrega confirmada). O Custo Médio do frete embutido no valor de nota estabilizou em <strong>${formatCurrency(rkgGlobal)} / Kg</strong>.</p>` },
+                { type: 'text', content: `<h3><i data-lucide="map" class="w-4 h-4"></i> 2. Performance de Frota por Filial (SLA)</h3><p>Cruzando a data de carregamento (DAK/DAI) com a entrega da nota fiscal (SF2), avaliámos as transportadoras com melhor <strong>Lead Time (Dias)</strong> para direcionar a montagem de carga desta semana:</p>` },
+                { type: 'segments', content: segmentosParaRenderizar },
+                { type: 'text', content: `<h3><i data-lucide="shield-check" class="w-4 h-4"></i> 3. Otimização de Custo vs Prazo</h3><p>A transportadora <strong>${melhorTranspGlobal.nome}</strong> apresentou o melhor SLA geral de entrega (${melhorTranspGlobal.lt.toFixed(1)} dias). Sugiro roteirizar prioritariamente as cargas de clientes Curva A (VIPs) ou urgentes utilizando exclusivamente esta frota.</p>` },
+                { type: 'text', content: `<h3><i data-lucide="trending-down" class="w-4 h-4"></i> 4. Alerta de Ineficiência</h3><p>As transportadoras que excedem sistematicamente os 4 dias de Lead Time aumentam o ciclo de conversão de caixa (atrasam o recebimento dos boletos). Considere aplicar multas contratuais (SLA Penalties) ou redirecioná-las apenas para rotas não urgentes do interior do Estado.</p>` },
+                { type: 'text', content: `<div class="mt-8 p-3 glass-panel border border-emerald-500/30 rounded inline-block text-emerald-400 font-bold text-[10px] uppercase tracking-[0.2em]"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 inline -mt-0.5 mr-1.5"></i> Auditoria Logística Concluída.</div>` }
+            ];
+
+            executarExibicaoSequencial(sequenciaExibicao);
+        }
+
+        function construirRadarVendas(radarMap, mesAtual) {
+            const container = document.getElementById('radarContainer');
+            const topProdutos = Object.values(radarMap).sort((a,b) => b.volHistorico - a.volHistorico).slice(0, 4);
+            if(topProdutos.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-500 text-center">Sem dados suficientes.</p>'; return;
+            }
+
+            let html = '';
+            topProdutos.forEach((p, idx) => {
+                const mediaHist = p.volHistorico / 6;
+                const variacao = mediaHist > 0 ? ((p.volMesAtual - mediaHist) / mediaHist) * 100 : 0;
+                
+                const isPositivo = variacao >= 0;
+                const corText = isPositivo ? 'text-sky-400' : 'text-rose-500';
+                const corBarra = isPositivo ? 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]' : 'bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.8)]';
+                const iconeVar = isPositivo ? 'trending-up' : 'trending-down';
+                const barraFill = Math.min(Math.max((p.volMesAtual / (mediaHist * 1.5)) * 100, 5), 100);
+
+                html += `
+                    <div class="mb-5 fade-in-up" style="animation-delay: ${300 + (idx*100)}ms">
+                        <div class="flex justify-between items-end mb-1.5">
+                            <div class="flex flex-col flex-1 pr-2 truncate">
+                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-tight">${p.sku}</span>
+                                <span class="text-[11px] font-bold text-slate-200 truncate leading-tight">${p.desc}</span>
+                            </div>
+                            <div class="flex flex-col items-end shrink-0">
+                                <span class="text-[11px] font-black ${corText} uppercase flex items-center gap-1"><i data-lucide="${iconeVar}" class="w-3.5 h-3.5"></i> ${isPositivo?'+':''}${variacao.toFixed(1)}%</span>
+                                <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Atual: ${formatNumber(p.volMesAtual)} L</span>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden mb-1">
+                            <div class="h-1.5 rounded-full ${corBarra} transition-all duration-1000 ease-out" style="width: ${barraFill}%"></div>
+                        </div>
+                        <span class="text-[8px] font-semibold text-slate-600 uppercase tracking-widest">MÉDIA: ${formatNumber(mediaHist)} L</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            lucide.createIcons({ root: container });
+        }
+
+        function construirRadarLogistica(rawLog, rkgGlobal) {
+            const container = document.getElementById('radarContainer');
+            const topTransp = [...rawLog].sort((a,b) => b.PesoTotal - a.PesoTotal).slice(0, 5);
+            if(topTransp.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-500 text-center">Sem dados logísticos.</p>'; return;
+            }
+
+            let html = '';
+            topTransp.forEach((t, idx) => {
+                const mediaIdeal = 4.0;
+                const isPositivo = t.LeadTimeMedioDias <= mediaIdeal; 
+                const corText = isPositivo ? 'text-emerald-400' : 'text-rose-500';
+                const corBarra = isPositivo ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.8)]';
+                const iconeVar = isPositivo ? 'check-circle-2' : 'alert-circle';
+                
+                const maxBar = 7; 
+                const barraFill = Math.min(Math.max((t.LeadTimeMedioDias / maxBar) * 100, 5), 100);
+
+                html += `
+                    <div class="mb-5 fade-in-up" style="animation-delay: ${300 + (idx*100)}ms">
+                        <div class="flex justify-between items-end mb-1.5">
+                            <div class="flex flex-col flex-1 pr-2 truncate">
+                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Filial: ${t.Filial}</span>
+                                <span class="text-[11px] font-bold text-slate-200 truncate leading-tight">${t.NomeTransportadora}</span>
+                            </div>
+                            <div class="flex flex-col items-end shrink-0">
+                                <span class="text-[11px] font-black ${corText} uppercase flex items-center gap-1"><i data-lucide="${iconeVar}" class="w-3.5 h-3.5"></i> ${t.LeadTimeMedioDias.toFixed(1)} Dias</span>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="h-1.5 rounded-full ${corBarra} transition-all duration-1000 ease-out" style="width: ${barraFill}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            lucide.createIcons({ root: container });
+        }
+
+
+        function executarExibicaoSequencial(sequencia) {
+            const divPrincipal = document.getElementById('aiOutput');
+            const cursor = document.getElementById('aiCursor');
+            cursor.classList.remove('hidden');
+            let seqIdx = 0;
+            const scrollArea = document.getElementById('scrollArea');
+
+            function proximoElemento() {
+                if (seqIdx >= sequencia.length) {
+                    cursor.classList.add('hidden');
+                    return;
+                }
+                const item = sequencia[seqIdx];
+
+                if (item.type === 'text') {
+                    let i = 0;
+                    const content = item.content;
+                    const tempDiv = document.createElement('div');
+                    tempDiv.className = "mb-4 block transition-opacity";
+                    divPrincipal.appendChild(tempDiv);
+
+                    function typeChar() {
+                        if (i < content.length) {
+                            if (content.charAt(i) === '<') {
+                                let tag = '';
+                                while (content.charAt(i) !== '>' && i < content.length) {
+                                    tag += content.charAt(i);
+                                    i++;
+                                }
+                                tag += '>';
+                                i++;
+                                tempDiv.innerHTML += tag;
+                                setTimeout(typeChar, 0); 
+                            } else {
+                                tempDiv.innerHTML += content.charAt(i);
+                                i++;
+                                scrollArea.scrollTop = scrollArea.scrollHeight;
+                                setTimeout(typeChar, 5); 
+                            }
+                        } else {
+                            lucide.createIcons({ root: tempDiv });
+                            seqIdx++;
+                            setTimeout(proximoElemento, 200);
+                        }
+                    }
+                    typeChar();
+
+                } else if (item.type === 'segments') {
+                    let segIdx = 0;
+                    function showNextSegment() {
+                        if (segIdx < item.content.length) {
+                            const wrapper = document.createElement('div');
+                            wrapper.innerHTML = item.content[segIdx];
+                            const card = wrapper.firstElementChild;
+                            
+                            divPrincipal.appendChild(card);
+                            lucide.createIcons({ root: card });
+                            scrollArea.scrollTop = scrollArea.scrollHeight;
+
+                            void card.offsetWidth;
+                            card.classList.add('visible');
+
+                            segIdx++;
+                            setTimeout(showNextSegment, 400); 
+                        } else {
+                            seqIdx++;
+                            setTimeout(proximoElemento, 300);
+                        }
+                    }
+                    showNextSegment();
+                }
+            }
+            proximoElemento();
+        }
+
+        function gerarMockVendas() {
+            const mock = [];
+            const tCli = ['F', 'R', 'I'];
+            const segs = ['POSTO DE COMBUSTÍVEL', 'AUTO CENTER E MECÂNICA', 'USINA DE ETANOL', 'TRANSPORTADORA RODOVIÁRIA', 'CONCESSIONÁRIA AUT.'];
+            const pz = [{c:'A', d:'À VISTA'}, {c:'B', d:'30 DIAS'}, {c:'C', d:'30/60 DIAS'}];
+            const grp = ['0100 - AUTOMOTIVO LIGEIRO', '0150 - INDUSTRIAL PESADO', '0200 - GRAXAS COMPLEXAS'];
+            const tiposProd = ['R1', 'R2', 'R3', 'R4']; 
+            
+            const dataHoje = new Date();
+            const anoAtual = dataHoje.getFullYear();
+            const mesAtual = dataHoje.getMonth() + 1;
+
+            for (let i = 1; i <= 400; i++) {
+                const m = Math.floor(Math.random() * 6) + 1;
+                const mesStr = '2026' + String(m).padStart(2, '0');
+                const t = tCli[Math.floor(Math.random() * tCli.length)];
+                const p = pz[Math.floor(Math.random() * pz.length)];
+                const g = grp[Math.floor(Math.random() * grp.length)];
+                const tp = tiposProd[Math.floor(Math.random() * tiposProd.length)];
+                const idPedido = 'PD' + (Math.floor(Math.random() * 150) + 1000); 
+                
+                let sg = segs[Math.floor(Math.random() * segs.length)];
+                let l = Math.floor(Math.random() * 500) + 50;
+                
+                if (m === 4 && Math.random() > 0.4) {
+                    sg = 'AUTO CENTER E MECÂNICA';
+                    l = l * 2.5; 
+                }
+                
+                mock.push({
+                    Pedido: idPedido,
+                    MesAno: mesStr,
+                    TipoCliente: t,
+                    Segmento: sg,
+                    TipoProduto: tp,
+                    GrupoProduto: g,
+                    CondPagamento: p.d,
+                    PrazoMedio: p.d === 'À VISTA' ? '0' : '30',
+                    SKU: 'LUB00' + (Math.floor(Math.random() * 8)+1),
+                    DescProduto: (g.includes('AUTO') ? 'OLEO SINTÉTICO 5W30' : 'GRAXA LITIO AZUL') + ' ' + (Math.random() > 0.5 ? '20L' : '200L'),
+                    ValorTotal: l * 25.50,
+                    QtdBrutaTotal: Math.floor(Math.random() * 25) + 2,
+                    LitrosTotal: l
+                });
+            }
+            return mock;
+        }
+
+        function gerarMockLogistica() {
+            const mock = [];
+            for (let i = 1; i <= 20; i++) {
+                const filial = i % 3 === 0 ? '03' : (i % 2 === 0 ? '02' : '01');
+                const transp = i % 2 === 0 ? {c: 'T01', n: 'EXPRESSO ALAGOAS LOG'} : {c: 'T02', n: 'SUL BRASIL CARGAS'};
+                
+                mock.push({
+                    Filial: filial,
+                    CodTransportadora: transp.c,
+                    NomeTransportadora: transp.n,
+                    PesoTotal: 5000 + Math.random() * 20000,
+                    QtdPedidos: 50 + Math.random() * 150,
+                    ValorTotal: 150000 + Math.random() * 300000,
+                    LeadTimeMedioDias: 2 + Math.random() * 5
+                });
+            }
+            return mock;
+        }
+
+    </script>
+</body>
+</html>

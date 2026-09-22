@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Políticas e Regras - LEME ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                        mono: ['"Fira Code"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+
+        .dash-card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; }
+        
+        .corp-input { background-color: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 500; outline: none; transition: border-color 0.2s; width: 100%; }
+        .corp-input:focus { border-color: #38bdf8; }
+        
+        .table-slate { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .table-slate th { background-color: #1e293b; border-bottom: 2px solid #334155; color: #94a3b8; padding: 12px 16px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; text-align: left; position: sticky; top: 0; z-index: 10; }
+        .table-slate td { padding: 12px 16px; font-size: 12px; border-bottom: 1px solid #1e293b; background-color: #0f172a; color: #cbd5e1; transition: background-color 0.15s; white-space: nowrap; }
+        .table-slate tbody tr:hover td { background-color: #1e293b; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col antialiased">
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-[300] bg-[#1e293b] text-white text-xs font-bold uppercase tracking-widest px-5 py-4 rounded-xl shadow-2xl border border-[#334155] flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400" id="toastIcon"></i>
+        <span id="toastMessage">Operacao realizada com sucesso!</span>
+    </div>
+
+    <!-- CABEÇALHO -->
+    <header class="h-14 px-6 flex items-center justify-between border-b border-[#1e293b] bg-[#0f172a] shrink-0 z-20">
+        <div class="flex items-center gap-4">
+            <div class="flex items-baseline select-none">
+                <span class="text-white font-bold text-lg tracking-tight">LEME</span>
+                <span class="text-[#cbd5e1] font-bold text-lg tracking-tight ml-1">SUPREME</span>
+            </div>
+            <div class="h-4 w-px bg-[#334155]"></div>
+            <div>
+                <h1 class="text-xs font-semibold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-4 h-4 text-sky-400"></i> Políticas e Regras
+                </h1>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <span id="cloudBadge" class="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-sm">
+                <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Conectando...
+            </span>
+            <div class="h-5 w-px bg-[#334155] hidden sm:block"></div>
+            <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-slate-200 transition-colors p-1.5 rounded" title="Fechar Módulo">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- BARRA DE AÇÕES -->
+    <div class="bg-[#1e293b] border-b border-[#334155] px-6 py-3 flex items-center justify-between shrink-0 z-10">
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Gestão de Travas de Desconto e Metas Financeiras</p>
+        <button onclick="prepararFormulario()" class="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center gap-2">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nova Regra
+        </button>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col lg:flex-row gap-5 p-5 lg:p-6 w-full max-w-[1600px] mx-auto min-h-0 overflow-hidden">
+        
+        <!-- FORMULÁRIO -->
+        <div id="formContainer" class="hidden w-full lg:w-1/3 dash-card flex-col shrink-0 overflow-y-auto custom-scroll p-5">
+            <h2 id="formTitle" class="text-sm font-black text-slate-200 uppercase tracking-widest border-b border-[#334155] pb-3 mb-4 flex items-center gap-2">
+                <i data-lucide="edit-3" class="w-4 h-4 text-sky-400"></i> Cadastrar Regra
+            </h2>
+            
+            <form id="regraForm" onsubmit="salvarRegra(event)" class="space-y-4">
+                <input type="hidden" id="regraId"> 
+                
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tipo de Regra</label>
+                    <select id="tipo" required class="corp-input cursor-pointer [color-scheme:dark]">
+                        <option value="Trava Desconto">Trava Desconto (%)</option>
+                        <option value="Meta S&OP">Meta S&OP (Financeiro)</option>
+                        <option value="Campanha">Campanha Promocional</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Nome da Regra</label>
+                    <input type="text" id="nome" required class="corp-input" placeholder="Ex: Limite de Venda Diretoria">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Descrição / Detalhes</label>
+                    <textarea id="descricao" rows="2" class="corp-input resize-none" placeholder="Ex: Desconto máximo permitido sem aprovação no V8..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Valor Alvo (%)</label>
+                    <input type="number" step="0.01" id="valor_alvo" required class="corp-input font-mono text-sky-400 font-bold" placeholder="Ex: 15.00">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Data Início</label>
+                        <input type="date" id="data_inicio" required class="corp-input cursor-pointer [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Data Fim</label>
+                        <input type="date" id="data_fim" class="corp-input cursor-pointer [color-scheme:dark]">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Status</label>
+                    <select id="status" class="corp-input cursor-pointer [color-scheme:dark]">
+                        <option value="true">Ativa - Em Vigor</option>
+                        <option value="false">Inativa - Suspensa</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 flex gap-3 border-t border-[#334155]">
+                    <button type="button" onclick="fecharFormulario()" class="flex-1 bg-[#0f172a] border border-[#334155] hover:bg-[#1e293b] text-slate-300 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="btnSubmit" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors flex justify-center items-center gap-2 shadow-sm">
+                        <i data-lucide="save" class="w-3.5 h-3.5"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- PAINEL DE CONSULTA (GRID) -->
+        <div class="flex-1 dash-card flex flex-col min-h-0 overflow-hidden">
+            <div class="overflow-auto custom-scroll h-full bg-[#0f172a]">
+                <table class="table-slate">
+                    <thead>
+                        <tr>
+                            <th class="w-32">Tipo de Regra</th>
+                            <th>Nome e Descrição</th>
+                            <th class="text-right w-24">Alvo (%)</th>
+                            <th class="text-center w-40">Vigência</th>
+                            <th class="text-center w-24">Status</th>
+                            <th class="text-center w-24">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaRegras">
+                        <tr><td colspan="6" class="text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="loader-2" class="w-8 h-8 mx-auto mb-3 opacity-30 animate-spin"></i> Conectando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const DB_KEY = 'comlub_regras_db';
+        const SUPABASE_URL = 'https://qfgyduhvqtcrnvzydrup.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZ3lkdWh2cXRjcm52enlkcnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3ODYyNjYsImV4cCI6MjA5ODM2MjI2Nn0.b4hYKE4S1Kkxe_oDygbM8C_RZFqJKxhN6MtDN6rh5vE';
+        
+        let supabaseClient = null;
+        let regrasData = [];
+        let isOffline = false; // Flag para garantir que o sistema não trave se a nuvem falhar
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            
+            try {
+                if (typeof window.supabase !== 'undefined') {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                } 
+            } catch (err) { console.warn("Supabase library not loaded"); }
+
+            garantirRegraPadrao(); // Se não houver regra, cria uma de 15% automaticamente para o sistema não quebrar
+            carregarRegras();
+        });
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            document.getElementById('toastMessage').innerText = msg;
+            
+            if(isError) {
+                toast.classList.replace('border-[#334155]', 'border-rose-500/50');
+                toastIcon.setAttribute('data-lucide', 'alert-triangle');
+                toastIcon.classList.replace('text-emerald-400', 'text-rose-500');
+            } else {
+                toast.classList.replace('border-rose-500/50', 'border-[#334155]');
+                toastIcon.setAttribute('data-lucide', 'check-circle');
+                toastIcon.classList.replace('text-rose-500', 'text-emerald-400');
+            }
+            lucide.createIcons({root: toast});
+
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-[-100px]', 'opacity-0'); }, 3500);
+        }
+
+        // Se o banco estiver zerado, cria uma regra padrão (Trava 15%) para o motor da Aprovação não quebrar
+        function garantirRegraPadrao() {
+            let local = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            if (local.length === 0) {
+                local.push({
+                    id: Date.now().toString(),
+                    tipo: 'Trava Desconto',
+                    nome: 'Limite Desconto Padrão (V8)',
+                    descricao: 'Regra de teto máximo de desconto configurada via sistema.',
+                    valor_alvo: 15.00,
+                    data_inicio: new Date().toISOString().split('T')[0],
+                    data_fim: '2029-12-31',
+                    status: true
+                });
+                localStorage.setItem(DB_KEY, JSON.stringify(local));
+            }
+        }
+
+        async function carregarRegras() {
+            const badge = document.getElementById('cloudBadge');
+
+            try {
+                if (!supabaseClient) throw new Error("Supabase inativo.");
+
+                const fetchPromise = supabaseClient.from('politicas_regras').select('*').order('created_at', { ascending: false });
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 6000));
+                
+                const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+                if (error) throw error;
+
+                regrasData = data || [];
+                localStorage.setItem(DB_KEY, JSON.stringify(regrasData));
+                isOffline = false;
+                
+                badge.innerHTML = `<i data-lucide="cloud-lightning" class="w-3.5 h-3.5"></i> Nuvem Sincronizada`;
+                badge.className = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-[0_0_10px_rgba(16,185,129,0.2)]";
+
+            } catch (error) {
+                isOffline = true;
+                badge.innerHTML = `<i data-lucide="hard-drive" class="w-3.5 h-3.5"></i> Modo Offline (Local)`;
+                badge.className = "bg-slate-500/10 text-slate-400 border border-slate-500/30 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all";
+
+                regrasData = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+                if(regrasData.length > 0) {
+                    setTimeout(() => showToast("Modo Offline Ativo. Lendo dados do Cache Local.", false), 500);
+                }
+            } finally {
+                renderTabela();
+            }
+        }
+
+        function renderTabela() {
+            const tbody = document.getElementById('tabelaRegras');
+            tbody.innerHTML = '';
+
+            if (regrasData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500 text-xs font-semibold">Nenhuma política cadastrada. O Motor V8 utilizará margens padrão.</td></tr>';
+                return;
+            }
+
+            regrasData.forEach(regra => {
+                const badgeStatus = regra.status 
+                    ? `<span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold uppercase tracking-wider">Ativa</span>`
+                    : `<span class="px-2 py-1 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20 text-[9px] font-bold uppercase tracking-wider">Inativa</span>`;
+
+                let colorT = 'text-sky-400';
+                if(regra.tipo === 'Trava Desconto') colorT = 'text-rose-400';
+                if(regra.tipo === 'Campanha') colorT = 'text-amber-400';
+
+                const dtIni = regra.data_inicio ? regra.data_inicio.split('-').reverse().join('/') : '--';
+                const dtFim = regra.data_fim ? regra.data_fim.split('-').reverse().join('/') : '--';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="${colorT} font-bold text-[10px] tracking-widest uppercase">${regra.tipo}</td>
+                        <td>
+                            <div class="text-slate-200 font-bold truncate max-w-[250px]">${regra.nome}</div>
+                            <div class="text-[9px] text-slate-500 truncate max-w-[250px] mt-0.5">${regra.descricao || 'Sem descrição'}</div>
+                        </td>
+                        <td class="text-right font-mono font-bold text-slate-300">${regra.valor_alvo ? regra.valor_alvo.toFixed(2) + '%' : '-'}</td>
+                        <td class="text-center font-mono text-[10px] text-slate-400">${dtIni} a ${dtFim}</td>
+                        <td class="text-center">${badgeStatus}</td>
+                        <td class="text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="editarRegra('${regra.id}')" class="w-7 h-7 flex items-center justify-center rounded bg-[#1e293b] hover:bg-sky-500/20 text-slate-400 hover:text-sky-400 border border-[#334155] transition-colors" title="Editar">
+                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="deletarRegra('${regra.id}')" class="w-7 h-7 flex items-center justify-center rounded bg-[#1e293b] hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-[#334155] transition-colors" title="Apagar">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            lucide.createIcons();
+        }
+
+        async function salvarRegra(e) {
+            e.preventDefault();
+            
+            const btnSubmit = document.getElementById('btnSubmit');
+            const originalHTML = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Gravando...`;
+            btnSubmit.disabled = true;
+            lucide.createIcons({root: btnSubmit});
+
+            const id = document.getElementById('regraId').value;
+            const valorInput = document.getElementById('valor_alvo').value;
+            const dataFimInput = document.getElementById('data_fim').value;
+            const dataInicioInput = document.getElementById('data_inicio').value;
+
+            const regraPayload = {
+                tipo: document.getElementById('tipo').value,
+                nome: document.getElementById('nome').value,
+                descricao: document.getElementById('descricao').value,
+                valor_alvo: valorInput ? parseFloat(valorInput) : 0,
+                data_inicio: dataInicioInput ? dataInicioInput : null,
+                data_fim: dataFimInput ? dataFimInput : null,
+                status: document.getElementById('status').value === 'true'
+            };
+
+            try {
+                if (isOffline || !supabaseClient) throw new Error("Offline");
+
+                if (id) {
+                    const { error } = await supabaseClient.from('politicas_regras').update(regraPayload).eq('id', id); 
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabaseClient.from('politicas_regras').insert([regraPayload]); 
+                    if (error) throw error;
+                }
+                showToast("Regra salva na Nuvem com sucesso!");
+
+            } catch (error) {
+                // FALLBACK LOCAL PERFEITO
+                let localData = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+                if (id) {
+                    const idx = localData.findIndex(r => r.id === id);
+                    if (idx > -1) localData[idx] = { ...localData[idx], ...regraPayload };
+                } else {
+                    regraPayload.id = Date.now().toString();
+                    localData.push(regraPayload);
+                }
+                localStorage.setItem(DB_KEY, JSON.stringify(localData));
+                showToast("Regra salva localmente (Modo Offline).", false);
+            }
+
+            btnSubmit.innerHTML = originalHTML;
+            btnSubmit.disabled = false;
+            lucide.createIcons({root: btnSubmit});
+            
+            fecharFormulario();
+            carregarRegras(); 
+        }
+
+        async function deletarRegra(id) {
+            if (!confirm("Deseja realmente remover esta regra?")) return;
+
+            try {
+                if (isOffline || !supabaseClient) throw new Error("Offline");
+                const { error } = await supabaseClient.from('politicas_regras').delete().eq('id', id);
+                if (error) throw error;
+                showToast("Regra removida da Nuvem.");
+            } catch(e) {
+                // FALLBACK LOCAL
+                let localData = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+                localData = localData.filter(r => r.id !== id);
+                localStorage.setItem(DB_KEY, JSON.stringify(localData));
+                showToast("Regra removida localmente (Modo Offline).");
+            }
+            
+            carregarRegras();
+        }
+
+        function prepararFormulario() {
+            document.getElementById('regraForm').reset();
+            document.getElementById('regraId').value = '';
+            document.getElementById('formTitle').innerHTML = '<i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> Nova Regra';
+            document.getElementById('formContainer').classList.remove('hidden');
+            document.getElementById('formContainer').classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function fecharFormulario() {
+            document.getElementById('formContainer').classList.add('hidden');
+            document.getElementById('formContainer').classList.remove('flex');
+        }
+
+        function editarRegra(id) {
+            const regra = regrasData.find(r => r.id === id);
+            if (!regra) return;
+
+            document.getElementById('regraId').value = regra.id;
+            document.getElementById('tipo').value = regra.tipo;
+            document.getElementById('nome').value = regra.nome;
+            document.getElementById('descricao').value = regra.descricao || '';
+            document.getElementById('valor_alvo').value = regra.valor_alvo;
+            document.getElementById('data_inicio').value = regra.data_inicio || '';
+            document.getElementById('data_fim').value = regra.data_fim || '';
+            document.getElementById('status').value = regra.status.toString();
+
+            document.getElementById('formTitle').innerHTML = '<i data-lucide="edit-3" class="w-4 h-4 text-sky-400"></i> Editar Regra';
+            document.getElementById('formContainer').classList.remove('hidden');
+            document.getElementById('formContainer').classList.add('flex');
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

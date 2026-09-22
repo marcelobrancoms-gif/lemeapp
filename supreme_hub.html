@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Integrado - LEME ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: {
+                        leme: {
+                            navy: '#002B4D',
+                            blue: '#003865',
+                            dark: '#0B111E',
+                            panel: '#131B2E',
+                            border: '#1E293B',
+                            gold: '#FFCB05'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            background-color: #05080F; /* Fundo base muito escuro e neutro */
+            color: #E2E8F0; 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden; 
+        }
+        
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+        /* Estilo dos Cards Corporativos */
+        .module-card {
+            background-color: #0B111E;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .module-card:hover {
+            background-color: #0F172A;
+            border-color: #0284c7; /* Azul corporativo suave no hover */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Menu Lateral Ativo */
+        .nav-item {
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover {
+            background-color: #0F172A;
+            color: #F8FAFC;
+        }
+        .nav-item.active {
+            background-color: #0F172A;
+            border-left-color: #FFCB05; /* Destaque amarelo corporativo */
+            color: #F8FAFC;
+            font-weight: 700;
+        }
+        .nav-item.active i {
+            color: #FFCB05;
+        }
+
+        /* Inputs Sobrios */
+        .corp-input {
+            background-color: #0B111E;
+            border: 1px solid #1E293B;
+            color: #FFFFFF;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .corp-input:focus { border-color: #0284c7; }
+
+        /* Drawer Lateral para Cadastro */
+        .drawer-overlay { transition: opacity 0.3s ease; opacity: 0; pointer-events: none; }
+        .drawer-overlay.active { opacity: 1; pointer-events: auto; }
+        .drawer-content { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: translateX(100%); }
+        .drawer-overlay.active .drawer-content { transform: translateX(0); }
+
+        .module-checkbox:checked + div { border-color: #0284c7; background-color: rgba(2, 132, 199, 0.05); }
+        .module-checkbox:checked + div .check-icon { opacity: 1; transform: scale(1); }
+    </style>
+</head>
+<body class="h-screen w-screen flex antialiased">
+
+    <!-- SIDEBAR (MENU LATERAL ESQUERDO) -->
+    <aside class="w-64 bg-[#0B111E] border-r border-[#1E293B] flex flex-col shrink-0 hidden md:flex z-20">
+        
+        <!-- Logo Area -->
+        <div class="h-16 flex items-center px-6 border-b border-[#1E293B]">
+            <div class="flex items-baseline select-none">
+                <span class="text-white font-black text-xl tracking-tight">LEME</span>
+                <span class="text-[#FFCB05] font-black text-xl tracking-tight ml-1">SUPREME</span>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <div class="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+            <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Painéis de Acesso</p>
+            
+            <button onclick="filtrarCategoria('TODOS', this)" class="nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded text-xs text-slate-400 font-medium text-left">
+                <i data-lucide="layout-grid" class="w-4 h-4"></i> Visão Geral (Todos)
+            </button>
+            
+            <button onclick="filtrarCategoria('COMERCIAL', this)" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded text-xs text-slate-400 font-medium text-left">
+                <i data-lucide="briefcase" class="w-4 h-4"></i> Comercial & S&OP
+            </button>
+            
+            <button onclick="filtrarCategoria('LOGISTICA', this)" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded text-xs text-slate-400 font-medium text-left">
+                <i data-lucide="truck" class="w-4 h-4"></i> Logística & Frota
+            </button>
+            
+            <button onclick="filtrarCategoria('FINANCEIRO', this)" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded text-xs text-slate-400 font-medium text-left">
+                <i data-lucide="wallet" class="w-4 h-4"></i> Financeiro
+            </button>
+
+            <button onclick="filtrarCategoria('SUPREME INFO', this)" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded text-xs text-slate-400 font-medium text-left">
+                <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Supreme Info (BI)
+            </button>
+            
+            <button onclick="filtrarCategoria('SISTEMA', this)" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded text-xs text-slate-400 font-medium text-left">
+                <i data-lucide="settings" class="w-4 h-4"></i> Sistema & Acessos
+            </button>
+        </div>
+
+        <!-- User Area -->
+        <div class="border-t border-[#1E293B] p-4">
+            <div class="flex items-center justify-between bg-[#111827] border border-[#1E293B] p-2.5 rounded-lg">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-8 h-8 rounded bg-[#003865] flex items-center justify-center text-[#FFCB05] shrink-0">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                    </div>
+                    <div class="flex flex-col truncate">
+                        <span id="headerUser" class="text-xs font-bold text-white uppercase truncate">--</span>
+                        <span id="headerRole" class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">--</span>
+                    </div>
+                </div>
+                <button onclick="logout()" class="text-slate-400 hover:text-rose-400 p-1.5 transition-colors shrink-0" title="Sair do Portal">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex flex-col min-w-0 bg-[#05080F]">
+        
+        <!-- Header da Área Principal -->
+        <header class="h-16 px-8 flex items-center justify-between border-b border-[#1E293B] bg-[#0B111E] shrink-0">
+            <div class="flex items-center gap-2 text-sm font-medium text-slate-400">
+                <i data-lucide="monitor" class="w-4 h-4"></i>
+                <span id="breadcrumbPath">Módulos > Visão Geral (Todos)</span>
+            </div>
+
+            <!-- Busca Rápida -->
+            <div class="relative w-64 hidden sm:block">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                <input type="text" id="searchModule" oninput="buscarModulos()" class="corp-input !pl-9 w-full bg-[#111827]" placeholder="Localizar módulo...">
+            </div>
+        </header>
+
+        <!-- Container da Grelha -->
+        <div class="flex-1 overflow-y-auto p-6 md:p-8">
+            <div class="max-w-[1400px] mx-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-white" id="sectionTitle">Módulos Disponíveis</h2>
+                    <span id="moduloCount" class="text-xs font-semibold text-slate-500 bg-[#111827] px-3 py-1 rounded border border-[#1E293B]">-- Módulos</span>
+                </div>
+
+                <!-- GRELHA DE CARDS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" id="moduleContainer">
+                    <!-- Injetado via Javascript -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- DRAWER LATERAL: CADASTRO DE USUÁRIOS -->
+    <div id="drawerUsuario" class="fixed inset-0 bg-black/70 z-[100] drawer-overlay flex justify-end">
+        <div class="w-full max-w-2xl bg-[#0B111E] border-l border-[#1E293B] h-full flex flex-col drawer-content shadow-2xl">
+            
+            <div class="p-6 border-b border-[#1E293B] flex items-center justify-between bg-[#0B111E]">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded bg-[#111827] border border-[#1E293B] text-slate-300 flex items-center justify-center">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Gestão de Acessos</h3>
+                        <p class="text-[10px] text-slate-400">Novo cadastro e permissões de sistema</p>
+                    </div>
+                </div>
+                <button onclick="fecharDrawerUsuario()" class="text-slate-400 hover:text-white p-2 rounded hover:bg-[#111827]">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form onsubmit="cadastrarUsuario(event)" class="flex-1 flex flex-col justify-between overflow-y-auto p-6 space-y-6 custom-scroll">
+                <div class="space-y-6">
+                    <!-- Dados Pessoais -->
+                    <div class="space-y-4">
+                        <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-500 border-b border-[#1E293B] pb-2">1. Identificação</h4>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nome Completo *</label>
+                                <input type="text" id="newNome" required class="corp-input w-full uppercase" placeholder="Nome do colaborador">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Email *</label>
+                                <input type="email" id="newEmail" required class="corp-input w-full" placeholder="email@comlub.com.br">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Usuário *</label>
+                                <input type="text" id="newUser" required class="corp-input w-full" placeholder="usuario">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Senha *</label>
+                                <input type="text" id="newPass" required class="corp-input w-full" placeholder="••••••••">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Perfil</label>
+                                <select id="newRole" class="corp-input w-full cursor-pointer">
+                                    <option value="operacional">Operacional</option>
+                                    <option value="admin">Administrador</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Filial</label>
+                                <select id="newFilial" class="corp-input w-full cursor-pointer">
+                                    <option value="Todas">Todas</option>
+                                    <option value="01">01 - AL</option>
+                                    <option value="02">02 - PE</option>
+                                    <option value="03">03 - SE</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Permissões -->
+                    <div class="space-y-3">
+                        <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-500 border-b border-[#1E293B] pb-2">2. Módulos Permitidos</h4>
+                        
+                        <div class="grid grid-cols-2 gap-3" id="checkboxContainer">
+                            <!-- Injetado Dinamicamente Baseado na Lista de Módulos -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-[#1E293B] flex justify-between items-center shrink-0">
+                    <div id="cadMsg" class="hidden text-[11px] font-bold"></div>
+                    <button type="submit" id="btnCadastrar" class="bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold py-2.5 px-6 rounded text-xs flex items-center gap-2 ml-auto transition-colors">
+                        <i data-lucide="save" class="w-4 h-4"></i> Salvar Usuário
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // MANTÉM A URL DA API GOOGLE SCRIPT INTACTA
+        const API_URL = "https://script.google.com/macros/s/AKfycbzCSM3tWK83XWQ1ls6sqxnAx7N5sgJbj7nKG5_1Cpv2k0DNZotyCIFzT64AJKECXelG/exec";
+
+        // BASE ÚNICA DE DADOS DOS MÓDULOS (Organizada e Profissional com o Visão Ruptura)
+        const todosModulosData = [
+            // LOGÍSTICA
+            { id: 'oms', categoria: 'LOGISTICA', url: 'montagem_carga_oms.html', icon: 'package', titulo: 'Formação de Carga', desc: 'Roteirização logística e validação física (DA8/DA9).' },
+            { id: 'frota', categoria: 'LOGISTICA', url: 'lancamentos_frota.html', icon: 'truck', titulo: 'Controle de Frota', desc: 'Checklists, vistorias e lançamentos operacionais.' },
+            
+            // COMERCIAL
+            { id: 'credito', categoria: 'COMERCIAL', url: 'liberacao_credito.html', icon: 'shield-check', titulo: 'Liberação Crédito V8', desc: 'Matriz de risco integrada à SE1 e SF2.' },
+            { id: 'aprovacao', categoria: 'COMERCIAL', url: 'aprovacao_comercial.html', icon: 'percent', titulo: 'Aprovação Comercial', desc: 'Auditoria e liberação de descontos (DA1).' },
+            { id: 'pricing', categoria: 'COMERCIAL', url: 'formacao_precos.html', icon: 'calculator', titulo: 'Pricing & Margens', desc: 'Simulação de venda, CMV e rateio de DRE.' },
+            { id: 'pesquisa', categoria: 'COMERCIAL', url: 'portal_pesquisa.html', icon: 'line-chart', titulo: 'Pesquisa B2B', desc: 'Recolha de dados da concorrência no mercado.' },
+            { id: 'pedidos', categoria: 'COMERCIAL', url: 'Pedidos Representante.html', icon: 'shopping-cart', titulo: 'Pedidos Representante', desc: 'Lançamento de pedidos externos e condições.' },
+            
+            // FINANCEIRO
+            { id: 'receber', categoria: 'FINANCEIRO', url: 'contas_receber.html', icon: 'arrow-down-right', titulo: 'Contas a Receber', desc: 'Gestão de títulos, juros e recebimentos (SE1).' },
+            { id: 'pagar', categoria: 'FINANCEIRO', url: 'contas_pagar.html', icon: 'arrow-up-right', titulo: 'Contas a Pagar', desc: 'Obrigações e agendamentos a fornecedores (SE2).' },
+            { id: 'extrato', categoria: 'FINANCEIRO', url: 'extrato_financeiro.html', icon: 'landmark', titulo: 'Extrato Bancário', desc: 'Conciliação automática via leitura de PDF (SE5).' },
+            
+            // SUPREME INFO (BI)
+            { id: 'consultor', categoria: 'SUPREME INFO', url: 'consultor_virtual_ia.html', icon: 'bot', titulo: 'Consultor Virtual IA', desc: 'Inteligência para cruzamento de dados e vendas.' },
+            { id: 'metas', categoria: 'SUPREME INFO', url: 'painel_metas.html', icon: 'target', titulo: 'Metas & KPIs', desc: 'Gestão de objetivos comerciais e performance.' },
+            { id: 'radar', categoria: 'SUPREME INFO', url: 'radar_executivo.html', icon: 'radar', titulo: 'Radar Executivo', desc: 'Consolidação operacional C-Level em tempo real.' },
+            { id: 'dre', categoria: 'SUPREME INFO', url: 'supreme_info_dre.html', icon: 'file-text', titulo: 'D.R.E. Analítica', desc: 'Demonstração de resultado de exercício gerencial.' },
+            { id: 'dre_caixa', categoria: 'SUPREME INFO', url: 'dre_financeira.html', icon: 'bar-chart-horizontal', titulo: 'D.R.E. Caixa Dinâmica', desc: 'Análise do fluxo de caixa e P&L (SE5/CT1).' },
+            { id: 'fluxo_caixa', categoria: 'SUPREME INFO', url: 'fluxo_caixa.html', icon: 'trending-up', titulo: 'Fluxo de Caixa', desc: 'Projeção preditiva e saldo projetado.' },
+            { id: 'curva_abc', categoria: 'SUPREME INFO', url: 'curva_abc.html', icon: 'pie-chart', titulo: 'Curva ABC (Pareto)', desc: 'Análise da rentabilidade operacional 80/20.' },
+            { id: 'analise', categoria: 'SUPREME INFO', url: 'analise_comercial.html', icon: 'activity', titulo: 'Análise Comercial', desc: 'Desempenho focado em rentabilidade e geografia.' },
+            { id: 'auditoria', categoria: 'SUPREME INFO', url: 'auditoria_fisco.html', icon: 'building-2', titulo: 'Auditoria Fiscal', desc: 'Validação na Receita Federal (CNPJ/CCC).' },
+            { id: 'ruptura', categoria: 'SUPREME INFO', url: 'visao_ruptura.html', icon: 'trending-down', titulo: 'Visão de Ruptura', desc: 'Monitor Executivo de Cortes e perdas financeiras (S&OP).' },
+            
+            // SISTEMA
+            { id: 'usuarios', categoria: 'SISTEMA', action: 'openDrawer', icon: 'users', titulo: 'Gestão de Acessos', desc: 'Permissões, perfis e cadastro de usuários.' }
+        ];
+
+        let categoriaAtiva = 'TODOS';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = localStorage.getItem('comlub_leme_user');
+            const role = localStorage.getItem('comlub_leme_role');
+            const modulos = localStorage.getItem('comlub_leme_modulos') || '';
+
+            if (!user) {
+                window.location.href = "index.html"; 
+                return;
+            }
+
+            document.getElementById('headerUser').innerText = user;
+            document.getElementById('headerRole').innerText = role === 'admin' ? 'ADMINISTRADOR' : 'OPERACIONAL';
+
+            renderCheckboxesCadastro();
+            renderModules(role, modulos);
+        });
+
+        function renderModules(role, modulosPermitidos) {
+            const container = document.getElementById('moduleContainer');
+            const searchVal = document.getElementById('searchModule').value.toLowerCase().trim();
+            
+            let html = '';
+            const isAdmin = role === 'admin';
+            const perms = modulosPermitidos.toLowerCase();
+            const temPermissao = (termo) => isAdmin || perms.includes(termo) || perms.includes('todos') || perms.includes('acesso total');
+
+            let modulosFiltrados = todosModulosData.filter(m => {
+                if (categoriaAtiva !== 'TODOS' && m.categoria !== categoriaAtiva) return false;
+                if (searchVal !== '') {
+                    const matchText = `${m.titulo} ${m.desc}`.toLowerCase();
+                    if (!matchText.includes(searchVal)) return false;
+                }
+                
+                // Mapeamento Rígido de Permissões
+                if (m.id === 'oms') return temPermissao('oms') || temPermissao('carga');
+                if (m.id === 'credito') return temPermissao('crédito') || temPermissao('credito') || temPermissao('v8');
+                if (m.id === 'aprovacao') return temPermissao('aprovação') || temPermissao('aprovacao') || temPermissao('comercial');
+                if (m.id === 'pricing') return temPermissao('pricing') || temPermissao('margens');
+                if (m.id === 'frota') return temPermissao('frota') || temPermissao('logística');
+                if (m.id === 'receber') return temPermissao('receber') || temPermissao('se1') || temPermissao('financeiro');
+                if (m.id === 'pagar') return temPermissao('pagar') || temPermissao('se2') || temPermissao('financeiro');
+                if (m.id === 'extrato') return temPermissao('extrato') || temPermissao('se5') || temPermissao('financeiro');
+                if (m.id === 'pesquisa') return temPermissao('pesquisa') || temPermissao('b2b');
+                if (m.id === 'pedidos') return temPermissao('pedidos') || temPermissao('representante');
+                
+                // Os módulos analíticos do Supreme Info geralmente vêm com a tag "bi", "dss", "hub" ou o nome direto
+                if (['consultor', 'metas', 'radar', 'dre', 'dre_caixa', 'fluxo_caixa', 'curva_abc', 'analise', 'auditoria', 'ruptura'].includes(m.id)) {
+                    return isAdmin || temPermissao('hub') || temPermissao('dss') || temPermissao('bi') || temPermissao(m.titulo.toLowerCase());
+                }
+
+                if (m.id === 'usuarios') return isAdmin || temPermissao('usuários') || temPermissao('acessos');
+                
+                return true;
+            });
+
+            document.getElementById('moduloCount').innerText = `${modulosFiltrados.length} Módulos`;
+
+            modulosFiltrados.forEach(m => {
+                const targetAction = m.action === 'openDrawer' 
+                    ? `onclick="abrirDrawerUsuario()"` 
+                    : `href="${m.url}"`;
+
+                html += `
+                <a ${targetAction} class="module-card p-5 flex flex-col justify-between cursor-pointer group">
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-8 h-8 rounded bg-[#1E293B] text-slate-400 flex items-center justify-center group-hover:bg-[#0284c7] group-hover:text-white transition-colors shrink-0">
+                                <i data-lucide="${m.icon}" class="w-4 h-4"></i>
+                            </div>
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${m.categoria}</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide group-hover:text-[#38bdf8] transition-colors mb-1.5">${m.titulo}</h3>
+                        <p class="text-[11px] font-medium text-slate-500 leading-relaxed">${m.desc}</p>
+                    </div>
+
+                    <div class="mt-5 pt-3 border-t border-[#1E293B] flex items-center justify-between">
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Acessar</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-slate-500 group-hover:text-[#38bdf8] group-hover:translate-x-1 transition-all"></i>
+                    </div>
+                </a>`;
+            });
+
+            if (html === '') {
+                html = `<div class="col-span-full p-10 text-center text-slate-500 font-bold uppercase tracking-widest text-xs border border-dashed border-[#1E293B] rounded-xl">Nenhum módulo encontrado.</div>`;
+            }
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function filtrarCategoria(cat, btnElement) {
+            categoriaAtiva = cat;
+            
+            // Atualiza botões
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.className = "cat-btn bg-[#111827] text-slate-400 hover:text-white border border-[#1F293D] px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors";
+            });
+            if(btnElement && btnElement.classList.contains('cat-btn')) {
+                btnElement.className = "cat-btn bg-[#003865] text-white font-bold px-3 py-1.5 rounded text-[10px] uppercase tracking-wider transition-colors border border-[#004a80]";
+            }
+
+            // Atualiza Sidebar
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.remove('active', 'font-bold');
+                btn.classList.add('font-medium');
+            });
+            if(btnElement && btnElement.classList.contains('nav-item')) {
+                btnElement.classList.remove('font-medium');
+                btnElement.classList.add('active');
+            }
+
+            // Breadcrumb
+            let breadLabel = cat === 'TODOS' ? 'Visão Geral (Todos)' : cat;
+            if (cat === 'SUPREME INFO') breadLabel = 'Supreme Info (BI)';
+            document.getElementById('breadcrumbPath').innerText = `Módulos > ${breadLabel}`;
+            document.getElementById('sectionTitle').innerText = cat === 'TODOS' ? 'Módulos Disponíveis' : `Módulos: ${breadLabel}`;
+
+            const role = localStorage.getItem('comlub_leme_role');
+            const modulos = localStorage.getItem('comlub_leme_modulos') || '';
+            renderModules(role, modulos);
+        }
+
+        function buscarModulos() {
+            const role = localStorage.getItem('comlub_leme_role');
+            const modulos = localStorage.getItem('comlub_leme_modulos') || '';
+            renderModules(role, modulos);
+        }
+
+        // =====================================
+        // GESTÃO DE USUÁRIOS E CADASTRO
+        // =====================================
+        function abrirDrawerUsuario() { document.getElementById('drawerUsuario').classList.add('active'); }
+        function fecharDrawerUsuario() { document.getElementById('drawerUsuario').classList.remove('active'); }
+
+        function renderCheckboxesCadastro() {
+            const container = document.getElementById('checkboxContainer');
+            let html = '';
+            // Gera um checkbox para cada módulo que pode ser dado permissão
+            todosModulosData.forEach(m => {
+                html += `
+                <label class="relative cursor-pointer">
+                    <input type="checkbox" name="moduleOption" value="${m.titulo}" class="module-checkbox sr-only">
+                    <div class="border border-[#1F293D] rounded-lg p-2.5 flex items-center justify-between bg-[#111827] transition-colors hover:border-slate-600">
+                        <span class="text-[10px] font-bold text-slate-300 uppercase truncate" title="${m.titulo}">${m.titulo}</span>
+                        <i data-lucide="check" class="w-3.5 h-3.5 text-[#FFCB05] opacity-0 check-icon transition-opacity shrink-0"></i>
+                    </div>
+                </label>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function cadastrarUsuario(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnCadastrar');
+            const msg = document.getElementById('cadMsg');
+            
+            const checkboxes = document.querySelectorAll('input[name="moduleOption"]:checked');
+            let modulosSelecionados = [];
+            checkboxes.forEach(cb => modulosSelecionados.push(cb.value));
+
+            const payload = {
+                action: 'cadastrar',
+                nome: document.getElementById('newNome').value.trim(),
+                email: document.getElementById('newEmail').value.trim(),
+                username: document.getElementById('newUser').value.trim(),
+                password: document.getElementById('newPass').value.trim(),
+                role: document.getElementById('newRole').value,
+                filiais: document.getElementById('newFilial').value,
+                status: 'Ativo',
+                modulos: modulosSelecionados.length > 0 ? modulosSelecionados.join(', ') : 'Nenhum'
+            };
+
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Gravando...`;
+            
+            try {
+                const res = await fetch(API_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload) 
+                });
+                
+                const textResponse = await res.text();
+                const data = JSON.parse(textResponse);
+                
+                if (data.success) {
+                    msg.className = "text-emerald-400 text-[10px] font-bold uppercase tracking-widest";
+                    msg.innerText = "Usuário cadastrado com sucesso!";
+                    msg.classList.remove('hidden');
+                    e.target.reset();
+                    setTimeout(() => fecharDrawerUsuario(), 1500);
+                }
+            } catch (err) {
+                msg.className = "text-rose-400 text-[10px] font-bold uppercase tracking-widest";
+                msg.innerText = "Erro ao gravar usuário.";
+                msg.classList.remove('hidden');
+            } finally {
+                btn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> Salvar Usuário`;
+                lucide.createIcons();
+                setTimeout(() => msg.classList.add('hidden'), 4000);
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>
