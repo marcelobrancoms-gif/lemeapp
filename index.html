@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    
+    <title>Login - LEME Supreme</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['"Inter"', 'sans-serif'], mono: ['"Fira Code"', 'monospace'] } } }
+        }
+    </script>
+
+    <style>
+        body { 
+            background-color: #02040a; 
+            color: #e2e8f0; 
+            font-family: 'Inter', sans-serif; 
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center; 
+        }
+
+        .app-container {
+            position: relative;
+            width: 60vw; 
+            min-width: 800px; 
+            aspect-ratio: 16 / 9; 
+            background-image: url('index.png'); 
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end; 
+            padding-right: 5%; 
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.35); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12); 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 320px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .corp-input { 
+            width: 100%; 
+            background-color: rgba(0, 0, 0, 0.4); 
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            color: #f8fafc; 
+            border-radius: 8px; 
+            padding: 12px 14px 12px 38px; 
+            font-size: 11px; 
+            font-weight: 600; 
+            outline: none; 
+            transition: all 0.3s ease; 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .corp-input:focus { 
+            border-color: #38bdf8; 
+            background-color: rgba(15, 23, 42, 0.7); 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.7), 0 0 0 2px rgba(56,189,248,0.4); 
+        }
+        .corp-input::placeholder { color: #94a3b8; }
+
+        .btn-3d { transition: all 0.2s ease-in-out; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2); }
+        .btn-3d:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 12px -2px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.3); }
+        .btn-3d:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 3px 6px rgba(0,0,0,0.6); }
+        .btn-3d:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        .loader-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+
+        <div class="glass-panel p-6 sm:p-8 animate-[fadeIn_0.5s_ease-out]">
+            
+            <div class="flex items-baseline select-none mb-1.5 relative">
+                <span class="text-slate-100 font-black text-3xl tracking-tighter drop-shadow-lg">LEME</span>
+                <span class="text-sky-400 font-black text-3xl tracking-tighter ml-1 drop-shadow-[0_0_15px_rgba(56,189,248,0.6)]">SUPREME</span>
+                <span class="absolute -right-12 -top-2 bg-sky-600/80 text-white text-[7px] font-black px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(14,165,233,0.5)] border border-sky-400/50 backdrop-blur-sm tracking-widest">V11.3</span>
+            </div>
+            <p class="text-[9px] text-slate-300 font-bold uppercase tracking-widest mb-8 flex items-center gap-1 opacity-90 text-center">
+                <i data-lucide="cpu" class="w-2.5 h-2.5"></i> Motor Analítico S&OP
+            </p>
+
+            <form id="loginForm" onsubmit="realizarLogin(event)" class="w-full space-y-5">
+                
+                <div id="errorMsg" class="hidden bg-rose-500/20 border border-rose-500/50 text-rose-300 text-[10px] font-bold px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 uppercase tracking-widest text-center shadow-inner backdrop-blur-md">
+                </div>
+
+                <div class="space-y-3">
+                    <div class="relative group">
+                        <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-sky-400 transition-colors"></i>
+                        <input type="text" id="username" required class="corp-input" placeholder="UTILIZADOR" autocomplete="username">
+                    </div>
+                    
+                    <div class="relative group">
+                        <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-sky-400 transition-colors"></i>
+                        <input type="password" id="password" required class="corp-input font-mono tracking-widest" placeholder="••••••••" autocomplete="current-password">
+                    </div>
+                </div>
+
+                <button type="submit" id="btnLogin" class="w-full btn-3d bg-gradient-to-b from-sky-500 to-sky-700 hover:from-sky-400 hover:to-sky-600 text-white py-3 rounded-lg text-[10px] font-black uppercase tracking-widest border border-sky-400/50 shadow-[0_0_15px_rgba(14,165,233,0.4)] flex justify-center items-center gap-1.5 mt-2">
+                    Acessar Portal <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </button>
+                
+            </form>
+
+            <div class="mt-8 flex items-center justify-between w-full pt-4 border-t border-white/10">
+                <div class="flex items-center gap-1.5 text-slate-300">
+                    <i data-lucide="shield-check" class="w-3 h-3 text-emerald-400"></i>
+                    <span class="text-[8px] font-bold uppercase tracking-widest">Conexão Segura</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-slate-300">
+                    <div class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.8)]"></div>
+                    <span class="text-[8px] font-bold uppercase tracking-widest">Database Cloud</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            setTimeout(() => { document.getElementById('username').focus(); }, 100);
+            
+            const sessaoAtual = localStorage.getItem('comlub_leme_user');
+            if (sessaoAtual) {
+                window.location.href = "hub_principal.html";
+            }
+        });
+
+        function mostrarErro(mensagem) {
+            const errorDiv = document.getElementById('errorMsg');
+            errorDiv.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> ${mensagem}`;
+            errorDiv.classList.remove('hidden');
+            lucide.createIcons({root: errorDiv});
+            
+            const painel = document.querySelector('.glass-panel');
+            painel.classList.add('translate-x-2');
+            setTimeout(() => painel.classList.replace('translate-x-2', '-translate-x-2'), 50);
+            setTimeout(() => painel.classList.replace('-translate-x-2', 'translate-x-2'), 100);
+            setTimeout(() => painel.classList.replace('translate-x-2', '-translate-x-2'), 150);
+            setTimeout(() => painel.classList.replace('-translate-x-2', 'translate-x-0'), 200);
+        }
+
+        // Base local de segurança (Garante acesso contínuo mesmo com oscilações de API/CORS)
+        const usuariosFallback = [
+            {
+                Login: "marcelo",
+                Senha: "mhbranco",
+                Nome: "Marcelo (Master)",
+                Role: "admin",
+                Filial: "Todas",
+                Modulos: ["acesso total (admin)"],
+                Status: "Ativo"
+            },
+            {
+                Login: "COBRANCA",
+                Senha: "COB2026@",
+                Nome: "COBRANÇA",
+                Role: "Operacional",
+                Filial: "Todas",
+                Modulos: ["Contas a Receber (SE1)", "Gestão de Cobrança", "Acompanhamento Baixas"],
+                Status: "Ativo"
+            }
+        ];
+
+        async function realizarLogin(e) {
+            e.preventDefault();
+            
+            const usernameInput = document.getElementById('username').value.trim();
+            const passwordInput = document.getElementById('password').value.trim();
+            const btn = document.getElementById('btnLogin');
+            const errorDiv = document.getElementById('errorMsg');
+            
+            if (!usernameInput || !passwordInput) {
+                mostrarErro("Preencha todos os campos.");
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 loader-spin text-white"></i> Autenticando...`;
+            btn.disabled = true;
+            lucide.createIcons({root: btn});
+
+            let usuariosDB = [];
+
+            // 1. Tenta carregar os dados online do Google Sheets
+            const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycby1j5LHALry_orlS36rqpCkG4E8qt0oSCN-BAwxwQrido7QNipP8LcVLaQUffd8Cy9_/exec";
+
+            try {
+                const response = await fetch(GOOGLE_SHEETS_API);
+                if (response.ok) {
+                    const resData = await response.json();
+                    if (resData && resData.success && Array.isArray(resData.data)) {
+                        usuariosDB = resData.data;
+                    }
+                }
+            } catch (error) {
+                console.warn("Conexão online indisponível. Recorrendo à base de contingência local.", error);
+            }
+
+            // 2. Se a API falhou ou não retornou dados, utiliza a base de contingência local
+            if (usuariosDB.length === 0) {
+                usuariosDB = usuariosFallback;
+            }
+
+            // 3. Valida credenciais do usuário
+            const usuarioEncontrado = usuariosDB.find(u => {
+                const loginDB = String(u.Login || u.login || u.LOGIN || '').toUpperCase().trim();
+                const senhaDB = String(u.Senha || u.senha || u.SENHA || '').trim();
+                return loginDB === usernameInput.toUpperCase() && senhaDB === passwordInput;
+            });
+
+            if (!usuarioEncontrado) {
+                mostrarErro("Utilizador ou senha incorretos.");
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                lucide.createIcons({root: btn});
+                document.getElementById('password').value = '';
+                document.getElementById('password').focus();
+                return;
+            }
+
+            if ((usuarioEncontrado.Status || usuarioEncontrado.status) === 'Bloqueado') {
+                mostrarErro("Acesso bloqueado pela Diretoria.");
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                lucide.createIcons({root: btn});
+                return;
+            }
+
+            // SUCESSO NO LOGIN
+            btn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5 text-white"></i> Acesso Permitido`;
+            btn.classList.replace('from-sky-500', 'from-emerald-600');
+            btn.classList.replace('to-sky-700', 'to-emerald-800');
+            btn.classList.replace('border-sky-400/50', 'border-emerald-400/50');
+            btn.classList.replace('shadow-[0_0_15px_rgba(14,165,233,0.4)]', 'shadow-[0_0_15px_rgba(16,185,129,0.5)]');
+            lucide.createIcons({root: btn});
+
+            const modulos = usuarioEncontrado.Modulos || usuarioEncontrado.modulos;
+            const modulosStr = Array.isArray(modulos) ? modulos.join(',') : String(modulos || '');
+
+            localStorage.setItem('comlub_leme_user', usuarioEncontrado.Nome || usuarioEncontrado.nome || usuarioEncontrado.Login || usuarioEncontrado.login);
+            localStorage.setItem('comlub_leme_login', usuarioEncontrado.Login || usuarioEncontrado.login);
+            localStorage.setItem('comlub_leme_role', String(usuarioEncontrado.Role || usuarioEncontrado.role).toLowerCase());
+            localStorage.setItem('comlub_leme_filial', usuarioEncontrado.Filial || usuarioEncontrado.filial || 'Todas');
+            localStorage.setItem('comlub_leme_modulos', modulosStr.toLowerCase());
+            
+            const vendedor = usuarioEncontrado.Vendedor || usuarioEncontrado.vendedor;
+            if (vendedor) localStorage.setItem('comlub_leme_vendedor', vendedor);
+            else localStorage.removeItem('comlub_leme_vendedor');
+
+            setTimeout(() => { window.location.href = "hub_principal.html"; }, 800);
+        }
+    </script>
+</body>
+</html>

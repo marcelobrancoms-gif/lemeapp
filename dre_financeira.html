@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>DRE Caixa Dinâmica - LEME ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['"Inter"', 'sans-serif'], mono: ['"Fira Code"', 'monospace'] } } }
+        }
+    </script>
+
+    <style>
+        body { background-color: #080f1a; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+
+        .corp-input { 
+            background-color: #0f172a; border: 1px solid #1e293b; color: #f8fafc; border-radius: 6px; 
+            padding: 6px 12px; font-size: 11px; font-weight: 600; outline: none; transition: all 0.2s; 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .corp-input:focus { border-color: #38bdf8; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 0 2px rgba(56,189,248,0.4); }
+
+        .btn-3d { transition: all 0.15s ease-in-out; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15); }
+        .btn-3d:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 8px -2px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.25); }
+        .btn-3d:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 3px 6px rgba(0,0,0,0.5); }
+
+        .dre-table-wrapper { overflow-x: auto; width: 100%; }
+        .dre-table { border-collapse: separate; border-spacing: 0; min-width: 1300px; width: 100%; }
+        .dre-table th { 
+            background-color: #0f172a; border-bottom: 2px solid #1e293b; border-top: 1px solid #1e293b; 
+            font-weight: 800; color: #94a3b8; padding: 12px 16px; font-size: 10px; text-transform: uppercase; 
+            letter-spacing: 0.05em; position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+        }
+        .dre-table th:first-child, .dre-table td:first-child { position: sticky; left: 0; z-index: 30; background-color: inherit; border-right: 1px solid #1e293b; }
+        .dre-table th:first-child { background-color: #0f172a; z-index: 40; }
+        .dre-table td { padding: 8px 16px; font-size: 11px; border-bottom: 1px solid #151e2d; transition: background-color 0.2s; white-space: nowrap; }
+
+        .row-macro { background-color: #0b1120 !important; font-weight: 800; color: #f8fafc; border-top: 1px solid #1e293b; }
+        .row-sintetica { background-color: #0f172a !important; font-weight: 700; color: #cbd5e1; cursor: pointer; user-select: none; }
+        .row-sintetica:hover { background-color: #1e293b !important; }
+        .row-analitica { background-color: #151e2d !important; font-weight: 500; color: #94a3b8; }
+        .row-analitica:hover { background-color: #1e293b !important; color: #f8fafc; }
+
+        .val-positive { color: #34d399; } 
+        .val-negative { color: #f43f5e; } 
+        .loader-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .icon-collapse { 
+            display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; 
+            border-radius: 4px; background: rgba(255,255,255,0.05); margin-right: 8px; transition: all 0.2s; cursor: pointer;
+        }
+        .icon-collapse:hover { background: rgba(56,189,248,0.2); color: #38bdf8; }
+
+        /* Estilização Executiva do Relatório CFO e Copilot */
+        .cfo-section-title {
+            font-size: 11px; font-weight: 900; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.1em;
+            border-bottom: 2px solid #1e293b; padding-bottom: 8px; margin-bottom: 16px; margin-top: 24px;
+        }
+        .kpi-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; background-color: #0b1120; border-radius: 8px; overflow: hidden; border: 1px solid #1e293b; }
+        .kpi-table th { background-color: #0f172a; color: #94a3b8; font-size: 9px; text-transform: uppercase; font-weight: 800; padding: 10px; text-align: left; border-bottom: 1px solid #1e293b; }
+        .kpi-table td { padding: 10px; font-size: 11px; color: #cbd5e1; border-bottom: 1px solid #151e2d; font-weight: 500; }
+        .kpi-table tr:last-child td { border-bottom: none; }
+        
+        .cfo-note {
+            background-color: #0b1120; border: 1px solid #1e293b; border-left: 3px solid #38bdf8;
+            border-radius: 6px; padding: 16px; margin-bottom: 12px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .cfo-note.critical { border-left-color: #f43f5e; background-color: rgba(244, 63, 94, 0.05); }
+        .cfo-note.warning { border-left-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05); }
+        .cfo-note.success { border-left-color: #10b981; background-color: rgba(16, 185, 129, 0.05); }
+        .cfo-note.neutral { border-left-color: #64748b; background-color: rgba(100, 116, 139, 0.05); }
+
+        .chat-msg-user { 
+            background: #1e293b; border-right: 3px solid #64748b; padding: 12px; border-radius: 6px; margin-bottom: 12px;
+            font-size: 11px; font-style: italic; color: #e2e8f0; text-align: right;
+        }
+        .chat-msg-cfo {
+            background: #0f172a; border-left: 3px solid #38bdf8; padding: 16px; border-radius: 6px; margin-bottom: 16px;
+            font-size: 11px; color: #cbd5e1; line-height: 1.6; box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
+            border-top: 1px solid #1e293b; border-right: 1px solid #1e293b; border-bottom: 1px solid #1e293b;
+        }
+        .cfo-chat-input-area {
+            background: #0b1120; border-top: 1px solid #1e293b; padding: 16px; 
+            box-shadow: 0 -10px 20px rgba(0,0,0,0.5); position: relative; z-index: 10;
+        }
+        .pulsing-dot { animation: pulse-dot 1.5s infinite; }
+        @keyframes pulse-dot { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+    </style>
+</head>
+<body class="flex flex-col h-screen antialiased relative">
+
+    <div id="toastNotification" class="fixed top-5 right-5 z-[3000] bg-[#1e293b] text-white text-xs font-bold uppercase tracking-widest px-5 py-4 rounded-xl shadow-[0_15px_30px_rgba(0,0,0,0.6)] border border-[#334155] flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="info" class="w-5 h-5 text-sky-400" id="toastIcon"></i>
+        <span id="toastMessage">Mensagem do Sistema</span>
+    </div>
+
+    <div id="loadingOverlay" class="fixed inset-0 z-[60] bg-[#080f1a]/80 backdrop-blur-sm flex flex-col items-center justify-center hidden transition-opacity duration-300">
+        <div class="bg-[#0f172a] px-8 py-6 rounded-xl shadow-[0_15px_30px_rgba(0,0,0,0.6)] flex items-center gap-4 min-w-[320px] border border-[#1e293b]">
+            <i data-lucide="loader-2" class="w-6 h-6 text-sky-400 loader-spin"></i>
+            <div>
+                <h3 class="text-sm font-black text-slate-100 uppercase tracking-wide">Construindo Árvore DRE...</h3>
+                <p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-0.5">Sintetizando estrutura SED x SE5.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CABEÇALHO -->
+    <header class="bg-[#0f172a] border-b border-[#1e293b] px-6 py-4 flex items-center justify-between shrink-0 shadow-xl z-30">
+        <div class="flex items-center gap-4">
+            <div class="flex items-baseline select-none">
+                <span class="text-slate-100 font-black text-2xl tracking-tighter">LEME</span>
+                <span class="text-sky-500 font-black text-2xl tracking-tighter ml-1 drop-shadow-[0_0_10px_rgba(14,165,233,0.3)]">SUPREME</span>
+            </div>
+            <div class="h-6 w-px bg-[#334155] ml-2 hidden sm:block"></div>
+            <div class="hidden sm:flex items-center gap-3 ml-2">
+                <span class="bg-[#1e293b] text-slate-300 border border-[#334155] px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-inner">
+                    <i data-lucide="bar-chart-horizontal" class="w-3.5 h-3.5 text-indigo-400"></i> Módulo Financeiro
+                </span>
+                <h1 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center">
+                    Demonstrativo do Resultado do Exercício
+                    <span class="bg-indigo-600 text-white px-3 py-1 rounded-md text-[10px] font-black tracking-widest ml-4 shadow-lg border border-indigo-400 animate-pulse">
+                        VERSÃO V8.1-SUPREME CFO-REAL
+                    </span>
+                </h1>
+            </div>
+        </div>
+        <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-white transition-colors bg-[#1e293b] p-2 rounded-lg border border-[#334155] hover:border-slate-500 btn-3d">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <!-- BARRA DE FILTROS -->
+    <div class="bg-[#151e2d] border-b border-[#0f172a] px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 relative z-20 shadow-lg">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <div class="flex items-center gap-2">
+                <i data-lucide="filter" class="w-4 h-4 text-sky-400"></i>
+                <span class="text-[10px] font-black text-slate-200 uppercase tracking-widest mr-2">Filtros:</span>
+            </div>
+            <select id="selFilial" onchange="carregarDRE()" class="corp-input w-40 py-1.5 h-[32px] rounded-md cursor-pointer">
+                <option value="consolidado" selected>Global (Todas)</option>
+                <option value="01">01 - Alagoas</option>
+                <option value="02">02 - Pernambuco</option>
+                <option value="03">03 - Sergipe</option>
+            </select>
+            <select id="selVisao" onchange="carregarDRE()" class="corp-input w-48 py-1.5 h-[32px] rounded-md text-emerald-400 focus:border-emerald-500 border-emerald-500/30 cursor-pointer">
+                <option value="gerencial" selected>Visão Gerencial (SED)</option>
+                <option value="contabil">Visão Contábil (CT1)</option>
+            </select>
+            <select id="f_meses" onchange="carregarDRE()" class="corp-input w-40 py-1.5 h-[32px] rounded-md cursor-pointer">
+                <option value="1">Último Mês</option>
+                <option value="3">3 Meses (Trimestre)</option>
+                <option value="6" selected>6 Meses (Semestre)</option>
+                <option value="12">12 Meses (Anual)</option>
+            </select>
+            <button onclick="carregarDRE()" class="btn-3d bg-gradient-to-b from-sky-600 to-sky-700 hover:from-sky-500 hover:to-sky-600 text-white px-5 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg flex items-center gap-1.5 border border-sky-800 border-t-sky-500 ml-1">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Atualizar D.R.E.
+            </button>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <button onclick="expandirTodos()" class="btn-3d bg-[#1e293b] hover:bg-[#334155] text-slate-300 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-[#334155] shadow-sm transition-colors">Expandir</button>
+            <span class="text-slate-600">|</span>
+            <button onclick="recolherTodos()" class="btn-3d bg-[#1e293b] hover:bg-[#334155] text-rose-400 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-rose-500/30 shadow-sm transition-colors">Recolher</button>
+            <div class="w-px h-5 bg-[#334155] mx-2"></div>
+            
+            <!-- Botão Parecer CFO -->
+            <button onclick="abrirParecerCFO()" class="btn-3d bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white px-5 py-1.5 text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.4)] flex items-center gap-2 rounded-lg transition-colors border border-amber-800 border-t-amber-500">
+                <i data-lucide="brain-circuit" class="w-4 h-4"></i> Auditoria CFO & Copilot
+            </button>
+        </div>
+    </div>
+
+    <!-- ÁREA DA TABELA -->
+    <main class="flex-1 overflow-hidden flex flex-col relative w-full bg-[#080f1a] p-4 lg:p-6 custom-scroll">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 shrink-0">
+            <div class="bg-[#151e2d] border border-[#1e293b] rounded-xl p-4 shadow-lg flex flex-col justify-center relative overflow-hidden border-t-2 border-t-emerald-500">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">Total Entradas (Receitas)</span>
+                <span class="text-3xl font-black text-emerald-400 tabular-nums relative z-10" id="kpiEntradas">R$ 0,00</span>
+                <i data-lucide="trending-up" class="absolute -right-4 -bottom-4 w-24 h-24 text-emerald-500 opacity-5"></i>
+            </div>
+            <div class="bg-[#151e2d] border border-[#1e293b] rounded-xl p-4 shadow-lg flex flex-col justify-center relative overflow-hidden border-t-2 border-t-rose-500">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">Total Saídas (Despesas)</span>
+                <span class="text-3xl font-black text-rose-400 tabular-nums relative z-10" id="kpiSaidas">R$ 0,00</span>
+                <i data-lucide="trending-down" class="absolute -right-4 -bottom-4 w-24 h-24 text-rose-500 opacity-5"></i>
+            </div>
+            <div class="bg-[#151e2d] border border-[#1e293b] rounded-xl p-4 shadow-lg flex flex-col justify-center relative overflow-hidden border-t-2 border-t-sky-500 bg-gradient-to-br from-[#151e2d] to-[#0f172a]">
+                <span class="text-[10px] font-black text-slate-200 uppercase tracking-widest mb-1 relative z-10">Resultado (Caixa Líquido)</span>
+                <span class="text-4xl font-black tabular-nums relative z-10 text-sky-400 drop-shadow-[0_0_10px_rgba(56,189,248,0.3)]" id="kpiResultado">R$ 0,00</span>
+                <i data-lucide="wallet" class="absolute -right-4 -bottom-4 w-24 h-24 text-sky-500 opacity-5"></i>
+            </div>
+        </div>
+
+        <div class="flex-1 bg-[#151e2d] border border-[#1e293b] rounded-xl shadow-2xl flex flex-col overflow-hidden w-full">
+            <div class="px-6 py-4 border-b border-[#1e293b] bg-[#0f172a] flex justify-between items-center shrink-0 z-10">
+                <div>
+                    <h2 class="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="network" class="w-4 h-4 text-sky-400"></i> D.R.E. Financeira (Árvore Dinâmica)
+                    </h2>
+                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1" id="headerSub">
+                        Regime de Caixa Oficial - Valores Extraídos Diretamente do ERP
+                    </p>
+                </div>
+                <div class="text-[9px] bg-[#1e293b] border border-[#334155] px-3 py-1.5 rounded-full font-bold text-slate-400 shadow-inner flex items-center gap-2 uppercase tracking-widest" id="headerTag">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_5px_#10b981]"></span>
+                    Tabelas Auditadas: SE5010 e SED010
+                </div>
+            </div>
+
+            <div class="dre-table-wrapper flex-1 relative bg-[#0b1120] custom-scroll">
+                <table class="dre-table">
+                    <thead id="dreHeader"></thead>
+                    <tbody id="dreBody">
+                        <tr>
+                            <td colspan="10" class="text-center py-32 text-slate-600 font-bold uppercase tracking-widest text-xs flex flex-col items-center justify-center gap-3">
+                                <div class="p-4 rounded-full bg-[#1e293b] shadow-inner border border-[#334155]">
+                                    <i data-lucide="inbox" class="w-8 h-8 text-slate-500 opacity-50"></i>
+                                </div>
+                                Clique em "Atualizar D.R.E." para conectar ao Protheus.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- PAINEL CONSULTIVO CFO & COPILOT CHAT (DRAWER RIGHT)                       -->
+    <!-- ========================================================================= -->
+    <div id="cfoDrawer" class="fixed inset-y-0 right-0 w-full sm:w-[700px] bg-[#080f1a] shadow-[-20px_0_60px_rgba(0,0,0,0.9)] transform translate-x-full transition-transform duration-300 z-50 flex flex-col border-l border-[#1e293b]">
+        
+        <!-- Drawer Header -->
+        <div class="px-8 py-5 border-b border-[#1e293b] bg-[#0b1120] flex justify-between items-center shrink-0 shadow-md">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shadow-inner relative overflow-hidden">
+                    <i data-lucide="cpu" class="w-6 h-6 text-amber-500 relative z-10"></i>
+                    <div class="absolute inset-0 bg-amber-500/20 animate-pulse"></div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-white uppercase tracking-widest">CFO Co-Pilot & Auditoria</h3>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5 font-bold">Motor Analítico 100% Real-Time</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button class="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600/40 transition-colors btn-3d" onclick="window.print()"><i data-lucide="printer" class="w-3 h-3 inline-block"></i></button>
+                <button onclick="fecharParecerCFO()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-[#1e293b] border border-transparent hover:border-[#334155] transition-colors btn-3d"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+        
+        <!-- Drawer Scrollable Content -->
+        <div class="p-8 flex-1 overflow-y-auto custom-scroll bg-[#080f1a] flex flex-col gap-6" id="cfoDrawerScrollArea">
+            
+            <div id="cfoHeuristicaContent"></div>
+
+            <!-- Área de Chat Interativo -->
+            <div class="mt-4 pt-6 border-t border-[#1e293b]">
+                <h4 class="text-xs font-black text-sky-400 uppercase tracking-widest flex items-center gap-2 mb-6">
+                    <i data-lucide="terminal" class="w-4 h-4"></i> Console de Investigação Ativa
+                </h4>
+                <div id="chatHistory" class="flex flex-col">
+                    <div class="chat-msg-cfo">
+                        <span class="block text-[9px] font-black uppercase tracking-widest text-sky-500 mb-2 opacity-80"><i data-lucide="bot" class="w-3 h-3 inline-block mr-1"></i> Assistente LEME:</span>
+                        A análise acima reflete exclusivamente os dados presentes na tabela carregada. Você pode me solicitar auditorias sobre variações específicas cruzando com outros módulos. O que deseja investigar?
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Drawer Chat Input Area -->
+        <div class="cfo-chat-input-area">
+            <form onsubmit="enviarPerguntaCFO(event)" class="relative">
+                <input type="text" id="cfoChatInput" class="w-full bg-[#151e2d] border border-[#334155] text-slate-200 rounded-lg pl-4 pr-32 py-3 text-xs focus:outline-none focus:border-sky-500 shadow-inner placeholder-slate-600 transition-colors" placeholder="Ex: Qual o motivo da variação de impostos em Abril?" autocomplete="off">
+                <button type="submit" class="absolute right-2 top-2 bottom-2 bg-sky-600 hover:bg-sky-500 text-white rounded px-4 text-[10px] font-black uppercase tracking-widest shadow-md transition-colors flex items-center gap-1.5">
+                    <i data-lucide="send" class="w-3 h-3"></i> Consultar
+                </button>
+            </form>
+            <p class="text-center text-[8px] font-bold text-slate-600 uppercase tracking-widest mt-2">Consultas operam sobre os dados extraídos das tabelas do Protheus</p>
+        </div>
+    </div>
+    
+    <div id="cfoOverlay" onclick="fecharParecerCFO()" class="fixed inset-0 bg-[#000000]/70 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300"></div>
+
+    <script>
+        const API_BASE_URL = (() => {
+            let host = window.location.hostname;
+            if (!host || host.includes('goog') || host === 'localhost' || host === '127.0.0.1') return 'http://177.70.102.16:3001/api';
+            return `http://${host}:3001/api`;
+        })();
+
+        let labelsMeses = [];
+        let chavesAnoMes = []; 
+        let dreDataMap = {};
+        let globalRawData = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            construirEixosDeTempo();
+        });
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = msg;
+            const icon = document.getElementById('toastIcon');
+            
+            if(isError) {
+                toast.classList.replace('border-[#334155]', 'border-rose-500/50');
+                icon.setAttribute('data-lucide', 'alert-triangle'); icon.classList.replace('text-sky-400', 'text-rose-500');
+            } else {
+                toast.classList.replace('border-rose-500/50', 'border-[#334155]');
+                icon.setAttribute('data-lucide', 'check-circle'); icon.classList.replace('text-rose-500', 'text-emerald-400');
+            }
+            lucide.createIcons({root: toast});
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-[-100px]', 'opacity-0'); }, 3500);
+        }
+
+        function construirEixosDeTempo() {
+            labelsMeses = []; chavesAnoMes = [];
+            const mesesSel = parseInt(document.getElementById('f_meses').value) || 6;
+            const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            let d = new Date();
+            for (let i = mesesSel - 1; i >= 0; i--) {
+                const temp = new Date(d.getFullYear(), d.getMonth() - i, 1);
+                labelsMeses.push(`${mesesNomes[temp.getMonth()]}/${String(temp.getFullYear()).substring(2)}`);
+                chavesAnoMes.push(`${temp.getFullYear()}${String(temp.getMonth() + 1).padStart(2, '0')}`);
+            }
+            const thead = document.getElementById('dreHeader');
+            const isContabil = document.getElementById('selVisao').value === 'contabil';
+            const thTitulo = isContabil ? 'Conta Contábil (CT1) / Descrição' : 'Conta (ED_CODIGO) / Descrição (ED_DESCRIC)';
+            
+            let ths = `<tr><th class="w-[450px] min-w-[450px] text-left pl-6">${thTitulo}</th>`;
+            labelsMeses.forEach(mes => { ths += `<th class="text-right w-32 min-w-[120px]">${mes}</th>`; });
+            ths += `<th class="text-right w-40 min-w-[150px] bg-[#1e293b] text-slate-300">TOTAL ACUMULADO</th></tr>`;
+            thead.innerHTML = ths;
+        }
+
+        const formatCurrency = (val) => {
+            let n = parseFloat(val);
+            if (isNaN(n)) return 'R$ 0,00';
+            const formatted = Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return n < 0 ? `(R$ ${formatted})` : `R$ ${formatted}`;
+        };
+
+        const getValClass = (val, isTotal = false) => {
+            if (val === 0) return 'text-slate-500';
+            if (isTotal) return val > 0 ? 'text-emerald-400' : 'text-rose-400';
+            return val > 0 ? 'val-positive' : 'val-negative';
+        };
+
+        async function carregarDRE() {
+            construirEixosDeTempo();
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            
+            const filial = document.getElementById('selFilial').value;
+            const visao = document.getElementById('selVisao').value;
+            const mesesSel = document.getElementById('f_meses').value;
+            const isContabil = visao === 'contabil';
+            
+            document.getElementById('headerSub').innerText = isContabil ? 'Agrupamento pelo Plano de Contas (CT1) - Regime de Caixa' : 'Regime de Caixa Oficial - Valores Extraídos Exatamente do Banco';
+            
+            const urlPath = isContabil ? `dre-contabil/${filial}?meses=${mesesSel}` : `dre-financeira/${filial}?meses=${mesesSel}`;
+            const tbody = document.getElementById('dreBody');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/${urlPath}`);
+                if (!response.ok) throw new Error(`Status HTTP ${response.status}`);
+                
+                const dadosSQL = await response.json();
+                if (dadosSQL.error) throw new Error(`Erro SQL: ${dadosSQL.error}`);
+
+                if (!Array.isArray(dadosSQL) || dadosSQL.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-24 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="search-x" class="w-10 h-10 mx-auto mb-3 opacity-30"></i>Sem movimentação.</td></tr>`;
+                    lucide.createIcons({root: tbody});
+                    document.getElementById('kpiEntradas').innerText = 'R$ 0,00';
+                    document.getElementById('kpiSaidas').innerText = 'R$ 0,00';
+                    document.getElementById('kpiResultado').innerText = 'R$ 0,00';
+                    showToast("Consulta vazia.", false);
+                } else {
+                    processarArvoreDinamica(dadosSQL, isContabil);
+                    renderizarTabelaRecursiva();
+                    showToast("D.R.E. Atualizada com Sucesso!");
+                }
+            } catch (error) {
+                console.error(error);
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-20 text-rose-500"><i data-lucide="server-crash" class="w-12 h-12 mb-4 mx-auto opacity-80"></i><h3 class="text-sm font-black uppercase tracking-widest">Falha de API</h3><div class="bg-rose-500/10 p-4 rounded-xl mt-4 border border-rose-500/30 text-[11px] font-mono shadow-inner max-w-2xl mx-auto">${error.message}</div></td></tr>`;
+                lucide.createIcons({root: tbody});
+                showToast("Erro de API.", true);
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+        }
+
+        function processarArvoreDinamica(rows, isContabil) {
+            dreTreeNodes = {};
+            globalRawData = rows;
+            let kpiIn = 0; let kpiOut = 0;
+
+            rows.forEach(r => {
+                const cod = r.CODIGO || r.conta;
+                if(!cod) return;
+                if(!dreTreeNodes[cod]) {
+                    dreTreeNodes[cod] = { cod: cod, desc: r.DESCRICAO || r.descricao || 'ND', tipo: String(r.TIPO || r.classe).trim(), valores: {}, children: [], hasParent: false, isRoot: false };
+                    chavesAnoMes.forEach(m => dreTreeNodes[cod].valores[m] = 0);
+                }
+                const am = r.ANO_MES || r.ano_mes;
+                if (am && dreTreeNodes[cod].valores.hasOwnProperty(am)) {
+                    const ent = parseFloat(r.ENTRADAS || r.entradas) || 0;
+                    const sai = parseFloat(r.SAIDAS || r.saidas) || 0;
+                    kpiIn += ent; kpiOut += sai;
+                    dreTreeNodes[cod].valores[am] += (ent - sai);
+                }
+            });
+
+            if (isContabil) {
+                Object.keys(dreTreeNodes).forEach(cod => {
+                    const row = rows.find(x => (x.conta || x.CODIGO) === cod);
+                    if (row && row.conta_superior) {
+                        const parentCod = row.conta_superior.trim();
+                        if (dreTreeNodes[parentCod] && parentCod !== cod) {
+                            dreTreeNodes[parentCod].children.push(dreTreeNodes[cod]);
+                            dreTreeNodes[cod].hasParent = true;
+                        }
+                    }
+                });
+            } else {
+                const codigosOrdenados = Object.keys(dreTreeNodes).sort((a,b) => b.length - a.length);
+                codigosOrdenados.forEach(cod => {
+                    const node = dreTreeNodes[cod];
+                    let parentCod = null;
+                    for (let i = cod.length - 1; i > 0; i--) {
+                        const prefix = cod.substring(0, i);
+                        if (dreTreeNodes[prefix]) { parentCod = prefix; break; }
+                    }
+                    if (parentCod) { dreTreeNodes[parentCod].children.push(node); node.hasParent = true; }
+                });
+            }
+
+            const roots = Object.values(dreTreeNodes).filter(n => !n.hasParent);
+            function rollUpValores(node) {
+                node.children.forEach(child => {
+                    rollUpValores(child);
+                    chavesAnoMes.forEach(m => { node.valores[m] += child.valores[m]; });
+                });
+            }
+            roots.forEach(root => { root.isRoot = true; rollUpValores(root); });
+
+            document.getElementById('kpiEntradas').innerText = formatCurrency(kpiIn);
+            document.getElementById('kpiSaidas').innerText = formatCurrency(kpiOut);
+            const kpiRes = document.getElementById('kpiResultado');
+            kpiRes.innerText = formatCurrency(kpiIn - kpiOut);
+            kpiRes.className = `text-4xl font-black tabular-nums relative z-10 transition-colors duration-500 ${(kpiIn - kpiOut) >= 0 ? 'text-sky-400 drop-shadow-[0_0_10px_rgba(56,189,248,0.3)]' : 'text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]'}`;
+        }
+
+        function renderizarTabelaRecursiva() {
+            const tbody = document.getElementById('dreBody');
+            let html = '';
+            const roots = Object.values(dreTreeNodes).filter(n => n.isRoot).sort((a, b) => a.cod.localeCompare(b.cod));
+
+            function renderNodeHtml(node, depth, parentId) {
+                const safeId = node.cod.replace(/[^a-zA-Z0-9]/g, '-');
+                const isSintetico = (node.tipo === '1') || (node.children.length > 0);
+                let rowClass = isSintetico ? 'row-sintetica' : 'row-analitica';
+                if (depth === 0) rowClass = 'row-macro'; 
+                const padding = depth * 24; 
+                const parentClass = parentId ? `parent-${parentId}` : '';
+                const display = (depth <= 1) ? 'table-row' : 'none'; 
+                
+                let colsHtml = ''; let totalLinha = 0;
+                chavesAnoMes.forEach(m => {
+                    const val = node.valores[m] || 0; totalLinha += val;
+                    colsHtml += `<td class="text-right tabular-nums ${getValClass(val)}">${val === 0 ? '-' : formatCurrency(val)}</td>`;
+                });
+                colsHtml += `<td class="text-right tabular-nums font-black ${getValClass(totalLinha, true)} bg-[#1e293b]/50 border-l border-[#334155] shadow-[inset_2px_0_4px_rgba(0,0,0,0.2)]">${formatCurrency(totalLinha)}</td>`;
+
+                let iconChevron = `<div class="w-5 h-5 inline-block shrink-0"></div>`; 
+                if (isSintetico && node.children.length > 0) {
+                    const seta = (depth === 0) ? 'chevron-down' : 'chevron-right';
+                    iconChevron = `<span class="icon-collapse" onclick="window.toggleSubRows('${safeId}', event, this)"><i data-lucide="${seta}" class="w-4 h-4 text-sky-400"></i></span>`;
+                }
+
+                html += `
+                <tr class="${rowClass} ${parentClass} node-${safeId}" style="display: ${display};" id="row-${safeId}">
+                    <td style="padding-left: ${padding + 24}px" class="flex items-center">
+                        ${iconChevron}
+                        <span class="mr-3 font-mono ${isSintetico ? 'text-sky-400' : 'text-slate-500'} text-[10px] font-bold border border-[#334155] px-1.5 py-0.5 rounded ${isSintetico ? 'bg-[#1e293b]' : 'bg-[#0f172a]'} shadow-inner">${node.cod}</span>
+                        <span class="truncate uppercase ${isSintetico ? 'text-slate-200' : 'text-slate-400'}">${node.desc}</span>
+                    </td>
+                    ${colsHtml}
+                </tr>`;
+                node.children.sort((a,b) => a.cod.localeCompare(b.cod)).forEach(child => { renderNodeHtml(child, depth + 1, safeId); });
+            }
+
+            roots.forEach(root => renderNodeHtml(root, 0, null));
+
+            let totGeralMeses = {}; chavesAnoMes.forEach(m => totGeralMeses[m] = 0);
+            let totGeralAcum = 0;
+            roots.forEach(r => { chavesAnoMes.forEach(m => { totGeralMeses[m] += (r.valores[m] || 0); totGeralAcum += (r.valores[m] || 0); }); });
+
+            let colsResHtml = '';
+            chavesAnoMes.forEach(m => { colsResHtml += `<td class="text-right tabular-nums font-black ${getValClass(totGeralMeses[m])}">${formatCurrency(totGeralMeses[m])}</td>`; });
+            colsResHtml += `<td class="text-right tabular-nums font-black text-sm ${getValClass(totGeralAcum, true)}">${formatCurrency(totGeralAcum)}</td>`;
+
+            html += `<tr class="row-macro border-t-4 border-sky-500 mt-4 shadow-[0_-5px_15px_rgba(14,165,233,0.1)]"><td class="uppercase tracking-widest pl-6 flex items-center gap-2 text-sky-400 text-xs py-4"><i data-lucide="calculator" class="w-4 h-4"></i>(=) RESULTADO LÍQUIDO DO PERÍODO</td>${colsResHtml}</tr>`;
+            tbody.innerHTML = html;
+            lucide.createIcons({root: tbody});
+        }
+
+        window.hideChildrenRecursively = function(parentId) {
+            document.querySelectorAll('.parent-' + parentId).forEach(child => {
+                child.style.display = 'none';
+                const icon = child.querySelector('.icon-collapse');
+                if(icon && icon.innerHTML.includes('chevron-down')) {
+                    icon.innerHTML = '<i data-lucide="chevron-right" class="w-4 h-4 text-sky-400"></i>';
+                    lucide.createIcons({root: child});
+                }
+                hideChildrenRecursively(child.id.replace('row-', ''));
+            });
+        };
+
+        window.toggleSubRows = function(parentId, event, element) {
+            if(event) event.stopPropagation();
+            const children = document.querySelectorAll('.parent-' + parentId);
+            if (element.innerHTML.includes('chevron-right')) {
+                element.innerHTML = '<i data-lucide="chevron-down" class="w-4 h-4 text-sky-400"></i>';
+                children.forEach(child => child.style.display = 'table-row');
+            } else {
+                element.innerHTML = '<i data-lucide="chevron-right" class="w-4 h-4 text-sky-400"></i>';
+                hideChildrenRecursively(parentId);
+            }
+            lucide.createIcons({root: element});
+        };
+
+        window.expandirTodos = function() {
+            document.querySelectorAll('#dreBody tr').forEach(r => r.style.display = 'table-row');
+            document.querySelectorAll('.icon-collapse').forEach(icon => { icon.innerHTML = '<i data-lucide="chevron-down" class="w-4 h-4 text-sky-400"></i>'; });
+            lucide.createIcons();
+        };
+
+        window.recolherTodos = function() {
+            document.querySelectorAll('#dreBody tr[class*="parent-"]').forEach(r => r.style.display = 'none');
+            const roots = Object.values(dreTreeNodes).filter(n => n.isRoot);
+            roots.forEach(root => { document.querySelectorAll('.parent-' + root.cod.replace(/[^a-zA-Z0-9]/g, '-')).forEach(r => r.style.display = 'table-row'); });
+            document.querySelectorAll('.icon-collapse').forEach(icon => { icon.innerHTML = '<i data-lucide="chevron-right" class="w-4 h-4 text-sky-400"></i>'; });
+            roots.forEach(root => {
+                const row = document.getElementById('row-' + root.cod.replace(/[^a-zA-Z0-9]/g, '-'));
+                if (row) { const icon = row.querySelector('.icon-collapse'); if (icon) icon.innerHTML = '<i data-lucide="chevron-down" class="w-4 h-4 text-sky-400"></i>'; }
+            });
+            lucide.createIcons();
+        };
+
+        // ==========================================
+        // HEURÍSTICA CFO - SOMENTE DADOS REAIS
+        // ==========================================
+        function abrirParecerCFO() {
+            if (!globalRawData || globalRawData.length === 0) {
+                showToast("DRE sem dados consolidados. Atualize primeiro.", true);
+                return;
+            }
+
+            let mesesOrd = [...chavesAnoMes].sort();
+            let ultMes = mesesOrd[mesesOrd.length - 1];
+            let penultMes = mesesOrd[mesesOrd.length - 2] || ultMes;
+
+            const isVariavel = (desc) => /frete|comiss[aã]o|imposto|tributo|cmv|custo|icms|pis|cofins|embalagem/i.test(desc);
+
+            let fat = { penult: 0, ult: 0 };
+            let despesas = { var: { penult: 0, ult: 0 }, fix: { penult: 0, ult: 0 } };
+            let analiseContas = {};
+
+            globalRawData.forEach(r => {
+                let cod = r.CODIGO || r.conta;
+                let desc = String(r.DESCRICAO || r.descricao).toUpperCase();
+                let am = r.ANO_MES || r.ano_mes;
+                let vIn = parseFloat(r.ENTRADAS || r.entradas) || 0;
+                let vOut = parseFloat(r.SAIDAS || r.saidas) || 0;
+                
+                if (am === ultMes || am === penultMes) {
+                    if (!analiseContas[cod]) analiseContas[cod] = { desc, isVar: isVariavel(desc), penult: 0, ult: 0 };
+                    
+                    if (am === penultMes) {
+                        fat.penult += vIn;
+                        analiseContas[cod].penult += vOut;
+                        if(isVariavel(desc)) despesas.var.penult += vOut; else despesas.fix.penult += vOut;
+                    }
+                    if (am === ultMes) {
+                        fat.ult += vIn;
+                        analiseContas[cod].ult += vOut;
+                        if(isVariavel(desc)) despesas.var.ult += vOut; else despesas.fix.ult += vOut;
+                    }
+                }
+            });
+
+            let varFat = fat.penult > 0 ? ((fat.ult - fat.penult) / fat.penult) * 100 : 0;
+            let varCustoVar = despesas.var.penult > 0 ? ((despesas.var.ult - despesas.var.penult) / despesas.var.penult) * 100 : 0;
+            let varCustoFix = despesas.fix.penult > 0 ? ((despesas.fix.ult - despesas.fix.penult) / despesas.fix.penult) * 100 : 0;
+
+            let margemContribuicao = fat.ult > 0 ? ((fat.ult - despesas.var.ult) / fat.ult) * 100 : 0;
+            let ebitdaAtual = fat.ult > 0 ? ((fat.ult - despesas.var.ult - despesas.fix.ult) / fat.ult) * 100 : 0;
+            
+            let html = '';
+
+            // MACRO INDEXADORES (SOMENTE DADOS CALCULADOS DA TABELA)
+            html += `<div class="cfo-section-title mt-0">1. Macro Indexadores Reais da Operação</div>`;
+            const renderTableRow = (label, atual, isCritico) => {
+                const statusHtml = isCritico ? `<span class="text-rose-500 font-bold bg-rose-500/10 px-2 py-0.5 rounded text-[9px]">🔴 Alerta</span>` : `<span class="text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded text-[9px]">🟢 Saudável</span>`;
+                const colorClass = atual.includes('-') && isCritico ? 'text-rose-400' : (atual.includes('+') && !isCritico ? 'text-emerald-400' : 'text-slate-200');
+                
+                return `<tr><td class="font-bold text-slate-300">${label}</td><td class="tabular-nums font-mono font-bold ${colorClass}">${atual}</td><td>${statusHtml}</td></tr>`;
+            };
+
+            let strFat = varFat > 0 ? '+' + varFat.toFixed(1) + '%' : varFat.toFixed(1) + '%';
+            let strVar = varCustoVar > 0 ? '+' + varCustoVar.toFixed(1) + '%' : varCustoVar.toFixed(1) + '%';
+
+            html += `<table class="kpi-table">
+                        <thead><tr><th>Indicador Financeiro (DRE Real)</th><th>Atual (Variação/Margem)</th><th>Status</th></tr></thead>
+                        <tbody>
+                            ${renderTableRow('Variação de Receita (Faturamento MoM)', strFat, varFat < 0)}
+                            ${renderTableRow('Margem de Contribuição', margemContribuicao.toFixed(1) + '%', margemContribuicao < 0)}
+                            ${renderTableRow('Variação Custos Variáveis (MoM)', strVar, varCustoVar > varFat)}
+                            ${renderTableRow('EBITDA (Gerado no Período)', ebitdaAtual.toFixed(1) + '%', ebitdaAtual < 0)}
+                        </tbody>
+                    </table>`;
+
+            // PARECER TÉCNICO (CALCULADO)
+            html += `<div class="cfo-section-title">2. Parecer Técnico Baseado na Tabela</div>`;
+            let fatDir = varFat >= 0 ? 'crescimento' : 'contração';
+            let varDir = varCustoVar >= 0 ? 'crescimento' : 'redução';
+            
+            let diagOperacional = '';
+            if (varCustoVar > (varFat + 3)) {
+                diagOperacional = `A análise real de despesas demonstra um ${varDir} desproporcional de <b>${varCustoVar.toFixed(1)}%</b> em contraste com o ${fatDir} de <b>${varFat.toFixed(1)}%</b> na Receita. Isto aponta matematicamente para uma perda na eficiência de gastos variáveis (impostos, fretes, custo da mercadoria).`;
+            } else if (varCustoVar <= varFat && varFat > 0) {
+                diagOperacional = `A análise aponta uma correlação saudável: o ${varDir} de custos variáveis (<b>${varCustoVar.toFixed(1)}%</b>) foi superado ou equiparado ao ${fatDir} da Receita (<b>${varFat.toFixed(1)}%</b>), garantindo a estabilidade da margem de contribuição.`;
+            } else {
+                diagOperacional = `A análise cruzada regista variação de receita de <b>${varFat.toFixed(1)}%</b> contra variação de custos de <b>${varCustoVar.toFixed(1)}%</b>.`;
+            }
+            html += `<p class="text-[11px] text-slate-300 leading-relaxed mb-4 text-justify font-medium">Com base nas movimentações carregadas (SE5/SED), a companhia apresentou um ${fatDir} no último ciclo de <b>${varFat.toFixed(1)}%</b>. ${diagOperacional}</p>`;
+
+            // NOTAS EXPLICATIVAS (REAIS)
+            html += `<div class="cfo-section-title">3. Notas Analíticas</div>`;
+            const addNotaExplicativa = (num, titulo, fato, impacto, tipo) => {
+                html += `
+                <div class="cfo-note ${tipo}">
+                    <h5 class="text-xs font-black text-white uppercase tracking-widest mb-2">Nota ${num} - ${titulo}</h5>
+                    <p class="text-[10px] text-slate-300 mb-2"><b>Constatação:</b> ${fato}</p>
+                    <p class="text-[10px] text-slate-300"><b>Ação:</b> ${impacto}</p>
+                </div>`;
+            };
+
+            if (varCustoVar > varFat) {
+                addNotaExplicativa('01', 'Alerta de Custo Variável', 
+                    'A margem foi diretamente comprimida porque o gasto com contas variáveis escalou mais rápido que as entradas financeiras neste período.',
+                    '<span class="text-rose-400 font-bold">Inspecione rubricas de Fretes, Comissões e Impostos no detalhe da DRE.</span>', 'critical');
+            } else {
+                addNotaExplicativa('01', 'Retenção de Margem Verificada', 
+                    'O controle de gastos variáveis acompanhou ou ficou abaixo da evolução da receita.',
+                    '<span class="text-emerald-400 font-bold">Estabilidade Operacional garantida na escala atual.</span>', 'success');
+            }
+
+            if (varCustoFix > 5) {
+                let viloes = Object.values(analiseContas).filter(c => !c.isVar && (c.ult - c.penult) > 0).sort((a,b) => (b.ult - b.penult) - (a.ult - a.penult));
+                let descVilao = viloes.length > 0 ? viloes[0].desc : 'Despesas Administrativas';
+                addNotaExplicativa('02', 'Vazamento de Custo Fixo Operacional', 
+                    `As despesas fixas reais subiram +${varCustoFix.toFixed(1)}%, destacando-se na linha contábil "${descVilao}".`,
+                    '<span class="text-amber-400 font-bold">Revise imediatamente contratos e honorários (Overhead).</span>', 'warning');
+            } else {
+                addNotaExplicativa('02', 'Controle de Overhead', 
+                    'O custo fixo manteve-se controlado em relação à estrutura da empresa nos meses selecionados.',
+                    '<span class="text-slate-400 font-bold">Monitoramento passivo recomendado.</span>', 'neutral');
+            }
+
+            document.getElementById('cfoHeuristicaContent').innerHTML = html;
+            lucide.createIcons({ root: document.getElementById('cfoHeuristicaContent') });
+
+            const overlay = document.getElementById('cfoOverlay');
+            const drawer = document.getElementById('cfoDrawer');
+            
+            overlay.classList.remove('hidden');
+            drawer.classList.remove('translate-x-full');
+            
+            setTimeout(() => { overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); }, 10);
+            
+            const scrollArea = document.getElementById('cfoDrawerScrollArea');
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+        }
+
+        function fecharParecerCFO() {
+            const overlay = document.getElementById('cfoOverlay');
+            const drawer = document.getElementById('cfoDrawer');
+            drawer.classList.add('translate-x-full');
+            overlay.classList.remove('opacity-100');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+        }
+
+        // ==========================================
+        // LÓGICA DO COPILOT (LIMPO E SEM MOCKS)
+        // ==========================================
+        window.enviarPerguntaCFO = function(event) {
+            event.preventDefault();
+            const inputEl = document.getElementById('cfoChatInput');
+            const pergunta = inputEl.value.trim();
+            if (!pergunta) return;
+
+            const chatHistory = document.getElementById('chatHistory');
+            
+            const userHtml = `
+                <div class="chat-msg-user">
+                    <span class="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Você:</span>
+                    ${pergunta}
+                </div>`;
+            chatHistory.insertAdjacentHTML('beforeend', userHtml);
+            inputEl.value = '';
+            
+            const scrollArea = document.getElementById('cfoDrawerScrollArea');
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+
+            const loadingId = 'cfo-loading-' + Date.now();
+            const loadingHtml = `
+                <div class="chat-msg-cfo" id="${loadingId}">
+                    <span class="block text-[9px] font-black uppercase tracking-widest text-sky-500 mb-2 opacity-80"><i data-lucide="bot" class="w-3 h-3 inline-block mr-1 pulsing-dot"></i> Processando Requisição...</span>
+                </div>`;
+            chatHistory.insertAdjacentHTML('beforeend', loadingHtml);
+            lucide.createIcons({ root: document.getElementById(loadingId) });
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+
+            // Retorno padrão estruturado aguardando endpoint real de LLM
+            setTimeout(() => {
+                const loadingEl = document.getElementById(loadingId);
+                const respostaHtml = `
+                    <span class="block text-[9px] font-black uppercase tracking-widest text-sky-500 mb-3 opacity-80"><i data-lucide="bot" class="w-3 h-3 inline-block mr-1"></i> Assistente S&OP LEME:</span>
+                    <p class="mb-3">Compreendo a sua solicitação sobre: <i>"${pergunta}"</i>.</p>
+                    <div class="bg-[#151e2d] border border-l-2 border-amber-500 border-y-[#1e293b] border-r-[#1e293b] p-3 rounded mb-3">
+                        <span class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-amber-500">Conexão Backend Pendente:</span>
+                        <p class="text-slate-300 text-[10px] leading-relaxed">Para cruzar as linhas da DRE em tempo real com outras tabelas externas (SD2, SE1, SB1) e realizar esta auditoria profunda, é necessário estabelecer a integração da rota <b>/api/cfo-ask</b> na sua API Node.js. Por favor, solicite a ativação do módulo LLM no motor de pesquisa.</p>
+                    </div>
+                `;
+
+                loadingEl.innerHTML = respostaHtml;
+                lucide.createIcons({ root: loadingEl });
+                scrollArea.scrollTop = scrollArea.scrollHeight;
+
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

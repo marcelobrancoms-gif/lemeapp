@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Extrato Bancário (SE5) - LEME ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['"Inter"', 'sans-serif'], mono: ['"Fira Code"', 'monospace'] } } }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+
+        .corp-input { background-color: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 600; outline: none; transition: border-color 0.2s; width: 100%;}
+        .corp-input:focus { border-color: #38bdf8; }
+        .erp-label { display: block; font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+
+        .dre-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        .dre-table th { background-color: #1e293b; border-bottom: 1px solid #334155; border-top: 1px solid #334155; font-weight: 800; color: #94a3b8; padding: 10px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 20; text-align: left; white-space: nowrap;}
+        .dre-table td { padding: 8px 12px; font-size: 11px; border-bottom: 1px solid #1e293b; background-color: #0f172a; color: #cbd5e1; transition: background-color 0.15s; white-space: nowrap;}
+        .dre-table tbody tr:hover td { background-color: #1e293b; }
+    </style>
+</head>
+<body class="flex flex-col h-screen antialiased relative">
+
+    <div id="toastNotification" class="fixed top-5 right-5 z-[300] bg-[#1e293b] text-white text-xs font-bold uppercase tracking-widest px-5 py-4 rounded-xl shadow-2xl border border-[#334155] flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="info" class="w-5 h-5 text-sky-400" id="toastIcon"></i>
+        <span id="toastMessage">Mensagem</span>
+    </div>
+
+    <header class="bg-[#0f172a] border-b border-[#1e293b] px-6 py-4 flex items-center justify-between shrink-0 shadow-sm z-30">
+        <div class="flex items-center gap-4">
+            <div class="flex items-baseline select-none">
+                <span class="text-white font-bold text-xl tracking-tight">LEME</span>
+                <span class="text-[#cbd5e1] font-bold text-xl tracking-tight ml-1">SUPREME</span>
+            </div>
+            <div class="h-5 w-px bg-[#334155] ml-2"></div>
+            <div class="flex items-center gap-3 ml-2">
+                <span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_10px_rgba(99,102,241,0.2)]">
+                    <i data-lucide="landmark" class="w-3 h-3"></i> Tesouraria
+                </span>
+                <h1 class="text-xs font-semibold text-slate-300 uppercase tracking-wider hidden sm:block">Extrato Bancário Inteligente (SE5)</h1>
+            </div>
+        </div>
+        <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-white transition-colors p-1.5 rounded hover:bg-[#1e293b]">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <section class="bg-[#1e293b] border-b border-[#334155] px-6 py-4 shrink-0 z-20 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xs font-black text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="filter" class="w-4 h-4 text-amber-400"></i> Parâmetros da Conta
+            </h2>
+            <div class="flex items-center gap-3">
+                <button onclick="limparFiltros()" class="text-[10px] font-bold text-slate-400 hover:text-slate-200 uppercase tracking-widest transition-colors cursor-pointer underline">Limpar Filtros</button>
+                <button onclick="exportarExcel()" class="bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center gap-2">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar
+                </button>
+                <button onclick="consultarExtrato()" id="btnConsultar" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center gap-2">
+                    <i data-lucide="search" class="w-4 h-4"></i> Gerar Extrato
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 lg:grid-cols-8 gap-4">
+            
+            <div class="col-span-1 lg:col-span-2 relative">
+                <label class="erp-label text-emerald-400">Período de Movimento</label>
+                <div class="flex items-center gap-2 bg-[#0f172a] border border-[#334155] rounded-lg px-2 py-1">
+                    <input type="date" id="f_de" class="bg-transparent text-[11px] font-bold text-slate-200 outline-none w-full [color-scheme:dark]">
+                    <span class="text-[10px] text-slate-500 font-bold">A</span>
+                    <input type="date" id="f_ate" class="bg-transparent text-[11px] font-bold text-slate-200 outline-none w-full [color-scheme:dark]">
+                </div>
+            </div>
+
+            <div class="col-span-1">
+                <label class="erp-label">Banco</label>
+                <input type="text" id="f_banco" class="corp-input uppercase font-mono py-1.5" placeholder="Ex: 341">
+            </div>
+
+            <div class="col-span-1">
+                <label class="erp-label">Agência</label>
+                <input type="text" id="f_agencia" class="corp-input uppercase font-mono py-1.5" placeholder="Ex: 0001">
+            </div>
+            
+            <div class="col-span-1 lg:col-span-2">
+                <label class="erp-label">Conta Corrente</label>
+                <input type="text" id="f_conta" class="corp-input uppercase font-mono py-1.5" placeholder="Ex: 12345-6">
+            </div>
+
+            <div class="col-span-1 lg:col-span-2 flex items-end">
+                <div class="bg-slate-800 border border-slate-700 p-1.5 rounded-lg w-full flex items-center justify-between shadow-sm">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-2">Lançamentos</span>
+                    <span id="lblCount" class="text-sm font-black text-white pr-2 tabular-nums">0</span>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ÁREA DA TABELA -->
+    <main class="flex-1 overflow-auto bg-[#0f172a] relative custom-scroll">
+        <table class="dre-table" id="extratoTable">
+            <thead>
+                <tr>
+                    <th class="w-24 text-center">Data Mov.</th>
+                    <th class="w-32">Documento</th>
+                    <th class="w-20 text-center">Tipo</th>
+                    <th class="w-48">Natureza</th>
+                    <th>Histórico / Beneficiário</th>
+                    <th class="w-32 text-right text-emerald-400">Entrada (+)</th>
+                    <th class="w-32 text-right text-rose-400">Saída (-)</th>
+                    <th class="w-32 text-right text-sky-400">Saldo Atual</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyExtrato">
+                <tr><td colspan="8" class="text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="landmark" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Preencha os dados bancários e clique em "Gerar Extrato".</td></tr>
+            </tbody>
+        </table>
+    </main>
+
+    <!-- FOOTER DE TOTAIS -->
+    <footer class="bg-[#1e293b] border-t border-[#334155] px-6 py-3 flex justify-between items-center shrink-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div class="flex items-center gap-2">
+            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Resumo do Extrato</span>
+        </div>
+        <div class="flex gap-6 flex-wrap justify-end">
+            <div class="text-right">
+                <span class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Saldo Anterior</span>
+                <span class="text-sm font-black text-slate-300 tabular-nums" id="totSaldoIni">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-[#334155]">
+                <span class="block text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Total Entradas</span>
+                <span class="text-sm font-black text-emerald-400 tabular-nums" id="totEntradas">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-[#334155]">
+                <span class="block text-[9px] font-bold text-rose-500 uppercase tracking-widest">Total Saídas</span>
+                <span class="text-sm font-black text-rose-400 tabular-nums" id="totSaidas">R$ 0,00</span>
+            </div>
+            <div class="text-right pl-6 border-l border-[#334155]">
+                <span class="block text-[9px] font-bold text-sky-500 uppercase tracking-widest">Saldo Final</span>
+                <span class="text-lg font-black text-sky-400 tabular-nums" id="totSaldoFim">R$ 0,00</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        let extractData = [];
+        let globalSaldoInicial = 0;
+
+        let currentHost = window.location.hostname;
+        if (!currentHost || currentHost.includes('goog') || currentHost === 'localhost') { currentHost = '177.70.102.16'; }
+        const API_BASE_URL = `http://${currentHost}:3001/api`;
+
+        const fmtCurr = v => {
+            let n = parseFloat(v);
+            return isNaN(n) ? 'R$ 0,00' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        const formatDate = str => {
+            if (!str || str.length !== 8) return str;
+            return `${str.substring(6,8)}/${str.substring(4,6)}/${str.substring(0,4)}`;
+        };
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = msg;
+            const icon = document.getElementById('toastIcon');
+            
+            if(isError) {
+                toast.classList.replace('border-[#334155]', 'border-rose-500/50');
+                icon.setAttribute('data-lucide', 'alert-triangle');
+                icon.classList.replace('text-sky-400', 'text-rose-500');
+            } else {
+                toast.classList.replace('border-rose-500/50', 'border-[#334155]');
+                icon.setAttribute('data-lucide', 'check-circle');
+                icon.classList.replace('text-rose-500', 'text-emerald-400');
+            }
+            lucide.createIcons({root: toast});
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-[-100px]', 'opacity-0'); }, 3500);
+        }
+
+        function limparFiltros() {
+            document.getElementById('f_de').value = '';
+            document.getElementById('f_ate').value = '';
+            document.getElementById('f_banco').value = '';
+            document.getElementById('f_agencia').value = '';
+            document.getElementById('f_conta').value = '';
+            document.getElementById('tbodyExtrato').innerHTML = `<tr><td colspan="8" class="text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="landmark" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Preencha os dados bancários e clique em "Gerar Extrato".</td></tr>`;
+            lucide.createIcons({root: document.getElementById('tbodyExtrato')});
+            document.getElementById('lblCount').innerText = '0';
+            document.getElementById('totSaldoIni').innerText = 'R$ 0,00';
+            document.getElementById('totEntradas').innerText = 'R$ 0,00';
+            document.getElementById('totSaidas').innerText = 'R$ 0,00';
+            document.getElementById('totSaldoFim').innerText = 'R$ 0,00';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const hoje = new Date();
+            document.getElementById('f_ate').valueAsDate = hoje;
+            document.getElementById('f_de').valueAsDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        });
+
+        async function consultarExtrato() {
+            const banco = document.getElementById('f_banco').value.trim();
+            const conta = document.getElementById('f_conta').value.trim();
+            const agencia = document.getElementById('f_agencia').value.trim();
+            const deData = document.getElementById('f_de').value.replace(/-/g, '');
+            const ateData = document.getElementById('f_ate').value.replace(/-/g, '');
+
+            if (!banco || !conta || !deData || !ateData) {
+                showToast("Preencha Banco, Conta e Período.", true);
+                return;
+            }
+
+            const btn = document.getElementById('btnConsultar');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> Buscando...`;
+            btn.disabled = true;
+            lucide.createIcons({root: btn});
+
+            const tbody = document.getElementById('tbodyExtrato');
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-20 text-sky-400 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-3"></i> Lendo Movimentações (SE5)...</td></tr>`;
+            lucide.createIcons({root: tbody});
+
+            try {
+                const url = `${API_BASE_URL}/extrato-financeiro?banco=${banco}&agencia=${agencia}&conta=${conta}&deData=${deData}&ateData=${ateData}&_t=${Date.now()}`;
+                const res = await fetch(url);
+                const dataRaw = await res.json();
+
+                if (!res.ok || dataRaw.error) throw new Error(dataRaw.error || "Erro ao consultar API.");
+
+                globalSaldoInicial = dataRaw.saldoInicial || 0;
+                extractData = dataRaw.lancamentos || [];
+
+                renderizarExtrato();
+                showToast(`Sucesso! ${extractData.length} lançamentos encontrados.`);
+
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-20">
+                            <div class="flex flex-col items-center justify-center text-rose-500">
+                                <i data-lucide="server-crash" class="w-10 h-10 mb-3 opacity-80"></i>
+                                <h3 class="text-sm font-black uppercase tracking-widest">Falha de Conexão com a API</h3>
+                                <div class="bg-rose-500/10 text-rose-400 p-4 rounded-xl mt-3 border border-rose-500/30 text-[11px] font-mono">${err.message}</div>
+                            </div>
+                        </td>
+                    </tr>`;
+                lucide.createIcons({root: tbody});
+                showToast("Erro ao processar consulta.", true);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                lucide.createIcons({root: btn});
+            }
+        }
+
+        function renderizarExtrato() {
+            const tbody = document.getElementById('tbodyExtrato');
+            let html = '';
+            
+            let saldoAtual = globalSaldoInicial;
+            let totEntradas = 0;
+            let totSaidas = 0;
+
+            // Renderizar Saldo Inicial
+            html += `
+                <tr class="bg-slate-800/30 border-b border-[#334155]">
+                    <td class="text-center font-bold text-slate-500 tabular-nums">--/--/----</td>
+                    <td colspan="4" class="font-black text-slate-400 uppercase tracking-widest text-[10px]">Saldo Inicial Transportado</td>
+                    <td class="text-right"></td>
+                    <td class="text-right"></td>
+                    <td class="text-right font-black text-sky-400 tabular-nums">${fmtCurr(saldoAtual)}</td>
+                </tr>
+            `;
+
+            if (extractData.length === 0) {
+                html += `<tr><td colspan="8" class="text-center py-10 text-slate-500 font-bold uppercase tracking-widest text-[10px]">Nenhum lançamento no período.</td></tr>`;
+            } else {
+                extractData.forEach(r => {
+                    const isReceita = r.RecPag === 'R';
+                    const val = parseFloat(r.Valor) || 0;
+                    
+                    let colIn = '', colOut = '';
+
+                    if (isReceita) {
+                        saldoAtual += val;
+                        totEntradas += val;
+                        colIn = `<span class="text-emerald-400 font-bold">${fmtCurr(val)}</span>`;
+                        colOut = `-`;
+                    } else {
+                        saldoAtual -= val;
+                        totSaidas += val;
+                        colIn = `-`;
+                        colOut = `<span class="text-rose-400 font-bold">${fmtCurr(val)}</span>`;
+                    }
+
+                    const saldoColor = saldoAtual < 0 ? 'text-rose-500' : 'text-slate-300';
+
+                    html += `
+                    <tr>
+                        <td class="text-center font-mono font-bold text-slate-400">${formatDate(r.DataMov)}</td>
+                        <td class="font-mono text-sky-400">${r.Documento}</td>
+                        <td class="text-center font-bold text-slate-500 text-[10px]">${r.TipoDoc}</td>
+                        <td class="truncate max-w-[200px]" title="${r.DescNatureza}">
+                            <span class="font-bold text-slate-200 block truncate">${r.DescNatureza}</span>
+                            <span class="text-[9px] text-slate-500 font-mono">${r.Natureza}</span>
+                        </td>
+                        <td class="truncate max-w-[300px]" title="${r.Historico || r.Favorecido}">
+                            <span class="text-slate-300 block truncate">${r.Historico || '--'}</span>
+                            <span class="text-[9px] text-slate-500 font-bold uppercase tracking-widest block truncate mt-0.5">${r.Favorecido || ''}</span>
+                        </td>
+                        <td class="text-right tabular-nums bg-emerald-500/5">${colIn}</td>
+                        <td class="text-right tabular-nums bg-rose-500/5">${colOut}</td>
+                        <td class="text-right font-black tabular-nums border-l border-[#334155] ${saldoColor}">${fmtCurr(saldoAtual)}</td>
+                    </tr>
+                    `;
+                });
+            }
+
+            tbody.innerHTML = html;
+
+            document.getElementById('lblCount').innerText = extractData.length;
+            document.getElementById('totSaldoIni').innerText = fmtCurr(globalSaldoInicial);
+            document.getElementById('totEntradas').innerText = fmtCurr(totEntradas);
+            document.getElementById('totSaidas').innerText = fmtCurr(totSaidas);
+            document.getElementById('totSaldoFim').innerText = fmtCurr(saldoAtual);
+            
+            lucide.createIcons({root: tbody});
+        }
+
+        function exportarExcel() {
+            if (extractData.length === 0) {
+                showToast("Não há dados para exportar.", true);
+                return;
+            }
+
+            let saldoRow = globalSaldoInicial;
+            const exportArr = [];
+            
+            exportArr.push({
+                "Data Movimento": "SALDO INICIAL",
+                "Documento": "",
+                "Tipo": "",
+                "Natureza": "",
+                "Descrição Natureza": "",
+                "Histórico": "",
+                "Favorecido": "",
+                "Entrada (R$)": "",
+                "Saída (R$)": "",
+                "Saldo Atualizado (R$)": saldoRow
+            });
+
+            extractData.forEach(r => {
+                const isReceita = r.RecPag === 'R';
+                const val = parseFloat(r.Valor) || 0;
+                
+                let valIn = 0, valOut = 0;
+                if(isReceita) { valIn = val; saldoRow += val; }
+                else { valOut = val; saldoRow -= val; }
+
+                exportArr.push({
+                    "Data Movimento": formatDate(r.DataMov),
+                    "Documento": r.Documento,
+                    "Tipo": r.TipoDoc,
+                    "Natureza": r.Natureza,
+                    "Descrição Natureza": r.DescNatureza,
+                    "Histórico": r.Historico,
+                    "Favorecido": r.Favorecido,
+                    "Entrada (R$)": valIn || "",
+                    "Saída (R$)": valOut || "",
+                    "Saldo Atualizado (R$)": saldoRow
+                });
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(exportArr);
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            worksheet['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+            
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Extrato SE5");
+
+            const bco = document.getElementById('f_banco').value;
+            const cta = document.getElementById('f_conta').value;
+            const dt = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(workbook, `Extrato_${bco}_${cta}_${dt}.xlsx`);
+            showToast("Exportação concluída!");
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Gestão de Frota e Vistoria - Comlub V11.8</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #030712; 
+            color: #f8fafc;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            overflow-x: hidden;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+        
+        .custom-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.6); }
+
+        .glass-card { 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(24px); 
+            -webkit-backdrop-filter: blur(24px); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.05); 
+            border-radius: 20px;
+        }
+
+        .glass-input { 
+            width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); 
+            color: #ffffff; border-radius: 12px; padding: 12px 16px; font-size: 13px; font-weight: 600; 
+            outline: none; transition: all 0.3s ease; 
+        }
+        .glass-input:focus { border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+        .glass-input:disabled { background: rgba(255,255,255,0.05); color: #64748b; cursor: not-allowed; }
+        .form-label { display: block; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+
+        .check-chip input { display: none; }
+        .check-chip span {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 8px 16px; font-size: 11px; font-weight: 800; text-transform: uppercase;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; background: rgba(0,0,0,0.3);
+            color: #94a3b8; cursor: pointer; transition: all 0.2s;
+        }
+        .check-chip input:checked + span { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+        .check-chip-rose input:checked + span { background: rgba(244, 63, 94, 0.15); color: #fb7185; border-color: #f43f5e; box-shadow: 0 0 10px rgba(244, 63, 94, 0.3); }
+
+        .tab-btn { 
+            padding: 14px 24px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; 
+            color: #64748b; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.3s; 
+            display: flex; align-items: center; gap: 8px; white-space: nowrap;
+        }
+        .tab-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; background: rgba(56, 189, 248, 0.05); text-shadow: 0 0 10px rgba(56,189,248,0.5); }
+        .tab-btn:hover:not(.active) { color: #e2e8f0; background: rgba(255,255,255,0.02); }
+        
+        .tab-content { display: none; flex: 1; min-height: 0; overflow-y: auto;}
+        .tab-content.active { display: block; animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes popIn { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+
+        #vistoriaCanvas { 
+            background-color: #061224; cursor: crosshair; border-radius: 16px; 
+            border: 1px solid rgba(56, 189, 248, 0.2); width: 100%; max-height: 500px; 
+            object-fit: contain; box-shadow: inset 0 0 60px rgba(0,0,0,0.8);
+        }
+
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        th { background: rgba(15, 23, 42, 0.9); color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px);}
+        td { padding: 16px; font-size: 12px; color: #e2e8f0; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        tr:hover td { background-color: rgba(255,255,255,0.02); }
+
+        .popover { position: absolute; z-index: 50; background: rgba(15,23,42,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 200px; display: none; margin-left: 10px; margin-top: 10px;}
+        .popover.visible { display: block; animation: popIn 0.2s ease-out; }
+        .dano-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px; font-size: 11px; font-weight: 800; border-radius: 8px; cursor: pointer; width: 100%; text-align: left; transition: 0.2s; margin-bottom: 6px; color: #e2e8f0;}
+        .dano-btn:hover { background: rgba(244,63,94,0.2); color: #fb7185; border-color: #f43f5e; box-shadow: 0 0 10px rgba(244,63,94,0.3);}
+
+        .bg-glow-1 { position: fixed; top: -10%; left: -10%; width: 40%; height: 40%; background: radial-gradient(circle, rgba(2,132,199,0.15) 0%, transparent 70%); z-index: -1; pointer-events: none; }
+        .bg-glow-2 { position: fixed; bottom: -10%; right: -10%; width: 40%; height: 40%; background: radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%); z-index: -1; pointer-events: none; }
+
+        .modal-overlay { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); transform: scale(0.95); opacity: 0; }
+        .modal-active .modal-content { transform: scale(1); opacity: 1; }
+        
+        .drilldown-row { display: none; }
+        .drilldown-row.active { display: table-row; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .drilldown-icon { transition: transform 0.3s; }
+        .drilldown-open .drilldown-icon { transform: rotate(90deg); }
+    </style>
+</head>
+<body class="flex flex-col h-screen antialiased relative">
+
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+
+    <div id="toastNotification" class="fixed top-5 right-5 z-[200] bg-slate-800 text-white text-xs font-bold uppercase tracking-widest px-5 py-4 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-600 flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400" id="toastIcon"></i>
+        <span id="toastMessage">Notificação</span>
+    </div>
+
+    <header class="glass-card rounded-none border-x-0 border-t-0 px-6 py-4 flex items-center justify-between shrink-0 z-40">
+        <div class="flex items-center gap-6">
+            <div class="flex flex-col">
+                <span class="text-3xl font-black italic tracking-tighter leading-none text-white drop-shadow-md">comlub</span>
+                <span class="text-[#FFCB05] text-[9px] font-bold tracking-[0.4em] uppercase mt-1">DISTRIBUIDORA</span>
+            </div>
+            <div class="h-10 w-px bg-white/10"></div>
+            <div class="flex items-center gap-3">
+                <span class="bg-sky-500/10 text-sky-400 border border-sky-500/20 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_15px_rgba(56,189,248,0.1)]">
+                    <i data-lucide="truck" class="w-3.5 h-3.5"></i> Logística & Frota
+                </span>
+                <h1 class="text-sm font-bold text-white uppercase tracking-wider hidden sm:block">Controle Operacional V11.8</h1>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-rose-400 transition-colors bg-white/5 p-2.5 rounded-xl border border-white/5 hover:border-rose-500/30 hover:bg-rose-500/10">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="bg-slate-900/40 border-b border-white/5 px-6 flex overflow-x-auto shrink-0 z-30 backdrop-blur-md">
+        <div id="btn-tab-frota" class="tab-btn active" onclick="switchTab('tab-frota')"><i data-lucide="layout-grid" class="w-4 h-4"></i> Painel da Frota</div>
+        <div id="btn-tab-mov" class="tab-btn" onclick="switchTab('tab-mov')"><i data-lucide="clipboard-check" class="w-4 h-4"></i> Checklist Diário</div>
+        <div id="btn-tab-despesas" class="tab-btn" onclick="switchTab('tab-despesas')"><i data-lucide="wallet" class="w-4 h-4"></i> Lançar Despesas</div>
+        <div id="btn-tab-manutencao" class="tab-btn" onclick="switchTab('tab-manutencao')"><i data-lucide="wrench" class="w-4 h-4"></i> Manutenção Preventiva</div>
+        <div id="btn-tab-relatorios" class="tab-btn" onclick="switchTab('tab-relatorios')"><i data-lucide="pie-chart" class="w-4 h-4"></i> Dashboards</div>
+        <div id="btn-tab-config" class="tab-btn" onclick="switchTab('tab-config')"><i data-lucide="settings" class="w-4 h-4"></i> Configuração</div>
+    </div>
+
+    <main class="flex-1 p-4 lg:p-8 relative overflow-y-auto">
+
+        <!-- ========================================== -->
+        <!-- ABA 1: FROTA -->
+        <!-- ========================================== -->
+        <div id="tab-frota" class="tab-content active max-w-7xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-base font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="car-front" class="w-5 h-5 text-sky-400"></i> Frota Registrada
+                </h2>
+                <span class="glass-card px-4 py-1.5 rounded-full text-[10px] font-bold text-sky-300" id="countFrota">0 Veículos</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="gridVeiculos"></div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ABA 2: CHECKLIST DIÁRIO (VISTORIA) -->
+        <!-- ========================================== -->
+        <div id="tab-mov" class="tab-content max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div class="xl:col-span-2 space-y-8">
+                    <form id="formVistoria" onsubmit="salvarVistoria(event)" class="space-y-8">
+                        
+                        <div class="glass-card p-6 flex flex-col md:flex-row gap-6 items-center justify-between border-t-4 border-t-sky-500">
+                            <div class="flex-1 w-full relative">
+                                <label class="form-label text-sky-400">Selecionar Placa do Veículo</label>
+                                <select id="movPlaca" required class="glass-input text-lg font-black text-white cursor-pointer appearance-none" onchange="atualizarAcaoVistoria()">
+                                    <option value="" class="text-slate-800">Aguardando seleção...</option>
+                                </select>
+                                <i data-lucide="chevron-down" class="absolute right-4 top-[38px] w-5 h-5 text-sky-400 pointer-events-none"></i>
+                            </div>
+                            <div class="flex-1 w-full">
+                                <label class="form-label text-slate-400">Ação Determinada pelo Sistema</label>
+                                <div id="movAcaoBadge" class="glass-input flex items-center justify-center font-black uppercase text-xs tracking-widest text-slate-500 border-dashed">Selecione a Placa</div>
+                                <input type="hidden" id="movAcao">
+                            </div>
+                        </div>
+
+                        <div id="areaChecklist" class="hidden space-y-6 animate-pop">
+                            <div class="glass-card p-6">
+                                <h3 class="text-[11px] font-black text-white uppercase tracking-widest border-b border-white/10 pb-3 mb-6 flex items-center gap-2"><i data-lucide="user" class="w-4 h-4 text-sky-400"></i> 1. Identificação</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="relative">
+                                        <label class="form-label">Motorista *</label>
+                                        <select id="movMotorista" required class="glass-input cursor-pointer appearance-none text-white">
+                                            <option value="" class="text-slate-800">Selecione...</option>
+                                        </select>
+                                        <i data-lucide="chevron-down" class="absolute right-4 top-[38px] w-5 h-5 text-slate-400 pointer-events-none"></i>
+                                    </div>
+                                    <div class="relative">
+                                        <label class="form-label text-sky-400">Odômetro (KM) *</label>
+                                        <i data-lucide="gauge" class="absolute left-4 top-[38px] w-4 h-4 text-sky-400"></i>
+                                        <input type="number" id="movKM" required class="glass-input font-mono font-bold text-sky-300 pl-11" placeholder="0">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="glass-card p-6">
+                                <h3 class="text-[11px] font-black text-white uppercase tracking-widest border-b border-white/10 pb-3 mb-6 flex items-center gap-2"><i data-lucide="droplets" class="w-4 h-4 text-sky-400"></i> 2. Avaliação Rápida</h3>
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                                        <label class="form-label text-center mb-3">Combustível</label>
+                                        <div class="flex justify-center gap-1 flex-wrap">
+                                            <label class="check-chip-rose"><input type="radio" name="combustivel" value="VAZIO" required><span class="!px-2 !py-1 text-[9px]">E</span></label>
+                                            <label class="check-chip"><input type="radio" name="combustivel" value="1/4" required><span class="!px-2 !py-1 text-[9px]">1/4</span></label>
+                                            <label class="check-chip"><input type="radio" name="combustivel" value="1/2" required><span class="!px-2 !py-1 text-[9px]">1/2</span></label>
+                                            <label class="check-chip"><input type="radio" name="combustivel" value="3/4" required><span class="!px-2 !py-1 text-[9px]">3/4</span></label>
+                                            <label class="check-chip"><input type="radio" name="combustivel" value="CHEIO" required><span class="!px-2 !py-1 text-[9px]">F</span></label>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                                        <label class="form-label mb-3 text-center">Limpeza Interna</label>
+                                        <div class="flex gap-2">
+                                            <label class="check-chip flex-1"><input type="radio" name="limpInt" value="LIMPO" required><span class="w-full !py-1.5 text-[9px]">Limpo</span></label>
+                                            <label class="check-chip flex-1"><input type="radio" name="limpInt" value="SUJO" required><span class="w-full !py-1.5 text-[9px]">Sujo</span></label>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                                        <label class="form-label mb-3 text-center">Limpeza Externa</label>
+                                        <div class="flex gap-2">
+                                            <label class="check-chip flex-1"><input type="radio" name="limpExt" value="LIMPO" required><span class="w-full !py-1.5 text-[9px]">Limpo</span></label>
+                                            <label class="check-chip flex-1"><input type="radio" name="limpExt" value="SUJO" required><span class="w-full !py-1.5 text-[9px]">Sujo</span></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="glass-card p-6">
+                                <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-5">
+                                    <h3 class="text-[11px] font-black text-white uppercase tracking-widest flex items-center gap-2"><i data-lucide="scan-line" class="w-4 h-4 text-sky-400"></i> 3. Avarias e Planta</h3>
+                                    <button type="button" onclick="limparCanvas()" class="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-colors flex items-center gap-1.5">
+                                        <i data-lucide="trash-2" class="w-3 h-3"></i> Limpar
+                                    </button>
+                                </div>
+                                <div class="flex flex-col xl:flex-row gap-6 items-start">
+                                    <div class="w-full xl:w-[60%] relative flex justify-center">
+                                        <canvas id="vistoriaCanvas" width="800" height="500"></canvas>
+                                        <div id="danoPopover" class="popover">
+                                            <p class="text-[9px] font-black text-sky-400 uppercase text-center mb-3">Registrar Dano</p>
+                                            <button type="button" onclick="adicionarDano(1)" class="dano-btn">1 - Arranhado</button>
+                                            <button type="button" onclick="adicionarDano(2)" class="dano-btn">2 - Amassado</button>
+                                            <button type="button" onclick="adicionarDano(3)" class="dano-btn">3 - Piques</button>
+                                            <button type="button" onclick="adicionarDano(4)" class="dano-btn">4 - Trincado</button>
+                                            <button type="button" onclick="adicionarDano(5)" class="dano-btn">5 - Quebrado</button>
+                                            <button type="button" onclick="adicionarDano(6)" class="dano-btn">6 - Falta</button>
+                                            <button type="button" onclick="fecharPopover()" class="w-full mt-3 text-[9px] font-bold text-slate-500 text-center uppercase hover:text-white">Cancelar</button>
+                                        </div>
+                                    </div>
+                                    <div class="w-full xl:w-[40%] flex flex-col h-[500px]">
+                                        <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-3 overflow-y-auto" id="listaDanos">
+                                            <div class="text-center py-10 text-slate-500 font-bold uppercase tracking-widest text-[9px]"><i data-lucide="shield-check" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Sem avarias na lataria.</div>
+                                        </div>
+                                        <div class="mt-4">
+                                            <label class="form-label">Observações da Vistoria</label>
+                                            <textarea id="movObs" rows="3" class="glass-input resize-none" placeholder="Detalhes adicionais..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <button type="submit" id="btnSubmitVistoria" class="w-full relative group overflow-hidden bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-sm uppercase tracking-[0.2em] py-5 rounded-xl transition-all shadow-[0_0_30px_rgba(2,132,199,0.4)] flex items-center justify-center gap-3">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:animate-shimmer"></div>
+                                    <i data-lucide="check-circle" class="w-5 h-5 text-white"></i> Assinar e Registar Vistoria
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="xl:col-span-1 flex flex-col gap-4">
+                    <div class="glass-card flex-1 flex flex-col p-0 overflow-hidden min-h-[500px]">
+                        <div class="bg-black/20 border-b border-white/5 px-6 py-4 shrink-0">
+                            <h4 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2"><i data-lucide="history" class="w-4 h-4 text-sky-400"></i> Histórico de Checklists</h4>
+                        </div>
+                        <div class="p-4 shrink-0 grid grid-cols-2 gap-2 border-b border-white/5">
+                            <input type="date" id="fCheckData" class="glass-input !py-1.5 !px-2 !text-[10px]" onchange="renderChecklistsDatagrid()">
+                            <input type="text" id="fCheckPlaca" class="glass-input !py-1.5 !px-2 !text-[10px] uppercase" placeholder="Placa..." oninput="renderChecklistsDatagrid()">
+                        </div>
+                        <div class="flex-1 overflow-auto custom-scroll p-4 space-y-3" id="listaChecklistsDatagrid">
+                            <!-- Preenchido via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ABA 3: LANÇAR DESPESAS -->
+        <!-- ========================================== -->
+        <div id="tab-despesas" class="tab-content max-w-4xl mx-auto">
+            <form id="formDespesa" onsubmit="salvarDespesa(event)" class="glass-card p-8 md:p-10 space-y-8 border-t-4 border-t-emerald-500">
+                <div class="flex items-center gap-4 border-b border-white/10 pb-5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]"><i data-lucide="receipt" class="w-5 h-5"></i></div>
+                    <div>
+                        <h2 class="text-base font-black text-white uppercase tracking-widest">Lançamento Financeiro</h2>
+                        <p class="text-[10px] text-emerald-400 uppercase tracking-widest font-bold mt-1">Envio Direto via API Web App</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2 relative">
+                        <label class="form-label text-emerald-400">Placa do Veículo *</label>
+                        <select id="despPlaca" required class="glass-input font-bold text-white cursor-pointer appearance-none" onchange="atualizarVinculoManutencao()">
+                            <option value="" class="text-slate-800">Carregando...</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-4 top-[38px] w-5 h-5 text-emerald-400 pointer-events-none"></i>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="form-label text-amber-400"><i data-lucide="wrench" class="inline w-3 h-3"></i> Vincular à Manutenção Preventiva Pendente</label>
+                        <select id="despVinculoManut" class="glass-input cursor-pointer font-bold appearance-none border-dashed border-amber-500/30 text-amber-400 bg-amber-500/10">
+                            <option value="" class="text-slate-800">Selecione o veículo primeiro...</option>
+                        </select>
+                    </div>
+
+                    <div class="relative">
+                        <label class="form-label">Motorista *</label>
+                        <select id="despMotorista" required class="glass-input cursor-pointer appearance-none text-white">
+                            <option value="" class="text-slate-800">Selecione...</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-4 top-[38px] w-5 h-5 text-slate-400 pointer-events-none"></i>
+                    </div>
+                    <div>
+                        <label class="form-label">Hodômetro (KM) *</label>
+                        <input type="number" id="despKM" required class="glass-input font-mono text-sky-300">
+                    </div>
+                    <div class="relative">
+                        <label class="form-label text-emerald-400">Categoria de Custo *</label>
+                        <select id="despCategoria" required class="glass-input cursor-pointer font-bold appearance-none">
+                            <option value="" class="text-slate-800">Carregando...</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-4 top-[38px] w-5 h-5 text-emerald-400 pointer-events-none"></i>
+                    </div>
+                    <div>
+                        <label class="form-label text-emerald-400">Data do Lançamento</label>
+                        <input type="date" id="despData" class="glass-input cursor-pointer [color-scheme:dark]">
+                    </div>
+
+                    <!-- AREA MULTA - Escondida por padrão -->
+                    <div id="areaMulta" class="md:col-span-2 bg-rose-500/10 border border-rose-500/30 p-5 rounded-xl hidden flex-col gap-4 animate-pop">
+                        <h4 class="text-xs font-black text-rose-400 uppercase tracking-widest flex items-center gap-2"><i data-lucide="alert-octagon" class="w-4 h-4"></i> Detalhes da Infração</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="form-label text-rose-300">Grau da Multa</label>
+                                <select id="despMultaGrau" class="glass-input border-rose-500/30 text-rose-200 cursor-pointer appearance-none bg-black/40">
+                                    <option value="LEVE" class="text-slate-800">Leve (3 pts)</option>
+                                    <option value="MEDIA" class="text-slate-800">Média (4 pts)</option>
+                                    <option value="GRAVE" class="text-slate-800">Grave (5 pts)</option>
+                                    <option value="GRAVISSIMA" class="text-slate-800">Gravíssima (7 pts)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label text-rose-300">Pontos na CNH</label>
+                                <input type="number" id="despMultaPontos" class="glass-input font-mono font-bold border-rose-500/30 text-rose-200 bg-black/40" value="3">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative md:col-span-2">
+                        <label class="form-label text-rose-400">Valor Total (R$) *</label>
+                        <span class="absolute left-4 top-[38px] text-lg font-black text-rose-400">R$</span>
+                        <input type="number" id="despValor" step="0.01" required class="glass-input font-mono font-black text-rose-400 text-lg pl-12" placeholder="0.00">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="form-label">Nº Nota / Fatura / Recibo (Opcional)</label>
+                        <input type="text" id="despNota" class="glass-input uppercase" placeholder="Ex: NF 12345">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="form-label">Fornecedor / Motivo *</label>
+                        <textarea id="despObs" rows="2" required class="glass-input resize-none" placeholder="Detalhes da despesa..."></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSubmitDespesa" class="w-full relative group overflow-hidden bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-[0.2em] py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center gap-2">
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:animate-shimmer"></div>
+                    <i data-lucide="cloud-lightning" class="w-5 h-5 text-white"></i> Injetar no Sheets
+                </button>
+            </form>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ABA 4: MANUTENÇÃO PREVENTIVA -->
+        <!-- ========================================== -->
+        <div id="tab-manutencao" class="tab-content max-w-4xl mx-auto">
+            <form id="formManutencao" onsubmit="salvarManutencao(event)" class="glass-card p-8 md:p-10 space-y-8 border-t-4 border-t-amber-500">
+                <div class="flex items-center gap-4 border-b border-white/10 pb-5">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)]"><i data-lucide="wrench" class="w-5 h-5"></i></div>
+                    <div>
+                        <h2 class="text-base font-black text-white uppercase tracking-widest">Plano de Manutenção Preventiva</h2>
+                        <p class="text-[10px] text-amber-400 uppercase tracking-widest font-bold mt-1">Registo e Cálculo de Próxima Revisão</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2 relative">
+                        <label class="form-label text-amber-400">Placa do Veículo *</label>
+                        <select id="manutPlaca" required class="glass-input font-bold text-white cursor-pointer appearance-none" onchange="preencherKmManutencao()">
+                            <option value="" class="text-slate-800">Carregando...</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-4 top-[38px] w-5 h-5 text-amber-400 pointer-events-none"></i>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">Data da Manutenção *</label>
+                        <input type="date" id="manutData" required class="glass-input cursor-pointer [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="form-label">KM Atual (Momento da Manutenção) *</label>
+                        <input type="number" id="manutKM" required class="glass-input font-mono text-sky-300" oninput="calcularProximaManutencao()">
+                    </div>
+
+                    <div class="relative">
+                        <label class="form-label text-emerald-400">Categoria (Opcional)</label>
+                        <select id="manutCategoria" class="glass-input cursor-pointer font-bold appearance-none">
+                            <option value="" class="text-slate-800">Selecione uma categoria...</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-4 top-[38px] w-5 h-5 text-emerald-400 pointer-events-none"></i>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Descrição da Manutenção *</label>
+                        <input type="text" id="manutDescricao" required class="glass-input uppercase" placeholder="Ex: Troca de óleo, Correia dentada...">
+                    </div>
+
+                    <div class="bg-black/20 p-4 rounded-xl border border-white/5 md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="form-label text-amber-400">Regra de Validade (Opcional)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="manutPrazo" class="glass-input font-mono w-2/3" placeholder="Ex: 5000" oninput="calcularProximaManutencao()">
+                                <select id="manutUnidade" class="glass-input w-1/3 cursor-pointer p-0 text-center" onchange="calcularProximaManutencao()">
+                                    <option value="km" class="text-slate-800">KM</option>
+                                    <option value="dias" class="text-slate-800">DIAS</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label text-emerald-400">KM Próx. Manutenção</label>
+                            <input type="number" id="manutKmProx" class="glass-input font-mono text-emerald-300 bg-emerald-500/10 border-emerald-500/30" placeholder="Livre">
+                        </div>
+                        <div>
+                            <label class="form-label text-emerald-400">Data Próx. Manutenção</label>
+                            <input type="date" id="manutDataProx" class="glass-input font-mono text-emerald-300 bg-emerald-500/10 border-emerald-500/30 [color-scheme:dark]">
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="form-label text-rose-400">Custo Total da Preventiva (R$)</label>
+                        <input type="number" id="manutValor" step="0.01" class="glass-input font-mono font-black text-rose-400 text-lg w-1/2" placeholder="0.00 (Opcional se for só plano)">
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSubmitManutencao" class="w-full relative group overflow-hidden bg-amber-600 hover:bg-amber-500 text-white font-black text-xs uppercase tracking-[0.2em] py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.4)] flex items-center justify-center gap-2">
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:animate-shimmer"></div>
+                    <i data-lucide="wrench" class="w-5 h-5 text-white"></i> Registrar Plano de Manutenção
+                </button>
+            </form>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ABA 5: DASHBOARDS COM DRILL-DOWN MENSAL E AÇÕES -->
+        <!-- ========================================== -->
+        <div id="tab-relatorios" class="tab-content max-w-7xl mx-auto h-full flex-col">
+            <div class="flex flex-col flex-1 gap-6 min-h-[500px]">
+                
+                <div class="glass-card p-5 flex flex-col md:flex-row items-center gap-4 shrink-0">
+                    <div class="flex items-center gap-2 w-full md:w-auto">
+                        <i data-lucide="filter" class="w-4 h-4 text-sky-400"></i>
+                        <span class="text-[10px] font-bold text-white uppercase tracking-widest">Analytics:</span>
+                    </div>
+                    <div class="flex items-center gap-2 w-full md:w-auto">
+                        <input type="date" id="dashIni" class="glass-input py-2 text-xs w-auto cursor-pointer [color-scheme:dark]">
+                        <span class="text-slate-500 text-[10px] font-bold">A</span>
+                        <input type="date" id="dashFim" class="glass-input py-2 text-xs w-auto cursor-pointer [color-scheme:dark]">
+                    </div>
+                    <select id="dashPlaca" class="glass-input py-2 text-xs font-bold text-white w-full md:w-48 cursor-pointer appearance-none"><option value="TODOS" class="text-slate-800">Frota Total</option></select>
+                    
+                    <button type="button" onclick="renderDashboards()" class="bg-sky-500 hover:bg-sky-400 text-[#003865] px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors w-full md:w-auto shadow-[0_0_15px_rgba(56,189,248,0.3)] ml-auto">Filtrar</button>
+                    
+                    <button type="button" onclick="sincronizarPlanilha()" id="btnSyncDash" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors w-full md:w-auto shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center justify-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sincronizar Base
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 shrink-0">
+                    <div class="glass-card p-6 border-l-4 border-l-rose-500 flex justify-between items-center">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Despesa Acumulada</p>
+                            <h3 class="text-4xl font-black text-white tabular-nums" id="dashKpiTotal">R$ 0,00</h3>
+                        </div>
+                        <div class="w-14 h-14 bg-rose-500/20 text-rose-400 rounded-2xl flex items-center justify-center border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.2)]"><i data-lucide="dollar-sign" class="w-7 h-7"></i></div>
+                    </div>
+                    <div class="glass-card p-6 border-l-4 border-l-sky-500 flex justify-between items-center">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tickets Lançados</p>
+                            <h3 class="text-4xl font-black text-white tabular-nums" id="dashKpiQtd">0</h3>
+                        </div>
+                        <div class="w-14 h-14 bg-sky-500/20 text-sky-400 rounded-2xl flex items-center justify-center border border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.2)]"><i data-lucide="receipt" class="w-7 h-7"></i></div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 mb-6 shrink-0">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <h4 class="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="calendar-days" class="w-4 h-4 text-emerald-500"></i> Acompanhamento Anual (Drill-Down)
+                        </h4>
+                        <div class="flex items-center gap-3">
+                            <div class="flex bg-black/40 p-1 rounded-lg border border-white/10">
+                                <button type="button" onclick="setModoExibicaoAnual('grafico')" id="btnModoGrafico" class="p-1.5 rounded-md bg-sky-500 text-white shadow-sm transition-colors" title="Gráfico"><i data-lucide="bar-chart-2" class="w-4 h-4"></i></button>
+                                <button type="button" onclick="setModoExibicaoAnual('dados')" id="btnModoDados" class="p-1.5 rounded-md text-slate-400 hover:text-white transition-colors" title="Tabela Drill-Down"><i data-lucide="list-tree" class="w-4 h-4"></i></button>
+                            </div>
+                            <div class="w-px h-5 bg-white/10"></div>
+                            <div class="flex bg-black/40 p-1 rounded-lg border border-white/10">
+                                <button type="button" onclick="setVisaoAnual('veiculo')" id="btnVisaoAnualVeiculo" class="px-4 py-1.5 text-[9px] font-bold uppercase rounded-md bg-white/10 text-white shadow-sm transition-colors">Agrupar Veículo</button>
+                                <button type="button" onclick="setVisaoAnual('categoria')" id="btnVisaoAnualCategoria" class="px-4 py-1.5 text-[9px] font-bold uppercase rounded-md text-slate-400 hover:text-white transition-colors">Agrupar Categoria</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="containerGraficoAnual" class="relative h-64 w-full block">
+                        <canvas id="chartAnual"></canvas>
+                    </div>
+                    
+                    <div id="containerDadosAnual" class="relative max-h-96 w-full hidden overflow-auto custom-scroll border border-white/5 rounded-xl bg-black/20">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-black/60 sticky top-0 z-20 backdrop-blur-md">
+                                <tr id="theadDadosAnual"></tr>
+                            </thead>
+                            <tbody id="tbodyDadosAnual"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0">
+                    <div class="glass-card p-6">
+                        <h4 class="text-[10px] font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2"><i data-lucide="bar-chart-2" class="w-4 h-4 text-sky-400"></i> Custo Acumulado (Veículo)</h4>
+                        <div class="relative h-56 w-full"><canvas id="chartVeiculos"></canvas></div>
+                    </div>
+                    <div class="glass-card p-6">
+                        <h4 class="text-[10px] font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4 text-amber-400"></i> Centros de Custo (Cat)</h4>
+                        <div class="relative h-56 w-full"><canvas id="chartCategorias"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Datagrid Analítico com EDIÇÃO / EXCLUSÃO E FILTROS -->
+                <div class="glass-card flex-1 flex flex-col p-0 overflow-hidden min-h-[350px] mb-8">
+                    <div class="bg-black/20 border-b border-white/5 px-6 py-4 shrink-0 flex flex-col gap-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2"><i data-lucide="database" class="w-4 h-4 text-sky-400"></i> Datagrid Analítico</h4>
+                            <div class="flex gap-4">
+                                <button onclick="limparFiltroDatagrid()" class="text-[9px] text-slate-400 hover:text-white transition-colors underline uppercase tracking-widest font-bold">Limpar Filtros</button>
+                                <button onclick="exportarParaExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded text-[9px] font-black uppercase tracking-widest shadow flex items-center gap-1.5 transition-colors"><i data-lucide="sheet" class="w-3 h-3"></i> Exportar Base Filtrada</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                            <input type="text" id="fGridData" placeholder="Filtrar Data..." oninput="renderDatagridOnly()" class="glass-input !py-1.5 !px-2 !text-[10px] font-mono">
+                            <input type="text" id="fGridPlaca" placeholder="Filtrar Placa..." oninput="renderDatagridOnly()" class="glass-input !py-1.5 !px-2 !text-[10px] uppercase">
+                            <input type="text" id="fGridMotorista" placeholder="Filtrar Condutor..." oninput="renderDatagridOnly()" class="glass-input !py-1.5 !px-2 !text-[10px] uppercase">
+                            <select id="fGridClasse" onchange="renderDatagridOnly()" class="glass-input !py-1.5 !px-2 !text-[10px] uppercase cursor-pointer appearance-none">
+                                <option value="">TIPO (TODOS)</option>
+                                <option value="CORRETIVA">CORRETIVAS / AVULSAS</option>
+                                <option value="PREVENTIVA">PREVENTIVAS</option>
+                                <option value="PREVENTIVA (ABERTO)">PREVENTIVAS (EM ABERTO)</option>
+                                <option value="PREVENTIVA (QUITADA)">PREVENTIVAS (QUITADAS)</option>
+                            </select>
+                            <input type="text" id="fGridCategoria" placeholder="Filtrar Categoria..." oninput="renderDatagridOnly()" class="glass-input !py-1.5 !px-2 !text-[10px] uppercase">
+                            <input type="text" id="fGridObs" placeholder="Filtrar Histórico..." oninput="renderDatagridOnly()" class="glass-input !py-1.5 !px-2 !text-[10px] uppercase">
+                            <input type="text" id="fGridValor" placeholder="Filtrar Valor..." oninput="renderDatagridOnly()" class="glass-input !py-1.5 !px-2 !text-[10px] font-mono">
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-auto custom-scroll">
+                        <table class="w-full text-left border-collapse" id="tabelaAnalitica">
+                            <thead class="bg-black/60 sticky top-0 z-10 backdrop-blur-md border-b border-white/10">
+                                <tr>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Data</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Placa</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Condutor</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Tipo (Classificação)</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoria</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Histórico/Obs</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Valor</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center w-24 no-export">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyDash"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ABA 6: CONFIGURAÇÕES -->
+        <!-- ========================================== -->
+        <div id="tab-config" class="tab-content max-w-7xl mx-auto h-full flex-col">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-[400px]">
+                
+                <div class="glass-card flex flex-col overflow-hidden h-full p-0">
+                    <div class="bg-black/20 border-b border-white/5 px-6 py-5 shrink-0">
+                        <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2"><i data-lucide="truck" class="w-4 h-4 text-sky-400"></i> Gestão de Ativos (Frota)</h2>
+                    </div>
+                    <form onsubmit="adicionarVeiculo(event)" class="p-6 border-b border-white/5 bg-white/5 grid grid-cols-2 gap-4 shrink-0">
+                        <div><label class="form-label">Placa</label><input type="text" id="cadPlaca" required class="glass-input uppercase" maxlength="8"></div>
+                        <div><label class="form-label">Tipo (Blueprint)</label><select id="cadTipo" required class="glass-input cursor-pointer appearance-none"><option value="PASSEIO" class="text-slate-800">Carro</option><option value="CARGA" class="text-slate-800">Caminhão</option></select></div>
+                        <div class="col-span-2 flex gap-4 items-end">
+                            <div class="flex-1"><label class="form-label">Modelo/Detalhe</label><input type="text" id="cadModelo" required class="glass-input uppercase"></div>
+                            <button type="submit" class="bg-sky-500 hover:bg-sky-400 text-[#003865] px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all"><i data-lucide="plus" class="w-4 h-4"></i> Add</button>
+                        </div>
+                    </form>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3" id="listaVeiculosConf"></div>
+                </div>
+
+                <div class="glass-card flex flex-col overflow-hidden h-full p-0">
+                    <div class="bg-black/20 border-b border-white/5 px-6 py-5 shrink-0">
+                        <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2"><i data-lucide="tags" class="w-4 h-4 text-amber-400"></i> Dicionário de Categorias</h2>
+                    </div>
+                    <form onsubmit="adicionarCategoria(event)" class="p-6 border-b border-white/5 bg-white/5 flex flex-col gap-4 shrink-0">
+                        <div><label class="form-label">Nome da Categoria</label><input type="text" id="cadCategoria" required class="glass-input uppercase" placeholder="Ex: PEDÁGIO"></div>
+                        <div class="flex justify-end"><button type="submit" class="bg-amber-500 hover:bg-amber-400 text-[#003865] px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all w-full justify-center"><i data-lucide="plus" class="w-4 h-4"></i> Add</button></div>
+                    </form>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3" id="listaCategoriasConf"></div>
+                </div>
+
+                <div class="glass-card flex flex-col overflow-hidden h-full p-0">
+                    <div class="bg-black/20 border-b border-white/5 px-6 py-5 shrink-0">
+                        <h2 class="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2"><i data-lucide="users" class="w-4 h-4 text-emerald-400"></i> Gestão de Condutores</h2>
+                    </div>
+                    <form onsubmit="adicionarCondutor(event)" class="p-6 border-b border-white/5 bg-white/5 flex flex-col gap-4 shrink-0">
+                        <div><label class="form-label">Nome do Motorista</label><input type="text" id="cadCondutor" required class="glass-input uppercase" placeholder="Nome completo"></div>
+                        <div class="flex justify-end"><button type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-[#003865] px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all w-full justify-center"><i data-lucide="plus" class="w-4 h-4"></i> Add</button></div>
+                    </form>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3" id="listaCondutoresConf"></div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL DETALHES DE MANUTENÇÃO -->
+    <div id="modalManutencao" class="fixed inset-0 z-[150] bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4 modal-overlay opacity-0">
+        <div class="absolute inset-0" onclick="fecharModalManutencao()"></div>
+        <div class="glass-card w-full max-w-2xl flex flex-col overflow-hidden relative z-10 modal-content border-amber-500/30">
+            <div class="bg-black/40 px-6 py-5 border-b border-white/10 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0"><i data-lucide="wrench" class="w-4 h-4"></i></div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Plano de Manutenção Preventiva</h3>
+                        <p class="text-[10px] text-amber-400 font-bold uppercase tracking-widest mt-0.5" id="modalManutPlaca">PLACA - MODELO</p>
+                    </div>
+                </div>
+                <button onclick="fecharModalManutencao()" class="text-slate-400 hover:text-rose-400 transition-colors bg-white/5 p-2 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto max-h-[60vh] space-y-4">
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-white/5 border border-white/10 p-4 rounded-xl text-center">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">KM Atual do Veículo</span>
+                        <span class="text-2xl font-black text-sky-400 font-mono" id="modalManutKmAtual">0</span>
+                    </div>
+                    <div class="bg-white/5 border border-white/10 p-4 rounded-xl text-center">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Data Atual</span>
+                        <span class="text-2xl font-black text-white font-mono" id="modalManutDataAtual">--/--/----</span>
+                    </div>
+                </div>
+
+                <h4 class="text-[10px] font-black text-white uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Avisos e Histórico</h4>
+                <div id="listaManutencoesModal" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR DESPESA -->
+    <div id="modalEditDespesa" class="fixed inset-0 z-[150] bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4 modal-overlay opacity-0">
+        <div class="absolute inset-0" onclick="fecharModalEditDespesa()"></div>
+        <div class="glass-card w-full max-w-lg flex flex-col overflow-hidden relative z-10 modal-content border-sky-500/30">
+            <div class="bg-black/40 px-6 py-5 border-b border-white/10 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 border border-sky-500/30"><i data-lucide="edit-3" class="w-4 h-4"></i></div>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide">Editar Lançamento</h3>
+                </div>
+                <button onclick="fecharModalEditDespesa()" class="text-slate-400 hover:text-rose-400 transition-colors bg-white/5 p-2 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <form id="formEditDespesa" onsubmit="salvarEdicaoDespesa(event)" class="p-6 space-y-4">
+                <input type="hidden" id="editDespId">
+                <input type="hidden" id="editDespPlacaAntiga">
+                <input type="hidden" id="editDespCatAntiga">
+                <input type="hidden" id="editDespValorAntigo">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="form-label">Data</label>
+                        <input type="date" id="editDespData" required class="glass-input [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="form-label">Placa</label>
+                        <select id="editDespPlaca" required class="glass-input cursor-pointer appearance-none text-white"><option value="" class="text-slate-800">Carregando...</option></select>
+                    </div>
+                    <div>
+                        <label class="form-label">Categoria</label>
+                        <select id="editDespCategoria" required class="glass-input cursor-pointer appearance-none text-white"><option value="" class="text-slate-800">Carregando...</option></select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="form-label text-rose-400">Valor (R$)</label>
+                        <input type="number" id="editDespValor" step="0.01" required class="glass-input font-mono text-rose-400 font-black text-lg">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="form-label">Motorista</label>
+                        <select id="editDespMotorista" required class="glass-input cursor-pointer appearance-none text-white"><option value="" class="text-slate-800">Carregando...</option></select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="form-label">Observações</label>
+                        <textarea id="editDespObs" rows="2" class="glass-input resize-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="fecharModalEditDespesa()" class="flex-1 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors">Cancelar</button>
+                    <button type="submit" id="btnSubmitEditDespesa" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-[0_0_15px_rgba(2,132,199,0.4)] flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="save" class="w-4 h-4"></i> Atualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR CHECKLIST -->
+    <div id="modalEditChecklist" class="fixed inset-0 z-[150] bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4 modal-overlay opacity-0">
+        <div class="absolute inset-0" onclick="fecharModalEditChecklist()"></div>
+        <div class="glass-card w-full max-w-lg flex flex-col overflow-hidden relative z-10 modal-content border-sky-500/30">
+            <div class="bg-black/40 px-6 py-5 border-b border-white/10 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 border border-sky-500/30"><i data-lucide="clipboard-edit" class="w-4 h-4"></i></div>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide">Editar Checklist</h3>
+                </div>
+                <button onclick="fecharModalEditChecklist()" class="text-slate-400 hover:text-rose-400 transition-colors bg-white/5 p-2 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <form id="formEditChecklist" onsubmit="salvarEdicaoChecklist(event)" class="p-6 space-y-4">
+                <input type="hidden" id="editCheckId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label">Data</label>
+                        <input type="date" id="editCheckData" required class="glass-input [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="form-label">Ação</label>
+                        <select id="editCheckAcao" required class="glass-input cursor-pointer appearance-none text-white">
+                            <option value="SAÍDA" class="text-slate-800">SAÍDA</option>
+                            <option value="RETORNO" class="text-slate-800">RETORNO</option>
+                            <option value="VISTORIA" class="text-slate-800">VISTORIA GERAL</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Placa</label>
+                        <select id="editCheckPlaca" required class="glass-input cursor-pointer appearance-none text-white"><option value="" class="text-slate-800">Carregando...</option></select>
+                    </div>
+                    <div>
+                        <label class="form-label text-sky-400">KM Relatado</label>
+                        <input type="number" id="editCheckKm" required class="glass-input font-mono text-sky-400 font-black">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="form-label">Motorista</label>
+                        <select id="editCheckMotorista" required class="glass-input cursor-pointer appearance-none text-white"><option value="" class="text-slate-800">Carregando...</option></select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="form-label">Observações</label>
+                        <textarea id="editCheckObs" rows="3" class="glass-input resize-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="fecharModalEditChecklist()" class="flex-1 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors">Cancelar</button>
+                    <button type="submit" id="btnSubmitEditChecklist" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-[0_0_15px_rgba(2,132,199,0.4)] flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="save" class="w-4 h-4"></i> Atualizar Checklist
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- IFRAME OCULTO (ENVIO SEGURO PARA O GOOGLE SHEETS) -->
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+
+    <!-- SCRIPT DE LÓGICA -->
+    <script>
+        // ==========================================
+        // CONFIGURAÇÃO GOOGLE SHEETS E VARIAVEIS
+        // ==========================================
+        const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbywka-YPmvU_fabnxMPNKDef9tPyOu4IsPr8wPswBlVA6YmgCo7-JoBp7hEbz8xKbsJcw/exec";
+        
+        let dbVeiculos = [];
+        let dbDespesas = [];
+        let dbCategorias = [];
+        let dbManutencoes = []; 
+        let dbChecklists = [];
+        let dbCondutores = [];
+        
+        let chartVeiculosObj = null;
+        let chartCategoriasObj = null;
+        let chartAnualObj = null;
+        let visaoAnualAtual = 'veiculo'; 
+        let modoExibicaoAnual = 'grafico'; 
+        let drillDownState = {}; 
+
+        // Vistoria Core
+        let canvas = null, ctx = null;
+        let danosMarcados = [];
+        let coordsPendentes = {x: 0, y: 0};
+        let blueprintAtivo = 'PASSEIO';
+
+        window.setVisaoAnual = function(tipo) {
+            visaoAnualAtual = tipo;
+            document.getElementById('btnVisaoAnualVeiculo').className = `px-4 py-1.5 text-[9px] font-bold uppercase rounded-md transition-colors ${tipo === 'veiculo' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`;
+            document.getElementById('btnVisaoAnualCategoria').className = `px-4 py-1.5 text-[9px] font-bold uppercase rounded-md transition-colors ${tipo === 'categoria' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`;
+            drillDownState = {}; 
+            renderDashboards();
+        };
+
+        window.setModoExibicaoAnual = function(modo) {
+            modoExibicaoAnual = modo;
+            document.getElementById('btnModoGrafico').className = `p-1.5 rounded-md transition-colors ${modo === 'grafico' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`;
+            document.getElementById('btnModoDados').className = `p-1.5 rounded-md transition-colors ${modo === 'dados' ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`;
+            
+            if (modo === 'grafico') {
+                document.getElementById('containerGraficoAnual').classList.remove('hidden');
+                document.getElementById('containerGraficoAnual').classList.add('block');
+                document.getElementById('containerDadosAnual').classList.remove('block');
+                document.getElementById('containerDadosAnual').classList.add('hidden');
+            } else {
+                document.getElementById('containerGraficoAnual').classList.remove('block');
+                document.getElementById('containerGraficoAnual').classList.add('hidden');
+                document.getElementById('containerDadosAnual').classList.remove('hidden');
+                document.getElementById('containerDadosAnual').classList.add('block');
+            }
+        };
+
+        // ==========================================
+        // INICIALIZAÇÃO E BD
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                lucide.createIcons();
+                Chart.defaults.color = '#94a3b8';
+                Chart.defaults.font.family = '"Plus Jakarta Sans", sans-serif';
+                
+                carregarBancoDeDados();
+                
+                ['despPlaca', 'cadPlaca', 'movPlaca', 'manutPlaca', 'editDespPlaca', 'editCheckPlaca'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el && el.tagName !== 'SELECT') {
+                        el.addEventListener('input', function(e) {
+                            let val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                            if (val.length > 3) val = val.substring(0, 3) + '-' + val.substring(3, 7);
+                            e.target.value = val;
+                        });
+                    }
+                });
+
+                const dateIni = document.getElementById('dashIni');
+                const dateFim = document.getElementById('dashFim');
+                if(dateIni && dateFim) {
+                    const hoje = new Date();
+                    dateIni.valueAsDate = new Date(hoje.getFullYear(), 0, 1);
+                    dateFim.valueAsDate = hoje;
+                }
+                
+                const despData = document.getElementById('despData');
+                if(despData) despData.valueAsDate = new Date();
+
+                const hojeInput = document.getElementById('manutData');
+                if(hojeInput) hojeInput.valueAsDate = new Date();
+
+                const despCatEl = document.getElementById('despCategoria');
+                if (despCatEl) {
+                    despCatEl.addEventListener('change', function() {
+                        const val = this.value.toUpperCase();
+                        const area = document.getElementById('areaMulta');
+                        if (val.includes('MULTA') || val.includes('INFRAÇÃO') || val.includes('INFRACAO')) {
+                            area.classList.remove('hidden'); area.classList.add('flex');
+                        } else {
+                            area.classList.add('hidden'); area.classList.remove('flex');
+                        }
+                    });
+                }
+
+                const multaGrauEl = document.getElementById('despMultaGrau');
+                if (multaGrauEl) {
+                    multaGrauEl.addEventListener('change', function() {
+                        const pts = { 'LEVE': 3, 'MEDIA': 4, 'GRAVE': 5, 'GRAVISSIMA': 7 };
+                        document.getElementById('despMultaPontos').value = pts[this.value] || 0;
+                    });
+                }
+
+                atualizarUI();
+                switchTab('tab-frota');
+                
+                sincronizarPlanilha(); 
+
+            } catch (err) { console.error("Erro na inicializacao:", err); }
+        });
+
+        // TOAST NOTIFICATIONS
+        let toastTimer;
+        function notificar(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            if(!toast) return;
+            document.getElementById('toastMessage').innerText = msg;
+            const icon = document.getElementById('toastIcon');
+            
+            if(isError) {
+                toast.classList.replace('border-slate-600', 'border-rose-500');
+                icon.setAttribute('data-lucide', 'alert-triangle');
+                icon.classList.replace('text-emerald-400', 'text-rose-500');
+            } else {
+                toast.classList.replace('border-rose-500', 'border-slate-600');
+                icon.setAttribute('data-lucide', 'check-circle');
+                icon.classList.replace('text-rose-500', 'text-emerald-400');
+            }
+            lucide.createIcons({ root: toast });
+
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            if(toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { 
+                toast.classList.remove('translate-y-0', 'opacity-100'); 
+                toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none'); 
+            }, 3500);
+        }
+
+        function enviarDadosParaPlanilha(dados) {
+            return new Promise((resolve) => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = GOOGLE_SHEETS_URL;
+                form.target = 'hidden_iframe';
+                form.style.display = 'none';
+                
+                // Contrato explícito por aba: cadastros nunca podem ser confundidos com lançamentos.
+                // O Apps Script deve usar "sheet"/"aba" para selecionar a guia de destino.
+                let dadosFinais = { ...dados };
+                if (dados.isNewCadastro) {
+                    dadosFinais = {
+                        action: 'cadastro',
+                        tipo: 'cadastro',
+                        sheet: 'CADASTROS',
+                        aba: 'CADASTROS',
+                        cadastro_tipo: dados.detalhe2,
+                        id: dados.id,
+                        descricao: dados.descricao,
+                        detalhe1: dados.detalhe1 || '',
+                        detalhe2: dados.detalhe2 || ''
+                    };
+                } else if (!dadosFinais.sheet) {
+                    dadosFinais = { action: 'lancamento', sheet: 'DADOS', ...dadosFinais };
+                }
+
+                for (const key in dadosFinais) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden'; input.name = key; input.value = dadosFinais[key];
+                    form.appendChild(input);
+                }
+                document.body.appendChild(form);
+                form.submit();
+                setTimeout(() => { document.body.removeChild(form); resolve(true); }, 1500);
+            });
+        }
+
+        const formatCurrency = v => { let n = parseFloat(v); return isNaN(n) ? 'R$ 0,00' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
+
+        // DB LOCAL E TABS
+        function carregarBancoDeDados() {
+            try { dbVeiculos = JSON.parse(localStorage.getItem('comlub_frota_veic_v1')) || []; } catch(e) { dbVeiculos = []; }
+            try { dbDespesas = JSON.parse(localStorage.getItem('comlub_frota_desp_v1')) || []; } catch(e) { dbDespesas = []; }
+            try { dbCategorias = JSON.parse(localStorage.getItem('comlub_frota_cat_v1')) || []; } catch(e) { dbCategorias = []; }
+            try { dbManutencoes = JSON.parse(localStorage.getItem('comlub_frota_manut_v1')) || []; } catch(e) { dbManutencoes = []; }
+            try { dbChecklists = JSON.parse(localStorage.getItem('comlub_frota_check_v1')) || []; } catch(e) { dbChecklists = []; }
+            try { dbCondutores = JSON.parse(localStorage.getItem('comlub_frota_cond_v1')) || []; } catch(e) { dbCondutores = []; }
+        }
+
+        function salvarDB(qual) {
+            if(qual === 'veiculos') localStorage.setItem('comlub_frota_veic_v1', JSON.stringify(dbVeiculos));
+            if(qual === 'despesas') localStorage.setItem('comlub_frota_desp_v1', JSON.stringify(dbDespesas));
+            if(qual === 'categorias') localStorage.setItem('comlub_frota_cat_v1', JSON.stringify(dbCategorias));
+            if(qual === 'manutencoes') localStorage.setItem('comlub_frota_manut_v1', JSON.stringify(dbManutencoes));
+            if(qual === 'checklists') localStorage.setItem('comlub_frota_check_v1', JSON.stringify(dbChecklists));
+            if(qual === 'condutores') localStorage.setItem('comlub_frota_cond_v1', JSON.stringify(dbCondutores));
+        }
+
+        function switchTab(tabId) {
+            ['tab-frota', 'tab-mov', 'tab-despesas', 'tab-manutencao', 'tab-relatorios', 'tab-config'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            const activeTab = document.getElementById(tabId);
+            if (activeTab) activeTab.classList.add('active');
+            const activeBtn = document.getElementById('btn-' + tabId);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            if (tabId === 'tab-frota') renderizarFrota();
+            else if (tabId === 'tab-relatorios') renderDashboards();
+            else if (tabId === 'tab-mov') {
+                atualizarAcaoVistoria(); 
+                renderChecklistsDatagrid();
+                setTimeout(() => { desenharBlueprint(); }, 100);
+            } 
+            else atualizarUI();
+        }
+
+        function atualizarUI() {
+            let hPlaca = '<option value="" class="text-slate-800">Selecione o veículo...</option>';
+            let hDashPlaca = '<option value="TODOS" class="text-slate-800">Frota Total</option>';
+            dbVeiculos.forEach(v => {
+                let o = `<option value="${v.placa}" class="text-slate-800">${v.placa} - ${v.modelo}</option>`;
+                hPlaca += o; hDashPlaca += o;
+            });
+            ['movPlaca', 'despPlaca', 'manutPlaca', 'editDespPlaca', 'editCheckPlaca'].forEach(id => { const el = document.getElementById(id); if(el) { let v = el.value; el.innerHTML = hPlaca; el.value = v; } });
+            if(document.getElementById('dashPlaca')) document.getElementById('dashPlaca').innerHTML = hDashPlaca;
+
+            let hCat = '<option value="" class="text-slate-800">Selecione a categoria...</option>';
+            dbCategorias.forEach(c => { hCat += `<option value="${c}" class="text-slate-800">${c}</option>`; });
+            ['despCategoria', 'manutCategoria', 'editDespCategoria'].forEach(id => { const el = document.getElementById(id); if(el) { let v = el.value; el.innerHTML = hCat; el.value = v; } });
+
+            let hCond = '<option value="" class="text-slate-800">Selecione o condutor...</option>';
+            dbCondutores.forEach(c => { hCond += `<option value="${c}" class="text-slate-800">${c}</option>`; });
+            ['movMotorista', 'despMotorista', 'editDespMotorista', 'editCheckMotorista'].forEach(id => { const el = document.getElementById(id); if(el) { let v = el.value; el.innerHTML = hCond; el.value = v; } });
+
+            renderizarConfiguracoes();
+            atualizarVinculoManutencao();
+        }
+
+        // ==========================================
+        // FETCH PLANILHA (BLINDADO E C/ DATAMANUAL)
+        // ==========================================
+        async function sincronizarPlanilha() {
+            const btn = document.getElementById('btnSyncDash');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) { btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Atualizando...'; btn.disabled = true; lucide.createIcons({root: btn}); }
+            
+            try {
+                const res = await fetch(GOOGLE_SHEETS_URL, { cache: 'no-store', redirect: 'follow' });
+                const textResult = await res.text();
+                
+                let json;
+                try { json = JSON.parse(textResult); } catch (e) { throw new Error("A API devolveu HTML/Erro."); }
+                
+                const getCol = (obj, ...keys) => {
+                    const objKeys = Object.keys(obj);
+                    for (let key of keys) {
+                        const found = objKeys.find(k => k.trim().toLowerCase() === key.trim().toLowerCase());
+                        if (found !== undefined && obj[found] !== undefined && obj[found] !== '') return obj[found];
+                    }
+                    return undefined;
+                };
+
+                if (json.dados) {
+                    dbDespesas = []; 
+                    json.dados.forEach(d => {
+                        const isDespesa = getCol(d, 'Tipo de Despesa', 'Tipo Despesa', 'Categoria', 'Acao', 'Ação');
+                        const hasPlaca = getCol(d, 'Placa', 'Veículo', 'Veiculo');
+                        
+                        if (isDespesa || hasPlaca) {
+                            let dtOrig = getCol(d, 'Data/Hora', 'Data', 'DataHora');
+                            let dtMan = getCol(d, 'DataManual', 'Data Lançamento', 'Data Lancamento');
+                            
+                            let valParaUsar = (dtMan && String(dtMan).trim() !== '') ? dtMan : dtOrig;
+                            let dataFmt = new Date().toISOString().split('T')[0];
+                            
+                            if (valParaUsar) {
+                                let dtStr = String(valParaUsar).trim();
+                                if (dtStr.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+                                    let parts = dtStr.substring(0, 10).split('/');
+                                    dataFmt = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                } else {
+                                    try {
+                                        const dObj = new Date(dtStr);
+                                        if (!isNaN(dObj.getTime())) dataFmt = dObj.toISOString().split('T')[0];
+                                        else dataFmt = dtStr.split('T')[0].substring(0,10);
+                                    } catch(e) {}
+                                }
+                            }
+
+                            let acaoRaw = getCol(d, 'Tipo de Despesa', 'Tipo Despesa', 'Categoria', 'Acao', 'Ação');
+                            let categoriaFinal = 'CORRETIVA';
+                            if (String(acaoRaw).toUpperCase().includes('PREVENTIVA')) {
+                                categoriaFinal = String(acaoRaw).toUpperCase();
+                            } else if (acaoRaw && String(acaoRaw).trim() !== '') {
+                                categoriaFinal = String(acaoRaw).toUpperCase();
+                            }
+
+                            let motoristaReal = getCol(d, 'Motorista', 'Condutor');
+
+                            let valorRaw = getCol(d, '# Valor (R$)', 'Valor (R$)', 'Valor', 'ValorDespesa');
+                            if(typeof valorRaw === 'string') valorRaw = valorRaw.replace(/[^0-9,\.-]/g, '').replace(',', '.');
+
+                            dbDespesas.push({
+                                id_lancamento: getCol(d, 'ID_LANCAMENTO', 'ID_LANC', 'ID') || Date.now() + Math.random(),
+                                dataHora: dataFmt,
+                                placa: getCol(d, 'Placa', 'Veículo', 'Veiculo') || 'N/A',
+                                categoria: categoriaFinal,
+                                valor: parseFloat(valorRaw) || 0,
+                                motorista: motoristaReal || '',
+                                observacoes: String(getCol(d, 'Observações', 'Obs', 'Avarias') || '')
+                            });
+                        }
+                    });
+                    salvarDB('despesas');
+                }
+
+                if (json.checklists) {
+                    dbChecklists = [];
+                    json.checklists.forEach(c => {
+                        let dtOrig = getCol(c, 'Data/Hora', 'Data');
+                        let dataFmt = dtOrig || new Date().toISOString().split('T')[0];
+                        
+                        dbChecklists.push({
+                            id_vistoria: getCol(c, 'ID') || Date.now() + Math.random(),
+                            dataHora: dataFmt,
+                            acao: getCol(c, 'Acao', 'Ação') || 'VISTORIA',
+                            placa: getCol(c, 'Placa', 'Veiculo') || 'N/A',
+                            motorista: getCol(c, 'Motorista', 'Condutor') || '',
+                            km: getCol(c, 'KM Atual', 'KM') || 0,
+                            obs: String(getCol(c, 'Observações', 'Obs') || '')
+                        });
+                    });
+                    salvarDB('checklists');
+                }
+
+                if (json.cadastros) {
+                    let veicMap = new Map();
+                    let catSet = new Set();
+                    let condSet = new Set();
+                    
+                    json.cadastros.forEach(c => {
+                        // Leitura EXATA das colunas originais
+                        let idCell = getCol(c, 'ID');
+                        let descCell = getCol(c, 'Descrição', 'Descricao');
+                        let det1Cell = getCol(c, 'Detalhe 1', 'Detalhe1');
+                        
+                        // O ID real está na coluna Descrição, o Nome no Detalhe 1 e o tipo lógico no ID.
+                        // Tipo: FROTA | ID: veiculo | Descrição: 1789... | Detalhe 1: CARRO... | Detalhe 2: PASSEIO
+                        let tipoLogico = String(idCell).toUpperCase();
+                        let descTexto = String(det1Cell).toUpperCase().trim();
+                        let numId = descCell;
+
+                        if (tipoLogico.includes('VEICULO') || tipoLogico.includes('VEÍCULO')) {
+                            let parts = descTexto.split('-');
+                            let placa = parts[0] ? parts[0].trim() : '';
+                            let modelo = parts.length > 1 ? parts.slice(1).join('-').trim() : 'VEÍCULO';
+                            
+                            if (placa && !veicMap.has(placa)) {
+                                veicMap.set(placa, { id: numId || Date.now() + Math.random(), placa: placa, modelo: modelo, tipo: getCol(c, 'Detalhe 2', 'Detalhe2') || 'PASSEIO', status: 'PARADO', motoristaAtual: '', kmAtual: 0 });
+                            }
+                        } else if (tipoLogico.includes('CATEGORIA') || tipoLogico.includes('DESPESA')) {
+                            if(descTexto) catSet.add(descTexto);
+                        } else if (tipoLogico.includes('CONDUTOR') || tipoLogico.includes('MOTORISTA')) {
+                            if(descTexto) condSet.add(descTexto);
+                        }
+                    });
+                    
+                    dbVeiculos = Array.from(veicMap.values()); 
+                    dbCategorias = Array.from(catSet);
+                    dbCondutores = Array.from(condSet);
+                    
+                    salvarDB('veiculos'); salvarDB('categorias'); salvarDB('condutores');
+                }
+
+                renderDashboards(); atualizarUI(); renderChecklistsDatagrid();
+                notificar("Base Oficial sincronizada e gráficos atualizados!");
+            } catch(err) {
+                console.error("Erro ao puxar dados", err);
+                notificar("Erro ao puxar planilha. Exibindo dados locais.", true);
+            } finally {
+                if (btn) { btn.innerHTML = origHtml; btn.disabled = false; lucide.createIcons({root: btn}); }
+            }
+        }
+
+        // =========================================================================
+        // EXPORTAÇÃO EXCEL
+        // =========================================================================
+        function exportarParaExcel() {
+            const table = document.getElementById("tabelaAnalitica");
+            if (!table) return notificar("Tabela não encontrada.", true);
+            
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Relatório Filtrado" });
+            const ws = wb.Sheets["Relatório Filtrado"];
+
+            // Limpa as colunas 'Ações' da exportação baseada no seletor "no-export"
+            const cloneTable = table.cloneNode(true);
+            const headers = cloneTable.querySelectorAll('th');
+            const actionColIndex = Array.from(headers).findIndex(th => th.innerText.trim().toUpperCase() === 'AÇÕES' || th.classList.contains('no-export'));
+            
+            if (actionColIndex > -1) {
+                cloneTable.querySelectorAll('tr').forEach(row => {
+                    if (row.children[actionColIndex]) {
+                        row.removeChild(row.children[actionColIndex]);
+                    }
+                });
+            }
+
+            const cleanWb = XLSX.utils.table_to_book(cloneTable, { sheet: "Base" });
+            XLSX.writeFile(cleanWb, `Frota_Analitico_${new Date().toISOString().slice(0,10)}.xlsx`);
+            notificar("Exportação concluída com sucesso!");
+        }
+
+        // =========================================================================
+        // EDIÇÃO E EXCLUSÃO (DATAGRID)
+        // =========================================================================
+        function excluirDespesa(id, placa, valor, cat) {
+            if(!confirm(`Tem a certeza que deseja expurgar permanentemente esta despesa (${formatCurrency(valor)})?`)) return;
+            
+            dbDespesas = dbDespesas.filter(d => String(d.id_lancamento) !== String(id));
+            salvarDB('despesas'); renderDashboards();
+            
+            notificar("A remover da nuvem...");
+            enviarDadosParaPlanilha({
+                tipo: 'delete_despesa',
+                id_lancamento: id,
+                placaAntiga: placa,
+                tipoDespesaAntigo: cat,
+                valorAntigo: valor
+            }).then(() => { sincronizarPlanilha(); });
+        }
+
+        function abrirEditarDespesa(id) {
+            const desp = dbDespesas.find(d => String(d.id_lancamento) === String(id));
+            if(!desp) return;
+
+            document.getElementById('editDespId').value = desp.id_lancamento || '';
+            document.getElementById('editDespPlacaAntiga').value = desp.placa;
+            document.getElementById('editDespCatAntiga').value = desp.categoria;
+            document.getElementById('editDespValorAntigo').value = desp.valor;
+
+            document.getElementById('editDespData').value = desp.dataHora;
+            document.getElementById('editDespPlaca').value = desp.placa;
+            document.getElementById('editDespCategoria').value = desp.categoria;
+            document.getElementById('editDespValor').value = desp.valor;
+            document.getElementById('editDespMotorista').value = desp.motorista;
+            document.getElementById('editDespObs').value = desp.observacoes;
+
+            const modal = document.getElementById('modalEditDespesa');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            void modal.offsetWidth; modal.classList.add('modal-active', 'opacity-100');
+        }
+
+        function fecharModalEditDespesa() {
+            const modal = document.getElementById('modalEditDespesa');
+            modal.classList.remove('modal-active', 'opacity-100');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+        }
+
+        async function salvarEdicaoDespesa(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitEditDespesa');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Atualizando...`;
+            btn.disabled = true; lucide.createIcons({root: btn});
+
+            const payload = {
+                tipo: 'update_despesa',
+                id_lancamento: document.getElementById('editDespId').value,
+                placaAntiga: document.getElementById('editDespPlacaAntiga').value,
+                tipoDespesaAntigo: document.getElementById('editDespCatAntiga').value,
+                valorAntigo: document.getElementById('editDespValorAntigo').value,
+                dataHoraManual: document.getElementById('editDespData').value,
+                placa: document.getElementById('editDespPlaca').value,
+                tipoDespesa: document.getElementById('editDespCategoria').value,
+                valorDespesa: document.getElementById('editDespValor').value,
+                motorista: document.getElementById('editDespMotorista').value.toUpperCase().trim(),
+                observacoes: document.getElementById('editDespObs').value
+            };
+
+            await enviarDadosParaPlanilha(payload);
+            fecharModalEditDespesa();
+            sincronizarPlanilha(); 
+            btn.innerHTML = originalHTML; btn.disabled = false;
+        }
+
+        // =========================================================================
+        // DASHBOARDS
+        // =========================================================================
+        window.toggleDrillDown = function(idRow) {
+            drillDownState[idRow] = !drillDownState[idRow];
+            renderDashboards();
+        };
+
+        function renderDashboards() {
+            const dIni = document.getElementById('dashIni').value.replace(/-/g, '');
+            const dFim = document.getElementById('dashFim').value.replace(/-/g, '');
+            const pPlaca = document.getElementById('dashPlaca').value;
+
+            let filtrado = dbDespesas.filter(d => {
+                let dt = d.dataHora.replace(/-/g, '');
+                if (dIni && dt < dIni) return false;
+                if (dFim && dt > dFim) return false;
+                if (pPlaca !== 'TODOS' && d.placa !== pPlaca) return false;
+                return true;
+            });
+
+            let tValor = 0; const porP = {}; const porC = {};
+            filtrado.forEach(d => {
+                tValor += d.valor;
+                if(!porP[d.placa]) porP[d.placa] = 0; porP[d.placa] += d.valor;
+                if(!porC[d.categoria]) porC[d.categoria] = 0; porC[d.categoria] += d.valor;
+            });
+
+            document.getElementById('dashKpiTotal').innerText = formatCurrency(tValor);
+            document.getElementById('dashKpiQtd').innerText = filtrado.length;
+
+            const agrupamentoAnual = {};
+            const categoriasPri = new Set();
+            const categoriasSec = new Set();
+
+            filtrado.forEach(d => {
+                if(!d.dataHora) return;
+                const p = d.dataHora.split('-');
+                if(p.length !== 3) return;
+                const mesChave = `${p[0]}-${p[1]}`;
+                
+                const primario = visaoAnualAtual === 'veiculo' ? d.placa : d.categoria;
+                const secundario = visaoAnualAtual === 'veiculo' ? d.categoria : d.placa;
+                
+                categoriasPri.add(primario);
+                categoriasSec.add(secundario);
+                
+                if(!agrupamentoAnual[mesChave]) agrupamentoAnual[mesChave] = {};
+                if(!agrupamentoAnual[mesChave][primario]) agrupamentoAnual[mesChave][primario] = { total: 0, filhos: {} };
+                if(!agrupamentoAnual[mesChave][primario].filhos[secundario]) agrupamentoAnual[mesChave][primario].filhos[secundario] = 0;
+                
+                agrupamentoAnual[mesChave][primario].total += d.valor;
+                agrupamentoAnual[mesChave][primario].filhos[secundario] += d.valor;
+            });
+
+            const chavesOrdenadas = Object.keys(agrupamentoAnual).sort();
+            const labelsAnual = chavesOrdenadas.map(c => {
+                const p = c.split('-');
+                const nomeMeses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                return `${nomeMeses[parseInt(p[1])-1]}/${p[0]}`;
+            });
+
+            const baseColors = ['#0ea5e9', '#10b981', '#f59e0b', '#f43f5e', '#a855f7', '#06b6d4', '#f97316', '#ec4899', '#84cc16', '#64748b'];
+            
+            const datasetsAnual = Array.from(categoriasPri).map((cat, idx) => {
+                const color = baseColors[idx % baseColors.length];
+                return {
+                    label: cat,
+                    data: chavesOrdenadas.map(mes => (agrupamentoAnual[mes][cat] ? agrupamentoAnual[mes][cat].total : 0)),
+                    backgroundColor: color,
+                    borderRadius: 4
+                };
+            });
+
+            if(chartAnualObj) chartAnualObj.destroy();
+            const ctxAnual = document.getElementById('chartAnual').getContext('2d');
+            chartAnualObj = new Chart(ctxAnual, {
+                type: 'bar',
+                data: { labels: labelsAnual, datasets: datasetsAnual },
+                options: {
+                    maintainAspectRatio: false, responsive: true, interaction: { mode: 'index', intersect: false },
+                    scales: { x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false } }, y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false } } },
+                    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12, font: {size: 10} } }, tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + formatCurrency(c.raw); } } } }
+                }
+            });
+
+            let thHtml = `<th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-white/10 bg-black/60 sticky left-0 z-20">${visaoAnualAtual === 'veiculo' ? 'Veículo / Categorias' : 'Categoria / Veículos'}</th>`;
+            labelsAnual.forEach(mes => { thHtml += `<th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-white/10 text-right whitespace-nowrap">${mes}</th>`; });
+            thHtml += `<th class="px-4 py-3 text-[10px] font-bold text-sky-400 uppercase tracking-wider border-b border-white/10 text-right whitespace-nowrap bg-sky-500/10">Total</th>`;
+            document.getElementById('theadDadosAnual').innerHTML = thHtml;
+
+            let tbHtml = '';
+            let totaisMes = {}; labelsAnual.forEach(m => totaisMes[m] = 0);
+            let totalGeral = 0;
+
+            const categoriasOrdenadas = Array.from(categoriasPri).map(cat => {
+                let t = 0; chavesOrdenadas.forEach(mes => t += (agrupamentoAnual[mes][cat] ? agrupamentoAnual[mes][cat].total : 0)); 
+                return { nome: cat, total: t };
+            }).sort((a,b) => b.total - a.total);
+
+            if (categoriasOrdenadas.length === 0) {
+                tbHtml = `<tr><td colspan="${labelsAnual.length + 2}" class="text-center py-10 text-slate-500 font-bold text-[10px] uppercase tracking-widest">Sem dados para este período.</td></tr>`;
+            } else {
+                categoriasOrdenadas.forEach((item, idxPri) => {
+                    const cat = item.nome;
+                    const idRow = `drill-${idxPri}`;
+                    const isOpen = drillDownState[idRow] === true;
+                    const iconDir = isOpen ? 'chevron-down' : 'chevron-right';
+                    
+                    tbHtml += `<tr onclick="toggleDrillDown('${idRow}')" class="cursor-pointer hover:bg-white/5 transition-colors group border-b border-white/5">`;
+                    tbHtml += `<td class="px-4 py-3 font-bold text-white text-[11px] uppercase tracking-wider bg-black/20 sticky left-0 z-10 group-hover:bg-black/40 flex items-center gap-2" title="${cat}"><i data-lucide="${iconDir}" class="w-4 h-4 text-sky-400 transition-transform"></i> ${cat}</td>`;
+                    
+                    let totalLinhaPri = 0;
+                    chavesOrdenadas.forEach((mesObj, idx) => {
+                        let val = agrupamentoAnual[mesObj][cat] ? agrupamentoAnual[mesObj][cat].total : 0;
+                        totalLinhaPri += val; totaisMes[labelsAnual[idx]] += val;
+                        tbHtml += `<td class="px-4 py-3 text-right font-mono text-white font-bold text-xs whitespace-nowrap">${val > 0 ? formatCurrency(val) : '<span class="opacity-30">-</span>'}</td>`;
+                    });
+                    totalGeral += totalLinhaPri;
+                    tbHtml += `<td class="px-4 py-3 text-right font-mono font-black text-sky-400 text-xs bg-sky-500/5 whitespace-nowrap">${formatCurrency(totalLinhaPri)}</td></tr>`;
+                    
+                    if (isOpen) {
+                        Array.from(categoriasSec).forEach(sec => {
+                            let temValor = false;
+                            chavesOrdenadas.forEach(mesObj => {
+                                if (agrupamentoAnual[mesObj][cat] && agrupamentoAnual[mesObj][cat].filhos[sec] > 0) temValor = true;
+                            });
+                            
+                            if (temValor) {
+                                tbHtml += `<tr class="bg-black/40 border-b border-white/5 hover:bg-white/5">`;
+                                tbHtml += `<td class="px-4 py-2 pl-10 font-medium text-slate-400 text-[10px] uppercase tracking-wider bg-black/40 sticky left-0 z-10 truncate max-w-[200px]" title="${sec}">? ${sec}</td>`;
+                                let totalLinhaSec = 0;
+                                chavesOrdenadas.forEach(mesObj => {
+                                    let valSec = (agrupamentoAnual[mesObj][cat] && agrupamentoAnual[mesObj][cat].filhos[sec]) ? agrupamentoAnual[mesObj][cat].filhos[sec] : 0;
+                                    totalLinhaSec += valSec;
+                                    tbHtml += `<td class="px-4 py-2 text-right font-mono text-slate-500 text-[10px] whitespace-nowrap">${valSec > 0 ? formatCurrency(valSec) : '<span class="opacity-30">-</span>'}</td>`;
+                                });
+                                tbHtml += `<td class="px-4 py-2 text-right font-mono font-bold text-sky-300 text-[10px] bg-sky-500/5 whitespace-nowrap">${formatCurrency(totalLinhaSec)}</td></tr>`;
+                            }
+                        });
+                    }
+                });
+
+                tbHtml += `<tr class="bg-sky-900/20 border-t border-sky-500/30">`;
+                tbHtml += `<td class="px-4 py-3 font-black text-white text-xs uppercase tracking-widest sticky left-0 z-10 bg-sky-900/40">Total Mensal</td>`;
+                labelsAnual.forEach(m => { tbHtml += `<td class="px-4 py-3 text-right font-mono font-black text-white text-xs whitespace-nowrap">${formatCurrency(totaisMes[m])}</td>`; });
+                tbHtml += `<td class="px-4 py-3 text-right font-mono font-black text-sky-400 text-sm bg-sky-500/20 whitespace-nowrap">${formatCurrency(totalGeral)}</td></tr>`;
+            }
+            document.getElementById('tbodyDadosAnual').innerHTML = tbHtml;
+
+            if(chartVeiculosObj) chartVeiculosObj.destroy();
+            if(chartCategoriasObj) chartCategoriasObj.destroy();
+            const c1 = document.getElementById('chartVeiculos').getContext('2d');
+            chartVeiculosObj = new Chart(c1, { type: 'bar', data: { labels: Object.keys(porP), datasets: [{ label: 'Custo', data: Object.values(porP), backgroundColor: '#0ea5e9', borderRadius: 4 }] }, options: { maintainAspectRatio: false, plugins: {legend:{display:false}}, scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(255,255,255,0.05)'}}} }});
+            const c2 = document.getElementById('chartCategorias').getContext('2d');
+            chartCategoriasObj = new Chart(c2, { type: 'doughnut', data: { labels: Object.keys(porC), datasets: [{ data: Object.values(porC), backgroundColor: ['#ef4444', '#f59e0b', '#0ea5e9', '#10b981', '#8b5cf6'], borderWidth: 0 }] }, options: { maintainAspectRatio: false, cutout: '70%', plugins: {legend:{position:'right', labels:{color:'#94a3b8', font:{size:10}}}} }});
+
+            window.dashFilteredData = filtrado;
+            renderDatagridOnly();
+        }
+
+        function renderDatagridOnly() {
+            const fData = document.getElementById('fGridData').value.toLowerCase().trim();
+            const fPlaca = document.getElementById('fGridPlaca').value.toUpperCase().trim();
+            const fMotorista = document.getElementById('fGridMotorista').value.toUpperCase().trim();
+            const fClasse = document.getElementById('fGridClasse').value;
+            const fCat = document.getElementById('fGridCategoria').value.toUpperCase().trim();
+            const fObs = document.getElementById('fGridObs').value.toUpperCase().trim();
+            const fValor = document.getElementById('fGridValor').value.toLowerCase().trim();
+
+            let list = window.dashFilteredData || [];
+
+            list = list.filter(d => {
+                let df = '--/--/----';
+                if(d.dataHora) { let p = d.dataHora.split('-'); if(p.length===3) df=`${p[2]}/${p[1]}/${p[0]}`; }
+                
+                let isPreventiva = String(d.observacoes).includes('[PREV');
+                let isPrevAberta = String(d.observacoes).includes('[PLANO]');
+                let isPrevQuitada = String(d.observacoes).includes('[PREV QUITADA]');
+                let classeOriginal = 'CORRETIVA / AVULSA';
+                if (isPrevAberta) classeOriginal = 'PREVENTIVA (ABERTO)';
+                else if (isPrevQuitada) classeOriginal = 'PREVENTIVA (QUITADA)';
+                else if (isPreventiva) classeOriginal = 'PREVENTIVA';
+
+                if (fData && !df.includes(fData)) return false;
+                if (fPlaca && !d.placa.includes(fPlaca)) return false;
+                if (fMotorista && !(d.motorista||'').toUpperCase().includes(fMotorista)) return false;
+                if (fClasse && classeOriginal !== fClasse) return false;
+                if (fCat && !d.categoria.includes(fCat)) return false;
+                if (fObs && !(d.observacoes||'').toUpperCase().includes(fObs)) return false;
+                if (fValor && !formatCurrency(d.valor).includes(fValor) && !String(d.valor).includes(fValor)) return false;
+                return true;
+            });
+
+            const tbody = document.getElementById('tbodyDash');
+            if(list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-slate-400 font-bold uppercase text-[10px]">Sem dados consolidados para a filtragem atual.</td></tr>';
+            } else {
+                let totalValor = 0;
+                let html = list.sort((a,b) => b.dataHora.localeCompare(a.dataHora)).map(d => {
+                    totalValor += d.valor;
+                    let df = '--/--/----';
+                    if(d.dataHora) { let p = d.dataHora.split('-'); if(p.length===3) df=`${p[2]}/${p[1]}/${p[0]}`; }
+                    
+                    let isPreventiva = String(d.observacoes).includes('[PREV');
+                    let isPrevAberta = String(d.observacoes).includes('[PLANO]');
+                    let isPrevQuitada = String(d.observacoes).includes('[PREV QUITADA]');
+                    let classeBadge = '<span class="px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border border-amber-500/30 text-amber-400 bg-amber-500/10">CORRETIVA / AVULSA</span>';
+                    
+                    if (isPrevAberta) {
+                        classeBadge = '<span class="px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border border-sky-500/30 text-sky-400 bg-sky-500/10">PREVENTIVA (ABERTO)</span>';
+                    } else if (isPrevQuitada) {
+                        classeBadge = '<span class="px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border border-emerald-500/30 text-emerald-400 bg-emerald-500/10">PREVENTIVA (QUITADA)</span>';
+                    } else if (isPreventiva) {
+                        classeBadge = '<span class="px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border border-sky-500/30 text-sky-400 bg-sky-500/10">PREVENTIVA</span>';
+                    }
+
+                    let obsHtml = `<span class="truncate max-w-[150px]" title="${d.observacoes}">${d.observacoes}</span>`;
+                    if (String(d.observacoes).includes('[MULTA:')) {
+                        const mMatch = String(d.observacoes).match(/\[MULTA:.*?\]/);
+                        if (mMatch) {
+                            const p1 = String(d.observacoes).replace(mMatch[0], '').trim();
+                            obsHtml = `<span class="inline-block px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-rose-500 text-white mb-1 mr-1">${mMatch[0].replace('[','').replace(']','')}</span> <span class="truncate max-w-[150px] inline-block align-middle" title="${p1}">${p1}</span>`;
+                        }
+                    }
+
+                    return `
+                    <tr class="hover:bg-white/5 transition-colors border-b border-white/5">
+                        <td class="py-3 px-4 text-slate-400 font-mono text-xs">${df}</td>
+                        <td class="py-3 px-4 font-black text-white">${d.placa}</td>
+                        <td class="py-3 px-4 font-bold text-sky-200">${d.motorista}</td>
+                        <td class="py-3 px-4 text-center">${classeBadge}</td>
+                        <td class="py-3 px-4 text-[10px] font-bold uppercase text-amber-400">${d.categoria}</td>
+                        <td class="py-3 px-4 text-xs text-slate-400">${obsHtml}</td>
+                        <td class="py-3 px-4 text-right font-black text-emerald-400 tabular-nums">${formatCurrency(d.valor)}</td>
+                        <td class="py-3 px-4 text-center no-export">
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="abrirEditarDespesa('${d.id_lancamento}')" class="text-slate-400 hover:text-sky-400 bg-white/5 hover:bg-sky-500/20 p-1.5 rounded transition-colors" title="Editar"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="excluirDespesa('${d.id_lancamento}', '${d.placa}', ${d.valor}, '${d.categoria}')" class="text-slate-400 hover:text-rose-400 bg-white/5 hover:bg-rose-500/20 p-1.5 rounded transition-colors" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+                
+                html += `
+                    <tr class="bg-sky-900/20 border-t border-sky-500/30">
+                        <td colspan="6" class="py-3 px-4 text-right font-black text-sky-400 uppercase tracking-widest text-[10px]">Soma Filtrada (${list.length} reg):</td>
+                        <td class="py-3 px-4 text-right font-black text-emerald-400 tabular-nums text-sm">${formatCurrency(totalValor)}</td>
+                        <td class="no-export"></td>
+                    </tr>
+                `;
+                
+                tbody.innerHTML = html;
+            }
+            lucide.createIcons({root: document.getElementById('tbodyDash')});
+        }
+
+        function limparFiltroDatagrid() {
+            document.getElementById('fGridData').value = '';
+            document.getElementById('fGridPlaca').value = '';
+            document.getElementById('fGridMotorista').value = '';
+            document.getElementById('fGridClasse').value = '';
+            document.getElementById('fGridCategoria').value = '';
+            document.getElementById('fGridObs').value = '';
+            document.getElementById('fGridValor').value = '';
+            renderDatagridOnly();
+        }
+
+        // ==========================================
+        // ABA 1 E 2: FROTA E MANUTENCOES NATIVAS E CHECKLIST
+        // ==========================================
+        function renderizarFrota() {
+            const grid = document.getElementById('gridVeiculos');
+            if(!grid) return;
+            document.getElementById('countFrota').innerText = dbVeiculos.length + " Veículos";
+            if (dbVeiculos.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-10 text-slate-500 font-bold uppercase tracking-widest text-xs">Sem veículos.</div>'; return; }
+
+            grid.innerHTML = dbVeiculos.map(v => {
+                const isRodando = v.status === 'EM USO';
+                const corBadge = isRodando ? 'bg-sky-500/20 text-sky-400 border-sky-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+                
+                const statusM = calcStatusManutencao(v.placa, v.kmAtual);
+                let badgeManut = '';
+                if (statusM.critico) {
+                    badgeManut = `<div class="mt-3 bg-rose-500/20 border border-rose-500/30 rounded-lg p-2 flex items-center gap-2 animate-pulse"><i data-lucide="alert-octagon" class="w-4 h-4 text-rose-500"></i><span class="text-[9px] font-bold text-rose-400 uppercase tracking-widest truncate">${statusM.msg}</span></div>`;
+                } else if (statusM.alerta) {
+                    badgeManut = `<div class="mt-3 bg-amber-500/20 border border-amber-500/30 rounded-lg p-2 flex items-center gap-2"><i data-lucide="triangle-alert" class="w-4 h-4 text-amber-500"></i><span class="text-[9px] font-bold text-amber-400 uppercase tracking-widest truncate">${statusM.msg}</span></div>`;
+                } else {
+                    badgeManut = `<div class="mt-3 bg-white/5 border border-white/10 rounded-lg p-2 flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-slate-500"></i><span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">Preventivas OK</span></div>`;
+                }
+
+                return `
+                <div class="glass-card p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform cursor-pointer group" onclick="abrirModalManutencao('${v.placa}')">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="font-black text-lg text-white tracking-widest group-hover:text-amber-400 transition-colors">${v.placa}</h3>
+                            <p class="text-[9px] font-bold text-sky-300 uppercase mt-0.5">${v.modelo}</p>
+                        </div>
+                        <span class="px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${corBadge}">${isRodando ? 'Em Rota' : 'Na Base'}</span>
+                    </div>
+                    <div class="border-t border-white/10 pt-3 flex justify-between items-end">
+                        <div>
+                            <span class="block text-[8px] font-bold text-slate-400 uppercase">Condutor Atual</span>
+                            <span class="text-[11px] font-bold text-white truncate block mt-0.5">${v.motoristaAtual || '--'}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-[8px] font-bold text-slate-400 uppercase">KM Atual</span>
+                            <span class="text-[11px] font-black text-sky-400 font-mono">${(v.kmAtual||0).toLocaleString()}</span>
+                        </div>
+                    </div>
+                    ${badgeManut}
+                </div>`;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function calcStatusManutencao(placa, kmAtualVeiculo) {
+            const manuts = dbManutencoes.filter(m => m.placa === placa);
+            if (manuts.length === 0) return { alerta: false, critico: false, msg: 'Nenhum plano ativo.' };
+
+            let alertaAtivo = false, criticoAtivo = false, msgs = [];
+            const hoje = new Date(); const kmAtualNum = parseInt(kmAtualVeiculo) || 0;
+
+            manuts.forEach(m => {
+                const prazo = parseInt(m.prazo) || 0;
+                let isCritical = false, isAlert = false;
+
+                if (m.kmProx && String(m.kmProx) !== 'N/A') {
+                    const kmFaltante = parseInt(m.kmProx) - kmAtualNum;
+                    if (kmFaltante <= 0) { isCritical = true; msgs.push(`Vencida (${m.descricao})`); } 
+                    else if (kmFaltante <= (prazo > 0 ? prazo * 0.1 : 500)) { isAlert = true; msgs.push(`Faltam ${kmFaltante}km (${m.descricao})`); }
+                } 
+                if (m.dataProx && String(m.dataProx) !== 'N/A') {
+                    const diffTime = new Date(m.dataProx + "T00:00:00").getTime() - hoje.getTime();
+                    const diasFaltantes = Math.ceil(diffTime / (1000 * 3600 * 24));
+                    if (diasFaltantes <= 0) { isCritical = true; msgs.push(`Vencida (${m.descricao})`); } 
+                    else if (diasFaltantes <= (prazo > 0 ? prazo * 0.1 : 15)) { isAlert = true; msgs.push(`Faltam ${diasFaltantes} dias (${m.descricao})`); }
+                }
+
+                if (isCritical) criticoAtivo = true;
+                if (isAlert) alertaAtivo = true;
+            });
+
+            if (criticoAtivo) return { alerta: true, critico: true, msg: msgs[0] };
+            if (alertaAtivo) return { alerta: true, critico: false, msg: msgs[0] };
+            return { alerta: false, critico: false, msg: 'Manutenções OK' };
+        }
+
+        function renderChecklistsDatagrid() {
+            const fData = document.getElementById('fCheckData').value;
+            const fPlaca = document.getElementById('fCheckPlaca').value.toUpperCase().trim();
+            const container = document.getElementById('listaChecklistsDatagrid');
+
+            let filtrados = dbChecklists.filter(c => {
+                if (fData && c.dataHora !== fData) return false;
+                if (fPlaca && !c.placa.includes(fPlaca)) return false;
+                return true;
+            });
+
+            if (filtrados.length === 0) {
+                container.innerHTML = '<div class="text-center py-6 text-slate-500 font-bold text-[10px] uppercase">Nenhum checklist encontrado.</div>';
+                return;
+            }
+
+            container.innerHTML = filtrados.sort((a,b) => b.dataHora.localeCompare(a.dataHora)).map(c => {
+                let badgeAcao = c.acao === 'SAÍDA' ? '<span class="text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase">SAÍDA</span>' : '<span class="text-sky-400 bg-sky-500/10 border border-sky-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase">RETORNO</span>';
+                if (c.acao === 'VISTORIA') badgeAcao = '<span class="text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase">VISTORIA</span>';
+                let dtStr = c.dataHora.split('-').reverse().join('/');
+                
+                return `
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-3">
+                    <div class="flex justify-between items-start border-b border-white/10 pb-2">
+                        <div>
+                            <span class="text-white font-black text-sm uppercase tracking-widest">${c.placa}</span>
+                            <span class="text-slate-400 font-bold text-[10px] block">${dtStr} - KM: <span class="text-sky-300 font-mono">${c.km}</span></span>
+                        </div>
+                        <div class="text-right">
+                            ${badgeAcao}
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 text-[9px] font-bold uppercase block mb-0.5">Motorista</span>
+                        <span class="text-sky-200 text-xs font-bold uppercase truncate block">${c.motorista}</span>
+                    </div>
+                    <div class="flex justify-between items-end border-t border-white/10 pt-2 mt-1">
+                        <span class="text-slate-400 text-[10px] italic truncate flex-1 pr-4" title="${c.obs}">${c.obs || 'Sem observações'}</span>
+                        <div class="flex gap-2">
+                            <button onclick="abrirEditarChecklist('${c.id_vistoria}')" class="text-slate-400 hover:text-sky-400 bg-black/40 hover:bg-black/60 p-1.5 rounded transition-colors" title="Editar"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="excluirChecklist('${c.id_vistoria}')" class="text-slate-400 hover:text-rose-400 bg-black/40 hover:bg-black/60 p-1.5 rounded transition-colors" title="Excluir"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+            lucide.createIcons({root: container});
+        }
+
+        // ==========================================
+        // VINCULOS E GRAVACOES NATIVAS
+        // ==========================================
+        function atualizarVinculoManutencao() {
+            const placa = document.getElementById('despPlaca').value;
+            const selVinculo = document.getElementById('despVinculoManut');
+            if(!selVinculo) return;
+            selVinculo.innerHTML = '<option value="" class="text-slate-800">Sem vínculo (Despesa Avulsa)</option>';
+            if(!placa) return;
+
+            const manuts = dbManutencoes.filter(m => m.placa === placa);
+            if(manuts.length === 0) return;
+
+            let html = '<option value="" class="text-slate-800">Sem vínculo (Despesa Avulsa)</option>';
+            manuts.forEach(m => {
+                let info = (m.kmProx && String(m.kmProx)!=='N/A') ? `Vence: ${m.kmProx} KM` : `Vence: ${m.dataProx ? m.dataProx.split('-').reverse().join('/') : ''}`;
+                html += `<option value="${m.id}" class="text-slate-800">Quitar: ${m.descricao} (${info})</option>`;
+            });
+            selVinculo.innerHTML = html;
+        }
+
+        async function salvarDespesa(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitDespesa');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Gravando...`; btn.disabled = true; lucide.createIcons({root: btn});
+
+            const placa = document.getElementById('despPlaca').value;
+            const motorista = document.getElementById('despMotorista').value.toUpperCase().trim();
+            const km = document.getElementById('despKM').value;
+            const cat = document.getElementById('despCategoria').value;
+            const val = document.getElementById('despValor').value;
+            let obs = document.getElementById('despObs').value;
+            const dataLanc = document.getElementById('despData').value || new Date().toISOString().split('T')[0];
+            const notaFatura = document.getElementById('despNota').value.trim();
+
+            if (cat.includes('MULTA') || cat.includes('INFRAÇÃO') || cat.includes('INFRACAO')) {
+                const g = document.getElementById('despMultaGrau').value;
+                const p = document.getElementById('despMultaPontos').value;
+                obs = `[MULTA: ${g} - ${p} PTS] ${obs}`;
+            }
+
+            if (notaFatura) obs = `[NF: ${notaFatura.toUpperCase()}] ${obs}`;
+
+            const idVinculo = document.getElementById('despVinculoManut').value;
+            if (idVinculo) {
+                const idxM = dbManutencoes.findIndex(m => String(m.id) === String(idVinculo));
+                if (idxM !== -1) {
+                    let m = dbManutencoes[idxM];
+                    m.kmAtual = km; m.data = dataLanc;
+                    if (m.unidade === 'km') m.kmProx = parseInt(km) + parseInt(m.prazo || 0);
+                    else { let d = new Date(dataLanc + "T00:00:00"); d.setDate(d.getDate() + parseInt(m.prazo || 0)); m.dataProx = d.toISOString().split('T')[0]; }
+                    salvarDB('manutencoes'); obs = `[PREV QUITADA] ${m.descricao} | ${obs}`;
+                }
+            }
+
+            const payload = { 
+                id_lancamento: Date.now() + Math.random(), 
+                motorista: motorista, placa: placa, km: km.toString(), combustivel: 'N/A', pneus: 'N/A', oleo: 'N/A', luzes: 'N/A', avarias: 'N/A', 
+                tipoDespesa: cat, valorDespesa: val, observacoes: obs, dataHoraManual: dataLanc 
+            };
+            const sOk = await enviarDadosParaPlanilha(payload);
+            
+            if (sOk) {
+                dbDespesas.unshift({ id_lancamento: payload.id_lancamento, dataHora: dataLanc, placa: placa, categoria: cat, valor: parseFloat(val), motorista: motorista, observacoes: obs });
+                salvarDB('despesas');
+                const idx = dbVeiculos.findIndex(v => v.placa === placa);
+                if(idx !== -1 && parseInt(km) > (parseInt(dbVeiculos[idx].kmAtual)||0)) { dbVeiculos[idx].kmAtual = km; salvarDB('veiculos'); }
+                
+                document.getElementById('formDespesa').reset();
+                document.getElementById('despData').valueAsDate = new Date();
+                document.getElementById('areaMulta').classList.add('hidden'); document.getElementById('areaMulta').classList.remove('flex');
+                atualizarUI();
+                notificar("Lançamento financeiro concluído!");
+            } else {
+                notificar("Erro ao registrar a despesa.", true);
+            }
+
+            btn.innerHTML = originalHTML; btn.disabled = false; lucide.createIcons({root: btn});
+        }
+
+        // ==========================================
+        // VISTORIA E BLUEPRINT
+        // ==========================================
+        function fecharPopover() { const pop = document.getElementById('danoPopover'); if(pop) pop.classList.remove('visible'); coordsPendentes = {x:0,y:0}; }
+        function getDescDano(n) { const t = {1:'Arranhado', 2:'Amassado', 3:'Piques', 4:'Trincado', 5:'Quebrado', 6:'Falta'}; return t[n] || 'Dano'; }
+        function adicionarDano(num) { if(coordsPendentes.x !== 0 || coordsPendentes.y !== 0) { danosMarcados.push({ x: coordsPendentes.x, y: coordsPendentes.y, tipo: num, desc: getDescDano(num), detalhe: '' }); desenharBlueprint(); renderListaAvarias(); } fecharPopover(); }
+        window.atualizarDetDano = function(idx, val) { if(danosMarcados[idx]) danosMarcados[idx].detalhe = val; };
+        function limparCanvas() { danosMarcados = []; desenharBlueprint(); renderListaAvarias(); fecharPopover(); }
+
+        function renderListaAvarias() {
+            const c = document.getElementById('listaDanos');
+            if(danosMarcados.length === 0) { c.innerHTML = '<div class="text-center py-10 text-slate-500 font-bold uppercase tracking-widest text-[9px]"><i data-lucide="shield-check" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Sem avarias na lataria.</div>'; lucide.createIcons({root:c}); return; }
+            c.innerHTML = danosMarcados.map((m, i) => `
+                <div class="flex items-center gap-3 p-3 border border-white/10 rounded-lg bg-black/20">
+                    <div class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-black text-[10px] flex items-center justify-center shrink-0">${i+1}</div>
+                    <div class="flex-1">
+                        <span class="text-[9px] font-bold text-rose-400 uppercase block mb-1">${m.desc}</span>
+                        <input type="text" class="glass-input !py-1 !px-2 !text-[10px]" placeholder="Adicione notas..." value="${m.detalhe || ''}" oninput="window.atualizarDetDano(${i}, this.value)">
+                    </div>
+                    <button type="button" onclick="danosMarcados.splice(${i},1); desenharBlueprint(); renderListaAvarias();" class="text-slate-500 hover:text-rose-400 p-2"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+            `).join(''); lucide.createIcons({root:c});
+        }
+
+        function atualizarAcaoVistoria() {
+            const selectEl = document.getElementById('movPlaca'); if (!selectEl) return;
+            const placa = selectEl.value; const area = document.getElementById('areaChecklist'); const badge = document.getElementById('movAcaoBadge'); const inputAcao = document.getElementById('movAcao');
+            if (!placa) { if (area) area.classList.add('hidden'); if (badge) { badge.innerText = 'Selecione a Placa'; badge.className = "glass-input flex items-center justify-center font-black uppercase text-xs tracking-widest text-slate-500 border-dashed"; } return; }
+            const veic = dbVeiculos.find(v => v.placa === placa); if (!veic) return;
+
+            blueprintAtivo = veic.tipo || 'PASSEIO';
+            if (!canvas) {
+                canvas = document.getElementById('vistoriaCanvas');
+                if (canvas) {
+                    ctx = canvas.getContext('2d');
+                    canvas.addEventListener('click', function(e) {
+                        const rect = canvas.getBoundingClientRect(); if(rect.width === 0) return; 
+                        const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+                        coordsPendentes = { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+                        const pop = document.getElementById('danoPopover');
+                        if (pop) { pop.style.left = (e.clientX - rect.left + 15) + 'px'; pop.style.top = (e.clientY - rect.top + 15) + 'px'; pop.classList.add('visible'); }
+                    });
+                }
+            }
+            limparCanvas(); if (area) area.classList.remove('hidden');
+            const movKM = document.getElementById('movKM'); if (movKM) movKM.value = veic.kmAtual || 0;
+
+            if (veic.status === 'PARADO') {
+                if (inputAcao) inputAcao.value = 'SAÍDA';
+                if (badge) { badge.innerHTML = 'Retirada (Saída)'; badge.className = "glass-input flex items-center justify-center font-black uppercase text-xs tracking-widest text-emerald-400 border-emerald-500/50 bg-emerald-500/10"; }
+                const mMotorista = document.getElementById('movMotorista'); if (mMotorista) { mMotorista.value = ''; }
+            } else {
+                if (inputAcao) inputAcao.value = 'RETORNO';
+                if (badge) { badge.innerHTML = 'Devolução (Retorno)'; badge.className = "glass-input flex items-center justify-center font-black uppercase text-xs tracking-widest text-sky-400 border-sky-500/50 bg-sky-500/10"; }
+                const mMotorista = document.getElementById('movMotorista'); if (mMotorista) { mMotorista.value = veic.motoristaAtual || ''; }
+            }
+        }
+
+        async function salvarVistoria(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitVistoria'); const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Transmitindo...`; btn.disabled = true; lucide.createIcons({root: btn});
+
+            const payloadSheet = {
+                tipo: 'checklist',
+                acao: document.getElementById('movAcao').value,
+                placa: document.getElementById('movPlaca').value,
+                km: document.getElementById('movKM').value,
+                motorista: document.getElementById('movMotorista').value.toUpperCase().trim(),
+                combustivel: document.querySelector('input[name="combustivel"]:checked')?.value || '',
+                avarias: JSON.stringify(danosMarcados),
+                obs: document.getElementById('movObs').value,
+                id_vistoria: Date.now() + Math.random()
+            };
+
+            const sOk = await enviarDadosParaPlanilha(payloadSheet);
+            if (sOk) {
+                const idx = dbVeiculos.findIndex(v => v.placa === payloadSheet.placa);
+                if(idx !== -1) {
+                    dbVeiculos[idx].kmAtual = payloadSheet.km;
+                    if (payloadSheet.acao === 'SAÍDA') { dbVeiculos[idx].status = 'EM USO'; dbVeiculos[idx].motoristaAtual = payloadSheet.motorista; } 
+                    else { dbVeiculos[idx].status = 'PARADO'; dbVeiculos[idx].motoristaAtual = ''; }
+                    salvarDB('veiculos');
+                }
+                
+                dbChecklists.unshift({
+                    id_vistoria: payloadSheet.id_vistoria,
+                    dataHora: new Date().toISOString().split('T')[0],
+                    acao: payloadSheet.acao,
+                    placa: payloadSheet.placa,
+                    motorista: payloadSheet.motorista,
+                    km: payloadSheet.km,
+                    obs: payloadSheet.obs
+                });
+                salvarDB('checklists');
+                renderChecklistsDatagrid();
+                
+                document.getElementById('formVistoria').reset(); document.getElementById('movPlaca').value=''; limparCanvas(); atualizarAcaoVistoria();
+                notificar("Checklist Oficial Gravado!");
+            } else { notificar("Falha ao salvar no Sheets.", true); }
+            btn.innerHTML = originalHTML; btn.disabled = false; lucide.createIcons({root: btn});
+        }
+
+        function excluirChecklist(id) {
+            if(!confirm("Atenção: deseja realmente excluir permanentemente este Checklist?")) return;
+            dbChecklists = dbChecklists.filter(c => String(c.id_vistoria) !== String(id));
+            salvarDB('checklists'); renderChecklistsDatagrid();
+            enviarDadosParaPlanilha({ tipo: 'delete_checklist', id_vistoria: id }).then(() => { sincronizarPlanilha(); });
+            notificar("A remover Checklist da nuvem...");
+        }
+
+        function abrirEditarChecklist(id) {
+            const check = dbChecklists.find(c => String(c.id_vistoria) === String(id));
+            if(!check) return;
+
+            document.getElementById('editCheckId').value = check.id_vistoria;
+            document.getElementById('editCheckData').value = check.dataHora;
+            document.getElementById('editCheckAcao').value = check.acao;
+            document.getElementById('editCheckPlaca').value = check.placa;
+            document.getElementById('editCheckMotorista').value = check.motorista;
+            document.getElementById('editCheckKm').value = check.km;
+            document.getElementById('editCheckObs').value = check.obs;
+
+            const modal = document.getElementById('modalEditChecklist');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            void modal.offsetWidth; modal.classList.add('modal-active', 'opacity-100');
+        }
+
+        function fecharModalEditChecklist() {
+            const modal = document.getElementById('modalEditChecklist');
+            modal.classList.remove('modal-active', 'opacity-100');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+        }
+
+        async function salvarEdicaoChecklist(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitEditChecklist');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Atualizando...`;
+            btn.disabled = true; lucide.createIcons({root: btn});
+
+            const payload = {
+                tipo: 'update_checklist',
+                id_vistoria: document.getElementById('editCheckId').value,
+                dataHoraManual: document.getElementById('editCheckData').value,
+                acao: document.getElementById('editCheckAcao').value,
+                placa: document.getElementById('editCheckPlaca').value,
+                motorista: document.getElementById('editCheckMotorista').value,
+                km: document.getElementById('editCheckKm').value,
+                observacoes: document.getElementById('editCheckObs').value
+            };
+
+            await enviarDadosParaPlanilha(payload);
+            fecharModalEditChecklist();
+            sincronizarPlanilha(); 
+            btn.innerHTML = originalHTML; btn.disabled = false;
+        }
+
+        function desenharBlueprint() {
+            if(!ctx) return;
+            ctx.fillStyle = '#061224'; ctx.fillRect(0,0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.05)'; ctx.lineWidth = 1;
+            for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+            for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
+            ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 12px "Courier New", monospace'; ctx.textAlign = 'center';
+            ctx.fillText('VISTA SUPERIOR', 200, 30); ctx.fillText('VISTA FRENTE', 600, 30); ctx.fillText('LATERAL ESQUERDA', 200, 300); ctx.fillText('VISTA TRASEIRA', 600, 300);
+            ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2; ctx.fillStyle = 'rgba(14, 165, 233, 0.05)';
+            if(blueprintAtivo === 'CARGA') desenharCaminhao(); else desenharCarro();
+            danosMarcados.forEach((m, i) => {
+                ctx.beginPath(); ctx.arc(m.x, m.y, 14, 0, Math.PI*2); ctx.fillStyle = 'rgba(220, 38, 38, 0.9)'; ctx.fill();
+                ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px "Courier New"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(i+1, m.x, m.y+1);
+            });
+        }
+        function rRect(x,y,w,h,r) { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        function roundRect2(ctx, x, y, width, height, radius) { ctx.beginPath(); ctx.moveTo(x + radius, y); ctx.lineTo(x + width - radius, y); ctx.quadraticCurveTo(x + width, y, x + width, y + radius); ctx.lineTo(x + width, y + height - radius); ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height); ctx.lineTo(x + radius, y + height); ctx.quadraticCurveTo(x, y + height, x, y + height - radius); ctx.lineTo(x, y + radius); ctx.quadraticCurveTo(x, y, x + radius, y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        function desenharCarro() {
+            rRect(150,50,100,200,20); ctx.fillStyle = 'rgba(56, 189, 248, 0.15)'; rRect(160,90,80,40,5); rRect(165,190,70,30,5); ctx.fillStyle = 'rgba(14, 165, 233, 0.05)'; rRect(165,135,70,50,5);
+            ctx.fillStyle = '#0ea5e9'; rRect(140,100,10,20,3); rRect(250,100,10,20,3); ctx.fillStyle = 'rgba(14, 165, 233, 0.05)';
+            ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(110,480,25,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(290,480,25,0,Math.PI*2); ctx.fill(); ctx.fillStyle = 'rgba(14, 165, 233, 0.05)';
+            rRect(50,400,300,60,15); rRect(130,350,140,50,15); ctx.fillStyle = 'rgba(56, 189, 248, 0.15)'; rRect(145,360,50,40,5); rRect(205,360,50,40,5); ctx.fillStyle = 'rgba(14, 165, 233, 0.05)';
+            ctx.fillStyle = '#1e293b'; rRect(520,180,30,50,4); rRect(650,180,30,50,4); ctx.fillStyle = 'rgba(14, 165, 233, 0.05)'; rRect(530,130,140,100,20);
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.15)'; rRect(545,80,110,50,10); ctx.fillStyle = '#FFCB05'; rRect(540,160,25,15,5); rRect(635,160,25,15,5); ctx.fillStyle = 'rgba(14, 165, 233, 0.05)';
+            ctx.fillStyle = '#1e293b'; rRect(520,450,30,50,4); rRect(650,450,30,50,4); ctx.fillStyle = 'rgba(14, 165, 233, 0.05)'; rRect(530,400,140,100,15);
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.15)'; rRect(550,350,100,50,5); ctx.fillStyle = '#ef4444'; rRect(540,420,25,20,5); rRect(635,420,25,20,5); ctx.fillStyle = 'rgba(14, 165, 233, 0.05)';
+        }
+        function desenharCaminhao() {
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+            ctx.fillStyle = '#ffffff'; roundRect2(ctx, 140, 60, 120, 180, 2); roundRect2(ctx, 150, 10, 100, 45, 10); ctx.fillStyle = '#f1f5f9'; roundRect2(ctx, 155, 15, 90, 20, 4);
+            ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(100, 460, 25, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(280, 460, 25, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#cbd5e1'; ctx.beginPath(); ctx.arc(100, 460, 10, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(280, 460, 10, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(40, 270, 190, 190); ctx.strokeRect(40, 270, 190, 190); roundRect2(ctx, 235, 330, 80, 130, 10); ctx.fillStyle = '#f1f5f9'; roundRect2(ctx, 245, 340, 45, 55, 5);
+            ctx.fillStyle = '#1e293b'; roundRect2(ctx, 520, 180, 30, 50, 5); roundRect2(ctx, 650, 180, 30, 50, 5);
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(520, 40, 160, 100); ctx.strokeRect(520, 40, 160, 100); roundRect2(ctx, 535, 90, 130, 130, 15);
+            ctx.fillStyle = '#f1f5f9'; roundRect2(ctx, 545, 105, 110, 55, 5); ctx.fillStyle = '#FFCB05'; roundRect2(ctx, 545, 195, 25, 15, 3); roundRect2(ctx, 630, 195, 25, 15, 3); ctx.fillStyle = '#334155'; ctx.fillRect(580, 180, 40, 35);
+            ctx.fillStyle = '#1e293b'; roundRect2(ctx, 520, 450, 30, 50, 5); roundRect2(ctx, 650, 450, 30, 50, 5);
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(520, 270, 160, 180); ctx.strokeRect(520, 270, 160, 180); ctx.beginPath(); ctx.moveTo(600, 270); ctx.lineTo(600, 450); ctx.stroke(); ctx.strokeRect(530, 280, 60, 160); ctx.strokeRect(610, 280, 60, 160);
+            ctx.fillStyle = '#ef4444'; ctx.fillRect(530, 440, 30, 10); ctx.strokeRect(530, 440, 30, 10); ctx.fillRect(645, 440, 30, 10); ctx.strokeRect(645, 440, 30, 10);
+        }
+
+        function preencherKmManutencao() { const placa = document.getElementById('manutPlaca').value; if (placa) { const v = dbVeiculos.find(x => x.placa === placa); if (v) { document.getElementById('manutKM').value = v.kmAtual || 0; calcularProximaManutencao(); } } }
+        function calcularProximaManutencao() {
+            const kmAtual = parseInt(document.getElementById('manutKM').value) || 0; const prazo = parseInt(document.getElementById('manutPrazo').value) || 0; const unidade = document.getElementById('manutUnidade').value; const dataInput = document.getElementById('manutData').value;
+            const fieldKm = document.getElementById('manutKmProx'); const fieldData = document.getElementById('manutDataProx'); fieldKm.value = ''; fieldData.value = '';
+            if (prazo > 0) {
+                if (unidade === 'km') { fieldKm.value = kmAtual + prazo; } 
+                else if (unidade === 'dias' && dataInput) { const dataBase = new Date(dataInput + "T00:00:00"); dataBase.setDate(dataBase.getDate() + prazo); fieldData.value = dataBase.toISOString().split('T')[0]; }
+            }
+        }
+        async function salvarManutencao(e) {
+            e.preventDefault(); const btn = document.getElementById('btnSubmitManutencao'); const originalHTML = btn.innerHTML; btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Gravando...`; btn.disabled = true; lucide.createIcons({root: btn});
+            const placa = document.getElementById('manutPlaca').value; const dtHoje = document.getElementById('manutData').value; const km = document.getElementById('manutKM').value; const desc = document.getElementById('manutDescricao').value.toUpperCase().trim(); const cat = document.getElementById('manutCategoria').value || 'PREVENTIVA'; const prazo = document.getElementById('manutPrazo').value; const unid = document.getElementById('manutUnidade').value; const kmProx = document.getElementById('manutKmProx').value; const dtProx = document.getElementById('manutDataProx').value; const valor = document.getElementById('manutValor').value || "0";
+            const planoNovo = { id: Date.now(), placa: placa, data: dtHoje, kmAtual: km, categoria: cat, descricao: desc, prazo: prazo, unidade: unid, kmProx: kmProx, dataProx: dtProx, valor: parseFloat(valor) };
+            if (parseFloat(valor) > 0) {
+                const payload = { motorista: 'SISTEMA', placa: placa, km: km, combustivel: 'N/A', pneus: 'N/A', oleo: 'N/A', luzes: 'N/A', avarias: 'PREVENTIVA', tipoDespesa: cat, valorDespesa: valor, observacoes: `[PLANO] ${desc}`, dataHoraManual: dtHoje, id_lancamento: Date.now() + Math.random() };
+                enviarDadosParaPlanilha(payload).then(syncOk => { if(syncOk) { dbDespesas.unshift({ id_lancamento: payload.id_lancamento, dataHora: dtHoje, placa: placa, categoria: cat, valor: parseFloat(valor), motorista: 'SISTEMA', observacoes: `[PREV] ${desc}` }); salvarDB('despesas'); renderDashboards(); } });
+            } else { notificar('Plano gravado (Sem custos adicionais).'); }
+            dbManutencoes.unshift(planoNovo); salvarDB('manutencoes');
+            const idx = dbVeiculos.findIndex(v => v.placa === placa); if(idx !== -1 && parseInt(km) > (parseInt(dbVeiculos[idx].kmAtual)||0)) { dbVeiculos[idx].kmAtual = km; salvarDB('veiculos'); }
+            document.getElementById('formManutencao').reset(); calcularProximaManutencao(); atualizarUI();
+            btn.innerHTML = originalHTML; btn.disabled = false; lucide.createIcons({root: btn}); notificar('Plano Registado!');
+        }
+
+        // ==========================================
+        // CASCATA DE EXCLUSÃO (CONFIGURAÇÃO)
+        // ==========================================
+        function renderizarConfiguracoes() {
+            const cV = document.getElementById('listaVeiculosConf'); cV.innerHTML = dbVeiculos.map(v => `<div class="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl mb-3"><div class="text-xs text-white"><b>${v.placa}</b> - ${v.modelo} <span class="text-[9px] text-sky-400 font-bold ml-2 uppercase px-2 py-0.5 bg-sky-500/10 rounded border border-sky-500/20">${v.tipo || 'PASSEIO'}</span></div><button onclick="removerVeiculo('${v.placa}')" class="text-slate-500 hover:text-rose-400 p-2 rounded-lg hover:bg-rose-500/10 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`).join('');
+            const cC = document.getElementById('listaCategoriasConf'); cC.innerHTML = dbCategorias.map((c, i) => `<div class="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl mb-3"><span class="text-[11px] font-black text-amber-400 uppercase tracking-wider">${c}</span><button onclick="removerCategoria('${c}')" class="text-slate-500 hover:text-rose-400 p-2 rounded-lg hover:bg-rose-500/10 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`).join('');
+            const cCond = document.getElementById('listaCondutoresConf'); cCond.innerHTML = dbCondutores.map((c, i) => `<div class="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl mb-3"><span class="text-[11px] font-black text-emerald-400 uppercase tracking-wider">${c}</span><button onclick="removerCondutor('${c}')" class="text-slate-500 hover:text-rose-400 p-2 rounded-lg hover:bg-rose-500/10 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`).join('');
+            lucide.createIcons();
+        }
+
+        async function adicionarVeiculo(e) {
+            e.preventDefault(); const placa = document.getElementById('cadPlaca').value.toUpperCase().trim(); const modelo = document.getElementById('cadModelo').value.toUpperCase().trim(); const tipoVeic = document.getElementById('cadTipo').value;
+            if(dbVeiculos.some(v => v.placa === placa)) return notificar("Veículo já cadastrado.", true);
+            const idNovo = Date.now(); 
+            const payload = { isNewCadastro: true, detalhe2: 'veiculo', id: idNovo, descricao: `${placa} - ${modelo}`, detalhe1: tipoVeic };
+            const sOk = await enviarDadosParaPlanilha(payload);
+            if (sOk) { dbVeiculos.push({ id: idNovo, placa: placa, modelo: modelo, tipo: tipoVeic, status: 'PARADO', motoristaAtual: '', kmAtual: 0 }); salvarDB('veiculos'); document.getElementById('cadPlaca').value=''; document.getElementById('cadModelo').value=''; renderizarConfiguracoes(); atualizarUI(); notificar("Veículo gravado com sucesso.");}
+        }
+        
+        async function adicionarCategoria(e) {
+            e.preventDefault(); const val = document.getElementById('cadCategoria').value.toUpperCase().trim(); if(!val) return;
+            if(dbCategorias.includes(val)) return notificar("Dicionário já contém esta tag.", true);
+            const payload = { isNewCadastro: true, detalhe2: 'categoria', id: Date.now(), descricao: val, detalhe1: '' };
+            const sOk = await enviarDadosParaPlanilha(payload);
+            if (sOk) { dbCategorias.push(val); salvarDB('categorias'); document.getElementById('cadCategoria').value=''; renderizarConfiguracoes(); atualizarUI(); notificar("Categoria adicionada com sucesso.");}
+        }
+        
+        async function adicionarCondutor(e) {
+            e.preventDefault(); const val = document.getElementById('cadCondutor').value.toUpperCase().trim(); if(!val) return;
+            if(dbCondutores.includes(val)) return notificar("Condutor já cadastrado.", true);
+            const payload = { isNewCadastro: true, detalhe2: 'condutor', id: Date.now(), descricao: val, detalhe1: '' };
+            const sOk = await enviarDadosParaPlanilha(payload);
+            if (sOk) { dbCondutores.push(val); salvarDB('condutores'); document.getElementById('cadCondutor').value=''; renderizarConfiguracoes(); atualizarUI(); notificar("Condutor adicionado com sucesso.");}
+        }
+
+        function removerVeiculo(placa) {
+            const v = dbVeiculos.find(x => x.placa === placa);
+            if(!v) return;
+            const atrelados = dbDespesas.filter(d => d.placa === v.placa).length + dbChecklists.filter(c => c.placa === v.placa).length;
+            if (atrelados > 0) {
+                if(!confirm(`ATENÇÃO! A placa ${v.placa} possui ${atrelados} lançamentos atrelados.\n\nDeseja apagar o veículo e TODOS OS REGISTROS ATRELADOS?`)) return;
+                dbDespesas = dbDespesas.filter(d => d.placa !== v.placa);
+                dbChecklists = dbChecklists.filter(c => c.placa !== v.placa);
+                salvarDB('despesas'); salvarDB('checklists');
+            } else {
+                if(!confirm("Expurgar ativo da base?")) return;
+            }
+            dbVeiculos = dbVeiculos.filter(x => x.placa !== placa);
+            salvarDB('veiculos'); renderizarConfiguracoes(); atualizarUI();
+            enviarDadosParaPlanilha({ tipo: 'delete_cadastro', id: placa }).then(() => sincronizarPlanilha());
+            notificar("Comando de exclusão enviado. Caso retorne ao atualizar, apague a linha na Planilha manualmente.");
+        }
+
+        function removerCategoria(cat) { 
+            const atrelados = dbDespesas.filter(d => d.categoria === cat).length;
+            if (atrelados > 0) {
+                if(!confirm(`ATENÇÃO! A categoria ${cat} possui ${atrelados} despesas atreladas.\n\nDeseja apagar a categoria e TODAS AS DESPESAS ATRELADAS?`)) return;
+                dbDespesas = dbDespesas.filter(d => d.categoria !== cat);
+                salvarDB('despesas');
+            } else {
+                if(!confirm("Expurgar tag do dicionário local?")) return;
+            }
+            dbCategorias = dbCategorias.filter(c => c !== cat); 
+            salvarDB('categorias'); renderizarConfiguracoes(); atualizarUI(); 
+            enviarDadosParaPlanilha({ tipo: 'delete_cadastro', id: cat }).then(() => sincronizarPlanilha());
+            notificar("Comando de exclusão enviado. Caso retorne ao atualizar, apague a linha na Planilha manualmente.");
+        }
+
+        function removerCondutor(c) {
+            const atrelados = dbDespesas.filter(d => d.motorista === c).length + dbChecklists.filter(ck => ck.motorista === c).length;
+            if (atrelados > 0) {
+                if(!confirm(`ATENÇÃO! O motorista ${c} possui ${atrelados} registos atrelados.\n\nDeseja apagar o motorista e TODOS OS REGISTROS ATRELADOS?`)) return;
+                dbDespesas = dbDespesas.filter(d => d.motorista !== c);
+                dbChecklists = dbChecklists.filter(ck => ck.motorista !== c);
+                salvarDB('despesas'); salvarDB('checklists');
+            } else {
+                if(!confirm("Expurgar condutor da base?")) return;
+            }
+            dbCondutores = dbCondutores.filter(x => x !== c); 
+            salvarDB('condutores'); renderizarConfiguracoes(); atualizarUI();
+            enviarDadosParaPlanilha({ tipo: 'delete_cadastro', id: c }).then(() => sincronizarPlanilha());
+            notificar("Comando de exclusão enviado. Caso retorne ao atualizar, apague a linha na Planilha manualmente.");
+        }
+
+        // ==========================================
+        // MANUTENCAO MODAL LOGIC
+        // ==========================================
+        function abrirModalManutencao(placa) {
+            const v = dbVeiculos.find(x => x.placa === placa); if (!v) return;
+            document.getElementById('modalManutPlaca').innerText = `${v.placa} - ${v.modelo}`;
+            document.getElementById('modalManutKmAtual').innerText = v.kmAtual || 0;
+            document.getElementById('modalManutDataAtual').innerText = new Date().toLocaleDateString('pt-BR');
+            const manuts = dbManutencoes.filter(m => m.placa === placa);
+            const container = document.getElementById('listaManutencoesModal');
+            if (manuts.length === 0) { container.innerHTML = '<div class="text-center py-6 text-slate-500 font-bold text-[10px] uppercase">Nenhum plano preventivo registado.</div>'; } 
+            else {
+                let html = ''; const hoje = new Date();
+                manuts.forEach(m => {
+                    let alertClass = 'bg-white/5 border-white/10 text-slate-300'; let statusMsg = 'Em dia'; let badgeIcon = 'check-circle'; let corIcon = 'text-emerald-400';
+                    const prazo = parseInt(m.prazo) || 0;
+                    
+                    if (m.kmProx && String(m.kmProx) !== 'N/A') {
+                        const kmFaltante = parseInt(m.kmProx) - (parseInt(v.kmAtual) || 0);
+                        if (kmFaltante <= 0) { alertClass = 'bg-rose-500/20 border-rose-500/50 text-rose-200'; statusMsg = `Vencida (${Math.abs(kmFaltante)}km atraso)`; badgeIcon = 'alert-octagon'; corIcon = 'text-rose-500'; }
+                        else if (kmFaltante <= (prazo > 0 ? prazo * 0.1 : 500)) { alertClass = 'bg-amber-500/20 border-amber-500/50 text-amber-200'; statusMsg = `Faltam ${kmFaltante}km`; badgeIcon = 'triangle-alert'; corIcon = 'text-amber-500'; }
+                        else { statusMsg = `Faltam ${kmFaltante}km`; }
+                    } else if (m.dataProx && String(m.dataProx) !== 'N/A') {
+                        const dataLimite = new Date(m.dataProx + "T00:00:00"); const diasFaltantes = Math.ceil((dataLimite.getTime() - hoje.getTime()) / (1000 * 3600 * 24));
+                        if (diasFaltantes <= 0) { alertClass = 'bg-rose-500/20 border-rose-500/50 text-rose-200'; statusMsg = `Vencida (${Math.abs(diasFaltantes)} dias atraso)`; badgeIcon = 'alert-octagon'; corIcon = 'text-rose-500'; }
+                        else if (diasFaltantes <= (prazo > 0 ? prazo * 0.1 : 15)) { alertClass = 'bg-amber-500/20 border-amber-500/50 text-amber-200'; statusMsg = `Faltam ${diasFaltantes} dias`; badgeIcon = 'triangle-alert'; corIcon = 'text-amber-500'; }
+                        else { statusMsg = `Faltam ${diasFaltantes} dias`; }
+                    }
+                    
+                    let dataFmt = '--/--/----'; if (m.data) { const p = m.data.split('-'); if(p.length===3) dataFmt = `${p[2]}/${p[1]}/${p[0]}`; }
+                    let proxFmt = (m.kmProx && String(m.kmProx)!=='N/A') ? `${m.kmProx} KM` : (m.dataProx ? (m.dataProx.split('-').length===3 ? m.dataProx.split('-').reverse().join('/') : m.dataProx) : '');
+                    html += `
+                    <div class="border rounded-xl p-4 flex flex-col gap-3 transition-colors ${alertClass}">
+                        <div class="flex justify-between items-start border-b border-white/10 pb-2">
+                            <div><span class="text-[9px] font-bold uppercase tracking-widest opacity-70">Serviço:</span><h5 class="text-sm font-black uppercase tracking-wide flex items-center gap-2"><i data-lucide="${badgeIcon}" class="w-4 h-4 ${corIcon}"></i> ${m.descricao}</h5></div>
+                            <span class="text-[10px] font-black uppercase tracking-widest bg-black/30 px-2 py-1 rounded shadow-inner">${statusMsg}</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div><span class="block text-[8px] font-bold uppercase tracking-widest opacity-70">Última Ref.</span><span class="font-mono text-xs font-bold">${dataFmt} (KM: ${m.kmAtual})</span></div>
+                            <div><span class="block text-[8px] font-bold uppercase tracking-widest opacity-70">Prazo Regra</span><span class="font-mono text-xs font-bold">${m.prazo || '--'} ${m.unidade}</span></div>
+                            <div class="text-right"><span class="block text-[8px] font-bold uppercase tracking-widest opacity-70">Alvo (Próxima)</span><span class="font-mono text-xs font-black ${corIcon}">${proxFmt}</span></div>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html; lucide.createIcons({root: container});
+            }
+            const modal = document.getElementById('modalManutencao'); modal.classList.remove('hidden'); void modal.offsetWidth; modal.classList.add('modal-active', 'opacity-100');
+        }
+        function fecharModalManutencao() { const modal = document.getElementById('modalManutencao'); modal.classList.remove('modal-active', 'opacity-100'); setTimeout(() => { modal.classList.add('hidden'); }, 300); }
+
+    </script>
+</body>
+</html>

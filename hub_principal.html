@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Integrado - LEME ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            background-color: #0f172a; 
+            color: #e2e8f0; 
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; 
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+
+        .dash-card {
+            background-color: #1e293b; 
+            border: 1px solid #334155; 
+            border-radius: 8px;
+        }
+
+        .kpi-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: #475569;
+        }
+
+        /* Efeito 3D Clean para os Ícones */
+        .icon-3d {
+            background: linear-gradient(135deg, #334155 0%, #0f172a 100%);
+            border: 1px solid #475569;
+            box-shadow: 
+                inset 0px 1px 1px rgba(255, 255, 255, 0.15),
+                inset 0px -1px 1px rgba(0, 0, 0, 0.25),
+                0px 4px 6px rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #e2e8f0;
+        }
+
+        .module-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .module-card:hover {
+            background-color: #27354a;
+            border-color: #64748b; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-item {
+            border-left: 3px solid transparent;
+            color: #94a3b8;
+        }
+        .nav-item:hover {
+            background-color: #1e293b;
+            color: #e2e8f0;
+        }
+        .nav-item.active {
+            background-color: #1e293b;
+            border-left-color: #cbd5e1; 
+            color: #f8fafc;
+            font-weight: 600;
+        }
+
+        .corp-input {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            outline: none;
+        }
+        .corp-input:focus { border-color: #64748b; }
+
+        .drawer-overlay { transition: opacity 0.2s ease; opacity: 0; pointer-events: none; }
+        .drawer-overlay.active { opacity: 1; pointer-events: auto; }
+        .drawer-content { transition: transform 0.2s ease; transform: translateX(100%); }
+        .drawer-overlay.active .drawer-content { transform: translateX(0); }
+        .module-checkbox:checked + div { border-color: #64748b; background-color: #27354a; }
+    </style>
+</head>
+<body class="h-screen w-screen flex antialiased selection:bg-sky-500/30">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-[#0b1121] border-r border-[#334155] flex flex-col shrink-0 hidden md:flex z-20">
+        <div class="h-14 flex items-center px-5 border-b border-[#1e293b] shrink-0 bg-[#0f172a]">
+            <div class="flex items-baseline select-none">
+                <span class="text-white font-bold text-lg tracking-tight">LEME</span>
+                <span class="text-[#cbd5e1] font-bold text-lg tracking-tight ml-1">SUPREME</span>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto py-4 px-2 space-y-2 custom-scroll" id="sidebarMenu">
+            <!-- Injetado via JS -->
+        </div>
+
+        <div class="border-t border-[#1e293b] p-3 bg-[#0f172a] shrink-0">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-8 h-8 icon-3d">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                    </div>
+                    <div class="flex flex-col truncate">
+                        <span id="headerUser" class="text-xs font-semibold text-slate-200 truncate">--</span>
+                        <span id="headerRole" class="text-[10px] text-slate-500">--</span>
+                    </div>
+                </div>
+                <button onclick="logout()" class="text-slate-500 hover:text-slate-300 p-1.5 transition-colors shrink-0" title="Sair do Portal">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex flex-col min-w-0 bg-[#0f172a]">
+        
+        <header class="h-14 px-6 flex items-center justify-between border-b border-[#1e293b] bg-[#0f172a] shrink-0 sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-sm font-semibold text-slate-300">
+                <span id="breadcrumbPath">Visão Geral (Todos)</span>
+            </div>
+
+            <div class="flex items-center gap-4 text-xs font-medium text-slate-400">
+                <span id="lblDataAtual" class="hidden sm:inline-block">--</span>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-5 lg:p-6 custom-scroll">
+            <div class="max-w-[1500px] mx-auto space-y-6">
+                
+                <!-- ROW 1: KPIs 360º -->
+                <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                    
+                    <div class="kpi-card p-4 flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Faturamento</p>
+                            <div class="w-6 h-6 icon-3d"><i data-lucide="dollar-sign" class="w-3.5 h-3.5"></i></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-100" id="kpiFat">R$ 4.850k</h3>
+                            <p class="text-[9px] text-slate-500 mt-1">Margem Líq: <span class="text-slate-300">10.5%</span></p>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card p-4 flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">A Receber</p>
+                            <div class="w-6 h-6 icon-3d"><i data-lucide="arrow-down-right" class="w-3.5 h-3.5"></i></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-100" id="kpiReceber">R$ 1.250k</h3>
+                            <p class="text-[9px] text-slate-500 mt-1">Títulos SE1 em aberto</p>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card p-4 flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">A Pagar</p>
+                            <div class="w-6 h-6 icon-3d"><i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-100" id="kpiPagar">R$ 840k</h3>
+                            <p class="text-[9px] text-slate-500 mt-1">Obrigações SE2 em aberto</p>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-card p-4 flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Fila OMS</p>
+                            <div class="w-6 h-6 icon-3d"><i data-lucide="package" class="w-3.5 h-3.5"></i></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-100" id="kpiOms">142 Ped.</h3>
+                            <p class="text-[9px] text-slate-500 mt-1">Volume: <span class="text-slate-300">~18.000 L</span></p>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card p-4 flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Retidos V8</p>
+                            <div class="w-6 h-6 icon-3d"><i data-lucide="shield-alert" class="w-3.5 h-3.5"></i></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-100" id="kpiRetidos">20 Ped.</h3>
+                            <p class="text-[9px] text-slate-500 mt-1">Estq: <span class="text-slate-300">8</span> | Créd: <span class="text-slate-300">12</span></p>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card p-4 flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Ruptura (S&OP)</p>
+                            <div class="w-6 h-6 icon-3d"><i data-lucide="trending-down" class="w-3.5 h-3.5"></i></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-100" id="kpiRuptura">R$ 45,2k</h3>
+                            <p class="text-[9px] text-slate-500 mt-1">Perda: <span class="text-slate-300">1.250 L</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 2: GRÁFICOS -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    
+                    <div class="dash-card p-5 flex flex-col min-h-[320px]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-semibold text-slate-200">Síntese de Resultados (D.R.E.)</h3>
+                            <span class="text-[10px] font-medium text-slate-400">Valores em Milhares (K)</span>
+                        </div>
+                        <div class="flex-1 relative w-full">
+                            <canvas id="chartDRE"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="dash-card p-5 flex flex-col min-h-[320px]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-semibold text-slate-200">Fluxo Financeiro (Receber vs Pagar)</h3>
+                            <div class="flex gap-3 text-[10px] font-medium text-slate-400">
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 bg-slate-300 rounded-sm"></span> SE1</span>
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 bg-slate-600 rounded-sm"></span> SE2</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 relative w-full">
+                            <canvas id="chartCaixa"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ROW 3: MÓDULOS DE NAVEGAÇÃO -->
+                <div class="pt-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-sm font-semibold text-slate-200" id="sectionTitle">Diretório de Módulos</h2>
+                        <div class="relative w-56 hidden sm:block">
+                            <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                            <input type="text" id="searchModule" oninput="buscarModulos()" class="corp-input !pl-8 w-full" placeholder="Buscar módulo...">
+                        </div>
+                    </div>
+
+                    <!-- GRID DINÂMICO PARA BUSCAS -->
+                    <div class="w-full relative">
+                        <div id="moduleContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <!-- Preenchido via Javascript -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- DRAWER LATERAL: CADASTRO DE USUÁRIOS -->
+    <div id="drawerUsuario" class="fixed inset-0 bg-[#0f172a]/80 z-[100] drawer-overlay flex justify-end">
+        <div class="w-full max-w-2xl bg-[#0f172a] border-l border-[#1e293b] h-full flex flex-col drawer-content shadow-2xl">
+            <div class="p-5 border-b border-[#1e293b] flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <h3 class="text-sm font-semibold text-slate-200">Gestão de Acessos</h3>
+                </div>
+                <button onclick="fecharDrawerUsuario()" class="text-slate-400 hover:text-slate-200 p-1 rounded">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form onsubmit="cadastrarUsuario(event)" class="flex-1 flex flex-col justify-between overflow-y-auto p-6 space-y-6 custom-scroll">
+                <div class="space-y-6">
+                    <div class="space-y-4">
+                        <h4 class="text-xs font-semibold text-slate-400 border-b border-[#1e293b] pb-2">Identificação</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2"><label class="block text-[10px] font-semibold text-slate-400 mb-1">Nome Completo</label><input type="text" id="newNome" required class="corp-input w-full uppercase"></div>
+                            <div class="col-span-2"><label class="block text-[10px] font-semibold text-slate-400 mb-1">Email</label><input type="email" id="newEmail" required class="corp-input w-full"></div>
+                            <div><label class="block text-[10px] font-semibold text-slate-400 mb-1">Usuário</label><input type="text" id="newUser" required class="corp-input w-full"></div>
+                            <div><label class="block text-[10px] font-semibold text-slate-400 mb-1">Senha</label><input type="password" id="newPass" required class="corp-input w-full"></div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-400 mb-1">Perfil</label>
+                                <select id="newRole" class="corp-input w-full cursor-pointer"><option value="operacional">Operacional</option><option value="admin">Administrador</option></select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-400 mb-1">Filial</label>
+                                <select id="newFilial" class="corp-input w-full cursor-pointer"><option value="Todas">Todas</option><option value="01">01 - AL</option><option value="02">02 - PE</option><option value="03">03 - SE</option></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-semibold text-slate-400 border-b border-[#1e293b] pb-2">Permissões</h4>
+                        <div class="grid grid-cols-2 gap-2" id="checkboxContainer"></div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-[#1e293b] flex justify-between items-center shrink-0">
+                    <div id="cadMsg" class="hidden text-xs font-semibold"></div>
+                    <button type="submit" id="btnCadastrar" class="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-5 rounded text-xs flex items-center gap-2 transition-colors">
+                        Salvar Usuário
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- RECIPIENTE DO IFRAME (MÓDULOS FULLSCREEN) -->
+    <div id="moduleFrameContainer" class="fixed inset-0 z-[999] bg-[#0f172a] flex flex-col opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="iframeLoader" class="absolute inset-0 flex flex-col items-center justify-center bg-[#0f172a] z-10 transition-opacity duration-300">
+            <i data-lucide="loader-2" class="w-10 h-10 text-sky-400 animate-spin mb-4"></i>
+            <h3 class="text-xs font-black text-white uppercase tracking-widest">Carregando Módulo...</h3>
+        </div>
+        <iframe id="mainIframe" class="w-full h-full border-none relative z-20" src="" onload="hideIframeLoader()"></iframe>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbzCSM3tWK83XWQ1ls6sqxnAx7N5sgJbj7nKG5_1Cpv2k0DNZotyCIFzT64AJKECXelG/exec";
+
+        // MATRIZ OFICIAL DE MÓDULOS
+        const todosModulosData = [
+            // LOGÍSTICA
+            { id: 'oms', categoria: 'LOGISTICA', url: 'montagem_carga_oms.html', icon: 'package', titulo: 'Formação de Carga (OMS)', desc: 'Fila OMS, Cubagem e Montagem de Roteirização.' },
+            { id: 'frota', categoria: 'LOGISTICA', url: 'lancamentos_frota.html', icon: 'truck', titulo: 'Controle de Frota', desc: 'Lançamentos de Despesas Logísticas e Manutenção.' },
+            // COMERCIAL
+            { id: 'credito', categoria: 'COMERCIAL', url: 'liberacao_credito.html', icon: 'shield-check', titulo: 'Liberação V8', desc: 'Análise de Risco e Liberação de Pedidos Bloqueados.' },
+            { id: 'aprovacao', categoria: 'COMERCIAL', url: 'aprovacao_comercial.html', icon: 'percent', titulo: 'Aprovação Comercial', desc: 'Gestão de Alçadas de Desconto e Aprovação de Pedidos.' },
+            { id: 'pricing', categoria: 'COMERCIAL', url: 'formacao_precos.html', icon: 'calculator', titulo: 'Formação de Preços', desc: 'Engenharia Reversa de Preço, Rateio DRE e Simulador.' },
+            { id: 'pesquisa', categoria: 'COMERCIAL', url: 'portal_pesquisa.html', icon: 'line-chart', titulo: 'Pesquisa Concorrência', desc: 'Coleta de Preços da Concorrência no Mercado B2B.' },
+            { id: 'pedidos', categoria: 'COMERCIAL', url: 'Pedidos Representante.html', icon: 'shopping-cart', titulo: 'Pedidos Externos', desc: 'Emissão de Pedidos de Venda Field Sales.' },
+            // FINANCEIRO
+            { id: 'receber', categoria: 'FINANCEIRO', url: 'contas_receber.html', icon: 'arrow-down-right', titulo: 'Contas a Receber (SE1)', desc: 'Gestão de Títulos (SE1) e Inadimplência de Clientes.' },
+            { id: 'cobranca', categoria: 'FINANCEIRO', url: 'cobranca.html', icon: 'phone-call', titulo: 'Gestão de Cobrança', desc: 'Controle de inadimplência, acordos e integração Google Sheets.' },
+            { id: 'pagar', categoria: 'FINANCEIRO', url: 'contas_pagar.html', icon: 'arrow-up-right', titulo: 'Contas a Pagar (SE2)', desc: 'Gestão de Obrigações (SE2) e Títulos Fornecedores.' },
+            { id: 'extrato', categoria: 'FINANCEIRO', url: 'extrato_financeiro.html', icon: 'landmark', titulo: 'Extrato Bancário (SE5)', desc: 'Saldos em Conta e Movimentação Bancária (SE5).' },
+            { id: 'baixas', categoria: 'FINANCEIRO', url: 'acompanhamento_baixas.html', icon: 'history', titulo: 'Acompanhamento Baixas', desc: 'Histórico de baixas (SE5), Juros, Multas e Descontos.' },
+            // SUPREME INFO (BI)
+            { id: 'cfo_supreme', categoria: 'SUPREME INFO', url: 'cfo_supreme.html', icon: 'cpu', titulo: 'Painel CFO Supreme', desc: 'Board Terminal e Assistente S&OP com IA.', badge: 'AI' },
+            { id: 'consultor', categoria: 'SUPREME INFO', url: 'consultor_virtual_ia.html', icon: 'bot', titulo: 'Consultor S&OP', desc: 'Assistente Analítico de Vendas baseado em Inteligência de Negócio.' },
+            { id: 'metas', categoria: 'SUPREME INFO', url: 'painel_metas.html', icon: 'target', titulo: 'Painel de Metas', desc: 'Acompanhamento Estratégico de Objetivos.' },
+            { id: 'radar', categoria: 'SUPREME INFO', url: 'radar_executivo.html', icon: 'bar-chart', titulo: 'Radar Executivo', desc: 'Dashboard de Resumo Executivo para C-Level.' },
+            { id: 'dre', categoria: 'SUPREME INFO', url: 'supreme_info_dre.html', icon: 'file-text', titulo: 'D.R.E. Analítica', desc: 'Relatório Contábil Consolidado Analítico.' },
+            { id: 'dre_caixa', categoria: 'SUPREME INFO', url: 'dre_financeira.html', icon: 'bar-chart-horizontal', titulo: 'D.R.E. Caixa Dinâmica', desc: 'DRE Consolidada no formato de Fluxo Direto SE5.' },
+            { id: 'fluxo_caixa', categoria: 'SUPREME INFO', url: 'fluxo_caixa.html', icon: 'trending-up', titulo: 'Fluxo de Caixa', desc: 'Projeção Operacional Futura.' },
+            { id: 'curva_abc', categoria: 'SUPREME INFO', url: 'curva_abc.html', icon: 'pie-chart', titulo: 'Curva ABC', desc: 'Classificação Estratégica de Mix de Produtos.' },
+            { id: 'analise', categoria: 'SUPREME INFO', url: 'analise_comercial.html', icon: 'activity', titulo: 'Análise Comercial', desc: 'Estatísticas Globais de Volume e Vendas B2B.' },
+            { id: 'auditoria', categoria: 'SUPREME INFO', url: 'auditoria_fisco.html', icon: 'building-2', titulo: 'Auditoria Fiscal', desc: 'Apurador Inteligente de Regras Tributárias.' },
+            { id: 'ruptura', categoria: 'SUPREME INFO', url: 'visao_ruptura.html', icon: 'trending-down', titulo: 'Visão de Ruptura', desc: 'Pedidos pendentes por quebra de Estoque Operacional.' },
+            // SISTEMA
+            { id: 'usuarios', categoria: 'SISTEMA', url: 'cadastro_usuarios.html', icon: 'users', titulo: 'Gestão de Acessos', desc: 'Painel de Permissões de Usuários e Sincronização Cloud.' },
+            { id: 'regras', categoria: 'SISTEMA', url: 'regras_comerciais.html', icon: 'sliders', titulo: 'Regras Comerciais', desc: 'Gestão de Travas de Desconto, Metas S&OP e Campanhas.' }
+        ];
+
+        let chartDREObj = null;
+        let chartCaixaObj = null;
+        let categoriaAtiva = 'TODOS';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = localStorage.getItem('comlub_leme_user') || localStorage.getItem('comlub_portal_user');
+            const role = localStorage.getItem('comlub_leme_role') || 'operacional';
+            const modulos = localStorage.getItem('comlub_leme_modulos') || '';
+
+            if (!user) { window.location.href = "index.html"; return; }
+
+            document.getElementById('headerUser').innerText = user;
+            document.getElementById('headerRole').innerText = role === 'admin' ? 'Admin' : 'Operacional';
+            
+            const opcoesData = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('lblDataAtual').innerText = new Date().toLocaleDateString('pt-BR', opcoesData);
+
+            Chart.register(ChartDataLabels);
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = '"Inter", sans-serif';
+            Chart.defaults.plugins.tooltip.backgroundColor = '#1e293b';
+            Chart.defaults.plugins.tooltip.titleColor = '#f8fafc';
+            Chart.defaults.plugins.tooltip.bodyColor = '#cbd5e1';
+            Chart.defaults.plugins.tooltip.borderColor = '#334155';
+            Chart.defaults.plugins.tooltip.borderWidth = 1;
+            Chart.defaults.plugins.tooltip.padding = 10;
+            Chart.defaults.plugins.tooltip.cornerRadius = 6;
+
+            renderSidebarModules(role, modulos);
+            renderCheckboxesCadastro();
+            renderDashboardTorre();
+            renderModulesGrid(role, modulos);
+            
+            lucide.createIcons();
+        });
+
+        function renderDashboardTorre() {
+            const dreExplanations = {
+                'Receita Líq.': 'Faturamento total deduzido de impostos e devoluções.',
+                'Custos (CMV)': 'Custo da Mercadoria Vendida (gastos diretos de aquisição).',
+                'Lucro Bruto': 'Receita Líquida subtraída do CMV. Indica a margem comercial básica.',
+                'Opex (SG&A)': 'Despesas Operacionais, Administrativas e Comerciais fixas.',
+                'EBITDA': 'Lucro gerado pela operação antes de juros, impostos e depreciação.',
+                'Lucro Líq.': 'Resultado final contábil após todas as deduções e tributos.'
+            };
+
+            const ctxDRE = document.getElementById('chartDRE').getContext('2d');
+            const dataDRE = [4850, 3152, 1698, 848, 850, 510]; 
+            const labelsDRE = ['Receita Líq.', 'Custos (CMV)', 'Lucro Bruto', 'Opex (SG&A)', 'EBITDA', 'Lucro Líq.'];
+            
+            chartDREObj = new Chart(ctxDRE, {
+                type: 'bar',
+                data: {
+                    labels: labelsDRE,
+                    datasets: [{
+                        data: dataDRE,
+                        backgroundColor: '#475569',
+                        hoverBackgroundColor: '#94a3b8',
+                        borderRadius: 4,
+                        barPercentage: 0.5
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { top: 25 } },
+                    plugins: { 
+                        legend: { display: false },
+                        datalabels: {
+                            color: '#cbd5e1',
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: (val) => 'R$ ' + val + 'k',
+                            font: { size: 10, weight: '500' }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => ' R$ ' + c.raw + 'k',
+                                afterLabel: (c) => '\n' + dreExplanations[c.label]
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { border: { display: false }, grid: { color: '#1e293b' }, ticks: { callback: val => 'R$ ' + val + 'k' } },
+                        x: { border: { display: false }, grid: { display: false }, ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+
+            const ctxCaixa = document.getElementById('chartCaixa').getContext('2d');
+            chartCaixaObj = new Chart(ctxCaixa, {
+                type: 'line',
+                data: {
+                    labels: ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'],
+                    datasets: [
+                        { label: 'A Receber (SE1)', data: [450, 520, 480, 600], borderColor: '#cbd5e1', backgroundColor: '#cbd5e1', tension: 0.3, pointRadius: 4, pointHoverRadius: 6 },
+                        { label: 'A Pagar (SE2)', data: [380, 410, 500, 420], borderColor: '#475569', backgroundColor: '#475569', tension: 0.3, pointRadius: 4, pointHoverRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { top: 25, right: 20, left: 10, bottom: 10 } },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { 
+                        legend: { display: false },
+                        datalabels: {
+                            color: (ctx) => ctx.datasetIndex === 0 ? '#f8fafc' : '#94a3b8',
+                            anchor: (ctx) => ctx.datasetIndex === 0 ? 'end' : 'start',
+                            align: (ctx) => ctx.datasetIndex === 0 ? 'top' : 'bottom',
+                            offset: 4,
+                            formatter: (val) => 'R$ ' + val + 'k',
+                            font: { size: 10, weight: '500' }
+                        },
+                        tooltip: { callbacks: { label: (c) => ' R$ ' + c.raw + 'k' } }
+                    },
+                    scales: {
+                        y: { border: { display: false }, grid: { color: '#1e293b' }, ticks: { display: false }, suggestedMax: 700, suggestedMin: 200 },
+                        x: { border: { display: false }, offset: true, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // =====================================
+        // CONTROLE DO IFRAME 
+        // =====================================
+        const frameContainer = document.getElementById('moduleFrameContainer');
+        const mainIframe = document.getElementById('mainIframe');
+        const iframeLoader = document.getElementById('iframeLoader');
+
+        function openModule(url) {
+            frameContainer.classList.remove('opacity-0', 'pointer-events-none');
+            iframeLoader.style.opacity = '1';
+            iframeLoader.style.display = 'flex';
+            mainIframe.style.opacity = '0'; 
+            mainIframe.src = url;
+        }
+
+        function hideIframeLoader() {
+            if(mainIframe.src && mainIframe.src !== window.location.href) {
+                iframeLoader.style.opacity = '0';
+                setTimeout(() => {
+                    iframeLoader.style.display = 'none';
+                    mainIframe.style.opacity = '1';
+                }, 300);
+            }
+        }
+
+        function closeModule() {
+            frameContainer.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => { mainIframe.src = ''; }, 300);
+        }
+
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.action === 'closeModule') closeModule();
+        });
+
+        // =====================================
+        // RENDER MENU LATERAL
+        // =====================================
+        function renderSidebarModules(role, modulosPermitidos) {
+            const container = document.getElementById('sidebarMenu');
+            const isAdmin = role === 'admin';
+            const perms = modulosPermitidos.toLowerCase();
+            const temPermissao = (termo) => isAdmin || perms.includes(termo) || perms.includes('todos') || perms.includes('acesso total');
+
+            let modulosFiltrados = todosModulosData.filter(m => {
+                if (m.id === 'oms') return temPermissao('oms') || temPermissao('carga');
+                if (m.id === 'credito') return temPermissao('crédito') || temPermissao('credito') || temPermissao('v8');
+                if (m.id === 'aprovacao') return temPermissao('aprovação') || temPermissao('aprovacao') || temPermissao('comercial');
+                if (m.id === 'pricing') return temPermissao('pricing') || temPermissao('margens') || temPermissao('formação') || temPermissao('formacao') || temPermissao('preço') || temPermissao('preco');
+                if (m.id === 'frota') return temPermissao('frota') || temPermissao('logística');
+                if (m.id === 'receber') return temPermissao('receber') || temPermissao('se1') || temPermissao('financeiro');
+                if (m.id === 'cobranca') return temPermissao('cobrança') || temPermissao('cobranca') || temPermissao('financeiro');
+                if (m.id === 'pagar') return temPermissao('pagar') || temPermissao('se2') || temPermissao('financeiro');
+                if (m.id === 'extrato') return temPermissao('extrato') || temPermissao('se5') || temPermissao('financeiro');
+                if (m.id === 'baixas') return temPermissao('baixas') || temPermissao('se5') || temPermissao('financeiro');
+                if (m.id === 'pesquisa') return temPermissao('pesquisa') || temPermissao('b2b');
+                if (m.id === 'pedidos') return temPermissao('pedidos') || temPermissao('representante');
+                if (['consultor', 'metas', 'radar', 'dre', 'dre_caixa', 'fluxo_caixa', 'curva_abc', 'analise', 'auditoria', 'ruptura', 'cfo_supreme'].includes(m.id)) {
+                    return isAdmin || temPermissao('hub') || temPermissao('dss') || temPermissao('bi') || temPermissao(m.titulo.toLowerCase());
+                }
+                if (m.id === 'usuarios') return true;
+                if (m.id === 'regras') return true; 
+
+                return true;
+            });
+
+            const agrupado = {};
+            modulosFiltrados.forEach(m => {
+                if(!agrupado[m.categoria]) agrupado[m.categoria] = [];
+                agrupado[m.categoria].push(m);
+            });
+
+            let html = `
+                <div class="mb-4">
+                    <a href="#" onclick="filtrarCategoria('TODOS', this)" class="nav-item active flex items-center gap-3 px-3 py-2 rounded text-xs">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Painel Geral
+                    </a>
+                </div>
+            `;
+
+            const ordCat = ['COMERCIAL', 'LOGISTICA', 'FINANCEIRO', 'SUPREME INFO', 'SISTEMA'];
+            
+            ordCat.forEach(cat => {
+                if(agrupado[cat] && agrupado[cat].length > 0) {
+                    html += `<div class="mt-3 mb-1 px-3 text-[10px] font-black text-slate-600 uppercase tracking-widest">${cat}</div>`;
+                    html += `<div class="space-y-0.5">`;
+                    agrupado[cat].forEach(m => {
+                        const targetAction = m.action === 'openDrawer' ? `onclick="abrirDrawerUsuario()"` : `onclick="openModule('${m.url}')"`;
+                        const badgeHtml = m.badge ? `<span class="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded text-[8px] font-black tracking-widest shadow-sm animate-pulse shrink-0">${m.badge}</span>` : '';
+                        
+                        html += `
+                            <a ${targetAction} class="nav-item flex items-center justify-between px-3 py-1.5 rounded text-xs cursor-pointer group">
+                                <div class="flex items-center gap-2.5 truncate">
+                                    <i data-lucide="${m.icon}" class="w-3.5 h-3.5 ${m.badge ? 'text-indigo-400 group-hover:text-indigo-300' : ''}"></i> 
+                                    <span class="truncate ${m.badge ? 'font-black text-slate-300 group-hover:text-white' : ''}">${m.titulo}</span>
+                                </div>
+                                ${badgeHtml}
+                            </a>
+                        `;
+                    });
+                    html += `</div>`;
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        // =====================================
+        // RENDER GRID DE CARDS 
+        // =====================================
+        function renderModulesGrid(role, modulosPermitidos) {
+            const container = document.getElementById('moduleContainer');
+            const searchVal = (document.getElementById('searchModule') ? document.getElementById('searchModule').value.toLowerCase().trim() : '');
+            const isAdmin = role === 'admin';
+            const perms = modulosPermitidos.toLowerCase();
+            const temPermissao = (termo) => isAdmin || perms.includes(termo) || perms.includes('todos') || perms.includes('acesso total');
+
+            let modulosFiltrados = todosModulosData.filter(m => {
+                if (categoriaAtiva !== 'TODOS' && m.categoria !== categoriaAtiva) return false;
+                if (searchVal !== '') {
+                    const matchText = `${m.titulo} ${m.categoria} ${m.desc}`.toLowerCase();
+                    if (!matchText.includes(searchVal)) return false;
+                }
+                
+                if (m.id === 'oms') return temPermissao('oms') || temPermissao('carga');
+                if (m.id === 'credito') return temPermissao('crédito') || temPermissao('credito') || temPermissao('v8');
+                if (m.id === 'aprovacao') return temPermissao('aprovação') || temPermissao('aprovacao') || temPermissao('comercial');
+                if (m.id === 'pricing') return temPermissao('pricing') || temPermissao('margens') || temPermissao('formação') || temPermissao('formacao') || temPermissao('preço') || temPermissao('preco');
+                if (m.id === 'frota') return temPermissao('frota') || temPermissao('logística');
+                if (m.id === 'receber') return temPermissao('receber') || temPermissao('se1') || temPermissao('financeiro');
+                if (m.id === 'cobranca') return temPermissao('cobrança') || temPermissao('cobranca') || temPermissao('financeiro');
+                if (m.id === 'pagar') return temPermissao('pagar') || temPermissao('se2') || temPermissao('financeiro');
+                if (m.id === 'extrato') return temPermissao('extrato') || temPermissao('se5') || temPermissao('financeiro');
+                if (m.id === 'baixas') return temPermissao('baixas') || temPermissao('se5') || temPermissao('financeiro');
+                if (m.id === 'pesquisa') return temPermissao('pesquisa') || temPermissao('b2b');
+                if (m.id === 'pedidos') return temPermissao('pedidos') || temPermissao('representante');
+                if (['consultor', 'metas', 'radar', 'dre', 'dre_caixa', 'fluxo_caixa', 'curva_abc', 'analise', 'auditoria', 'ruptura', 'cfo_supreme'].includes(m.id)) {
+                    return isAdmin || temPermissao('hub') || temPermissao('dss') || temPermissao('bi') || temPermissao(m.titulo.toLowerCase());
+                }
+                if (m.id === 'usuarios') return true;
+                if (m.id === 'regras') return true;
+
+                return true;
+            });
+
+            let html = '';
+
+            modulosFiltrados.forEach(m => {
+                const targetAction = m.action === 'openDrawer' ? `onclick="abrirDrawerUsuario()"` : `onclick="openModule('${m.url}')"`;
+                const badgeHtml = m.badge ? `<span class="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded text-[8px] font-black tracking-widest shadow-sm animate-pulse ml-2">${m.badge}</span>` : '';
+
+                html += `
+                <a ${targetAction} class="module-card p-4 flex flex-col justify-between cursor-pointer group">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 icon-3d ${m.badge ? 'border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]' : ''}">
+                            <i data-lucide="${m.icon}" class="w-5 h-5 ${m.badge ? 'text-indigo-400' : ''}"></i>
+                        </div>
+                        <div class="flex flex-col truncate w-full">
+                            <span class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest truncate mb-0.5">${m.categoria}</span>
+                            <h3 class="text-sm font-semibold text-slate-200 group-hover:text-white transition-colors truncate flex items-center">
+                                ${m.titulo} ${badgeHtml}
+                            </h3>
+                            <p class="text-[9px] text-slate-400 mt-1 truncate leading-tight">${m.desc}</p>
+                        </div>
+                    </div>
+                </a>`;
+            });
+
+            if (html === '') {
+                html = `<div class="col-span-full p-8 text-center text-slate-500 text-xs border border-dashed border-[#1e293b] rounded">Nenhum módulo encontrado.</div>`;
+            }
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function filtrarCategoria(cat, btnElement) {
+            categoriaAtiva = cat;
+            
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            if(btnElement && btnElement.classList.contains('nav-item')) btnElement.classList.add('active');
+
+            let breadLabel = cat === 'TODOS' ? 'Visão Geral (Todos)' : cat;
+            if (cat === 'SUPREME INFO') breadLabel = 'Supreme Info (BI)';
+            document.getElementById('breadcrumbPath').innerText = breadLabel;
+
+            const role = localStorage.getItem('comlub_leme_role');
+            const modulos = localStorage.getItem('comlub_leme_modulos') || '';
+            renderModulesGrid(role, modulos);
+        }
+
+        function buscarModulos() {
+            const role = localStorage.getItem('comlub_leme_role');
+            const modulos = localStorage.getItem('comlub_leme_modulos') || '';
+            renderModulesGrid(role, modulos);
+        }
+
+        function abrirDrawerUsuario() { document.getElementById('drawerUsuario').classList.add('active'); }
+        function fecharDrawerUsuario() { document.getElementById('drawerUsuario').classList.remove('active'); }
+
+        function renderCheckboxesCadastro() {
+            const container = document.getElementById('checkboxContainer');
+            let html = '';
+            todosModulosData.forEach(m => {
+                html += `
+                <label class="relative cursor-pointer">
+                    <input type="checkbox" name="moduleOption" value="${m.titulo}" class="module-checkbox sr-only">
+                    <div class="border border-[#1e293b] rounded p-2 flex items-center justify-between bg-[#0f172a] transition-colors hover:border-slate-600">
+                        <span class="text-[10px] text-slate-300 truncate" title="${m.titulo}">${m.titulo}</span>
+                        <i data-lucide="check" class="w-3.5 h-3.5 text-slate-300 opacity-0 check-icon transition-opacity shrink-0"></i>
+                    </div>
+                </label>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function cadastrarUsuario(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnCadastrar');
+            const msg = document.getElementById('cadMsg');
+            
+            const checkboxes = document.querySelectorAll('input[name="moduleOption"]:checked');
+            let modulosSelecionados = [];
+            checkboxes.forEach(cb => modulosSelecionados.push(cb.value));
+
+            const payload = {
+                action: 'cadastrar',
+                nome: document.getElementById('newNome').value.trim(),
+                email: document.getElementById('newEmail').value.trim(),
+                username: document.getElementById('newUser').value.trim(),
+                password: document.getElementById('newPass').value.trim(),
+                role: document.getElementById('newRole').value,
+                filiais: document.getElementById('newFilial').value,
+                status: 'Ativo',
+                modulos: modulosSelecionados.length > 0 ? modulosSelecionados.join(', ') : 'Nenhum'
+            };
+
+            btn.innerHTML = `Gravando...`;
+            
+            try {
+                const res = await fetch(API_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload) 
+                });
+                
+                const textResponse = await res.text();
+                const data = JSON.parse(textResponse);
+                
+                if (data.success) {
+                    msg.className = "text-emerald-400 text-[10px]";
+                    msg.innerText = "Usuário cadastrado com sucesso!";
+                    msg.classList.remove('hidden');
+                    e.target.reset();
+                    setTimeout(() => fecharDrawerUsuario(), 1500);
+                }
+            } catch (err) {
+                msg.className = "text-rose-400 text-[10px]";
+                msg.innerText = "Erro ao gravar usuário.";
+                msg.classList.remove('hidden');
+            } finally {
+                btn.innerHTML = `Salvar Usuário`;
+                setTimeout(() => msg.classList.add('hidden'), 4000);
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

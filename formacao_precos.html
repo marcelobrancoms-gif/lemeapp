@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing Engine & Margens - Comlub ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                        mono: ['"Fira Code"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+
+        .dash-card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; }
+        
+        .corp-input { background-color: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 600; outline: none; transition: border-color 0.2s; }
+        .corp-input:focus { border-color: #38bdf8; }
+        
+        .erp-label { display: block; font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        
+        .btn-outline { background-color: #0f172a; border: 1px solid #334155; color: #cbd5e1; transition: all 0.15s ease; border-radius: 6px; }
+        .btn-outline:hover { background-color: #1e293b; border-color: #475569; color: #f8fafc; }
+
+        .dre-table-wrapper { overflow-x: auto; width: 100%; }
+        .dre-table { border-collapse: collapse; min-width: 1300px; width: 100%; }
+        .dre-table th { background-color: #1e293b; border-bottom: 2px solid #334155; border-top: 1px solid #334155; font-weight: 800; color: #94a3b8; padding: 12px 16px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 20; text-align: left; white-space: nowrap;}
+        
+        .dre-table th:first-child, .dre-table td:first-child { position: sticky; left: 0; z-index: 30; background-color: inherit; border-right: 1px solid #334155; }
+        .dre-table th:first-child { background-color: #1e293b; z-index: 40; }
+
+        .dre-table td { padding: 8px 16px; font-size: 11px; border-bottom: 1px solid #1e293b; transition: background-color 0.2s; white-space: nowrap; color: #cbd5e1;}
+        .dre-table tbody tr:hover td { background-color: #0b1121; cursor: pointer; color: #f8fafc;}
+
+        .slide-over { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: translateX(100%); }
+        .slide-over.active { transform: translateX(0); }
+        .overlay { transition: opacity 0.3s ease; opacity: 0; pointer-events: none; }
+        .overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal-zoom { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: scale(0.95); opacity: 0; pointer-events: none; }
+        .modal-zoom.active { transform: scale(1); opacity: 1; pointer-events: auto; }
+
+        .visual-bar-segment { transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+</head>
+<body class="flex flex-col h-screen antialiased relative">
+
+    <!-- TOAST DE NOTIFICAÇÃO -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-[300] bg-slate-900 text-white text-xs font-bold uppercase tracking-widest px-4 py-3 rounded-lg shadow-2xl border border-slate-700 flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="info" class="w-4 h-4 text-sky-400" id="toastIcon"></i>
+        <span id="toastMessage">Notificação</span>
+    </div>
+
+    <!-- OVERLAY DE CARREGAMENTO -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[200] bg-[#0f172a]/90 backdrop-blur-sm flex-col items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-[#1e293b] border border-[#334155] p-8 rounded-xl shadow-2xl flex flex-col items-center max-w-[340px] w-full">
+            <i data-lucide="loader-2" class="w-8 h-8 text-sky-400 animate-spin mb-4"></i>
+            <div class="text-center w-full">
+                <h3 class="text-xs font-bold text-slate-200 uppercase tracking-widest mb-1" id="loadingTitle">Sincronizando...</h3>
+                <p class="text-[10px] uppercase tracking-widest text-slate-400" id="loadingDesc">Aguarde o cruzamento de dados.</p>
+            </div>
+            <div class="w-full bg-[#0f172a] h-1.5 rounded-full overflow-hidden mt-4 border border-[#334155]">
+                <div class="bg-sky-500 h-full animate-[pulse_2s_ease-in-out_infinite]" style="width: 100%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CABEÇALHO -->
+    <header class="bg-[#0f172a] border-b border-[#1e293b] sticky top-0 z-40 px-6 h-14 flex items-center justify-between shrink-0 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="flex items-baseline select-none">
+                <span class="text-white font-bold text-lg tracking-tight">LEME</span>
+                <span class="text-[#cbd5e1] font-bold text-lg tracking-tight ml-1">SUPREME</span>
+            </div>
+            <div class="h-5 w-px bg-[#334155] ml-2"></div>
+            <div class="flex items-center gap-3 ml-2">
+                <span class="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_10px_rgba(168,85,247,0.2)]">
+                    <i data-lucide="calculator" class="w-3 h-3"></i> Pricing & Margens
+                </span>
+                <h1 class="text-xs font-semibold text-slate-300 uppercase tracking-wider hidden sm:block">Engenharia de Preços</h1>
+            </div>
+        </div>
+        <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-white transition-colors p-1.5 rounded hover:bg-[#1e293b]" title="Fechar Módulo">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+    </header>
+
+    <!-- BARRA DE CONFIGURAÇÕES -->
+    <div class="bg-[#1e293b] border-b border-[#334155] px-6 py-4 shrink-0 z-30 shadow-sm relative flex flex-col gap-4">
+        
+        <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+            <h2 class="text-xs font-black text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i> Variáveis DRE (Custos de Venda)
+            </h2>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-2 bg-[#0f172a] border border-[#334155] rounded-lg px-3 py-1.5 shadow-sm">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest"><i data-lucide="calendar" class="w-3 h-3 inline pb-0.5"></i> Ref. Vendas (SD2):</span>
+                    <input type="date" id="dtDeVenda" class="bg-transparent text-[11px] font-bold text-slate-200 outline-none cursor-pointer [color-scheme:dark]">
+                    <span class="text-[10px] text-slate-500 font-bold">à</span>
+                    <input type="date" id="dtAteVenda" class="bg-transparent text-[11px] font-bold text-slate-200 outline-none cursor-pointer [color-scheme:dark]">
+                </div>
+
+                <label class="flex items-center gap-2 cursor-pointer bg-[#0f172a] border border-[#334155] px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-800 transition-colors">
+                    <input type="checkbox" id="chkApenasComCusto" checked onchange="renderizarTabela()" class="w-3.5 h-3.5 text-sky-500 bg-[#1e293b] border-[#334155] rounded focus:ring-sky-500 focus:ring-offset-[#0f172a]">
+                    <span class="text-[9px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">Apenas Custo Médio > 0</span>
+                </label>
+                
+                <button onclick="sincronizarBaseGeral()" class="bg-sky-600 hover:bg-sky-500 text-white px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center gap-2" id="btnSync">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sincronizar Tudo
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 bg-[#0f172a] border border-[#334155] p-3 rounded-xl shadow-inner items-end">
+            <div>
+                <label class="erp-label text-rose-400">Impostos (%)</label>
+                <input type="number" id="glbImp" value="18.5" step="0.1" class="corp-input !text-rose-400 !border-rose-500/30">
+            </div>
+            <div>
+                <label class="erp-label text-amber-400">Comissões (%)</label>
+                <input type="number" id="glbCom" value="3.0" step="0.1" class="corp-input !text-amber-400 !border-amber-500/30">
+            </div>
+            <div>
+                <label class="erp-label text-blue-400">Frete/Logística (%)</label>
+                <input type="number" id="glbFrete" value="2.5" step="0.1" class="corp-input !text-blue-400 !border-blue-500/30">
+            </div>
+            <div>
+                <label class="erp-label text-purple-400">Desp. Fixas/Admin (%)</label>
+                <input type="number" id="glbFixo" value="12.0" step="0.1" class="corp-input !text-purple-400 !border-purple-500/30">
+            </div>
+            <div>
+                <label class="erp-label text-emerald-400" title="Usado apenas para gerar o Preço Sugerido (Divisor)">Margem Líquida Alvo (%)</label>
+                <input type="number" id="glbLucro" value="15.0" step="0.1" class="corp-input !text-emerald-400 !border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+            </div>
+            <div>
+                <button onclick="recalcularMassa()" class="w-full bg-[#1e293b] hover:bg-[#334155] border border-[#334155] text-sky-400 font-bold uppercase tracking-widest text-[10px] py-1.5 rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="calculator" class="w-3.5 h-3.5"></i> Recalcular
+                </button>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center gap-4">
+            <div class="flex-1 flex gap-4">
+                <div class="w-1/4">
+                    <label class="erp-label">Filtrar Grupo</label>
+                    <select id="filterGrupo" onchange="renderizarTabela()" class="corp-input cursor-pointer py-1.5">
+                        <option value="ALL">Todos os Grupos</option>
+                    </select>
+                </div>
+                <div class="flex-1 relative">
+                    <label class="erp-label">Busca Rápida</label>
+                    <div class="relative">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                        <input type="text" id="searchProduto" oninput="renderizarTabela()" placeholder="Buscar por código ou descrição do produto..." class="corp-input !pl-9 py-1.5">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pt-4">
+                <button onclick="abrirResumoClasses()" class="bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 text-indigo-400 px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm flex items-center gap-2">
+                    <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Relatório por Classe
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÁREA DA TABELA -->
+    <main class="flex-1 overflow-auto bg-[#0f172a] relative">
+        <div class="dre-table-wrapper h-full">
+            <table class="dre-table">
+                <thead>
+                    <tr>
+                        <th class="w-20">Código</th>
+                        <th>Produto / Grupo / Classe</th>
+                        <th class="w-28 text-right text-rose-400">Custo Médio</th>
+                        <th class="w-28 text-right text-sky-400 bg-sky-900/20">Prç. Médio Venda</th>
+                        <th class="w-24 text-right text-amber-400 bg-amber-900/20" title="((Venda - Custo) / Venda) * 100">Margem Bruta</th>
+                        <th class="text-center text-slate-400 border-x border-[#334155]">Rateio DRE em Reais (R$) Abatidos da Venda</th>
+                        <th class="w-24 text-right text-emerald-400 bg-emerald-900/20" title="Margem Bruta deduzindo as taxas configuradas">Margem Líquida</th>
+                        <th class="w-32 text-right text-white font-black border-l border-[#334155]">Preço Sugerido (Divisor)</th>
+                    </tr>
+                    <tr>
+                        <th colspan="5" class="p-0 border-none"></th>
+                        <th class="p-0 border-x border-b border-[#334155] bg-[#1e293b]">
+                            <div class="grid grid-cols-4 divide-x divide-[#334155] text-center text-[8px] font-black text-slate-400">
+                                <div class="py-1 text-rose-400">IMPOSTO</div>
+                                <div class="py-1 text-amber-400">COMISSÃO</div>
+                                <div class="py-1 text-blue-400">FRETE</div>
+                                <div class="py-1 text-purple-400">ADMIN/FIXO</div>
+                            </div>
+                        </th>
+                        <th colspan="2" class="p-0 border-none"></th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyProdutos">
+                    <tr><td colspan="8" class="text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="database" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Clique em "Sincronizar Tudo" para importar produtos e vendas.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- MODAL RESUMO CLASSES -->
+    <div id="overlayClasses" class="fixed inset-0 bg-[#0f172a]/80 z-[150] overlay backdrop-blur-sm" onclick="fecharResumoClasses()"></div>
+    <div id="modalClasses" class="fixed inset-0 m-auto w-full max-w-5xl h-[80vh] bg-[#1e293b] z-[200] rounded-2xl shadow-2xl flex flex-col modal-zoom overflow-hidden border border-[#334155]">
+        <div class="bg-[#0f172a] px-6 py-4 flex justify-between items-center shrink-0 border-b border-[#334155]">
+            <h3 class="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="layers" class="w-5 h-5 text-indigo-400"></i> Performance Agrupada por Classe (B1_CLASIC)
+            </h3>
+            <button onclick="fecharResumoClasses()" class="text-slate-400 hover:text-rose-500 transition-colors p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="bg-[#1e293b] p-4 border-b border-[#334155] text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center shrink-0 shadow-sm">
+            Os percentuais de Margem abaixo são ponderados pelo Volume Financeiro Total (Custo e Receita) de cada Classe no período selecionado.
+        </div>
+        <div class="flex-1 overflow-auto bg-[#0f172a] p-6 custom-scroll">
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-[#334155]">
+                        <th class="text-left py-2 px-3 text-[10px] font-black text-slate-400 uppercase">Classe de Produto</th>
+                        <th class="text-center py-2 px-3 text-[10px] font-black text-slate-400 uppercase">Qtd Produtos</th>
+                        <th class="text-right py-2 px-3 text-[10px] font-black text-rose-400 uppercase">Custo Total Base</th>
+                        <th class="text-right py-2 px-3 text-[10px] font-black text-sky-400 uppercase">Receita Total Base</th>
+                        <th class="text-right py-2 px-3 text-[10px] font-black text-amber-400 uppercase">Margem Bruta Média</th>
+                        <th class="text-right py-2 px-3 text-[10px] font-black text-emerald-400 uppercase">Margem Líquida Média</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyResumoClasses" class="divide-y divide-[#1e293b]">
+                    <!-- Injetado via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MODAL ENGENHARIA REVERSA DE PREÇO (SIMULADOR) -->
+    <div id="modalOverlay" class="fixed inset-0 bg-[#0f172a]/80 z-[150] overlay backdrop-blur-sm" onclick="fecharModalProduto()"></div>
+    
+    <div id="productPanel" class="fixed top-0 right-0 h-full w-full max-w-2xl bg-[#0f172a] z-[200] shadow-[-10px_0_30px_rgba(0,0,0,0.5)] slide-over flex flex-col border-l border-[#334155]">
+        
+        <div class="bg-[#1e293b] p-6 shrink-0 relative overflow-hidden flex justify-between items-start text-white border-b border-[#334155]">
+            <i data-lucide="microscope" class="absolute -left-4 -bottom-4 w-32 h-32 text-sky-400 opacity-10 pointer-events-none"></i>
+            <div class="z-10 w-3/4">
+                <span id="pnlGrupo" class="text-[9px] font-black text-sky-300 bg-sky-900/30 px-2 py-0.5 rounded uppercase tracking-widest border border-sky-500/20 mb-2 inline-block">--</span>
+                <span id="pnlClasse" class="text-[9px] font-black text-indigo-300 bg-indigo-900/30 px-2 py-0.5 rounded uppercase tracking-widest border border-indigo-500/20 mb-2 inline-block ml-1">--</span>
+                <h2 id="pnlDescricao" class="text-xl font-black leading-tight text-slate-100">--</h2>
+                <p id="pnlCodigo" class="text-xs font-mono font-bold text-slate-400 mt-1">CÓDIGO: --</p>
+            </div>
+            <button onclick="fecharModalProduto()" class="text-slate-400 hover:text-rose-500 transition-colors p-1 z-10"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 bg-[#0f172a] flex flex-col gap-6 custom-scroll">
+            
+            <div class="flex justify-between items-center bg-[#1e293b] p-4 rounded-xl border border-[#334155] shadow-sm">
+                <div>
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Custo Base Médio</span>
+                    <span id="pnlCusto" class="block text-2xl font-black text-rose-400 tabular-nums">R$ 0,00</span>
+                </div>
+                <div class="text-center px-6 border-x border-[#334155]">
+                    <span class="block text-[10px] font-bold text-sky-400 uppercase tracking-widest">Preço Médio Praticado</span>
+                    <span id="pnlVendaMedia" class="block text-xl font-black text-sky-300 tabular-nums">R$ 0,00</span>
+                </div>
+                <div class="text-right">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Carga Variável + Fixa</span>
+                    <span id="pnlCarga" class="block text-lg font-black text-slate-300 tabular-nums">0.00%</span>
+                </div>
+            </div>
+
+            <div class="bg-[#1e293b] p-5 rounded-xl border border-[#334155] shadow-sm relative overflow-hidden">
+                <h3 class="text-xs font-black text-slate-200 uppercase tracking-widest flex items-center gap-2 border-b border-[#334155] pb-3 mb-4">
+                    <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i> Mesa de Simulação de Venda
+                </h3>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="flex flex-col border-r border-[#334155] pr-6">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Preço Alvo Sugerido (Divisor)</span>
+                        <span id="pnlPrecoSugerido" class="text-3xl font-black text-white tabular-nums text-center mt-1 mb-2">R$ 0,00</span>
+                        <div class="bg-[#0f172a] border border-[#334155] p-2 rounded text-center">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase">Garante a Margem Líquida de</span>
+                            <span id="pnlMargemAlvoTxt" class="block font-black text-emerald-400 text-sm mt-0.5">15.00%</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-sky-400 uppercase tracking-widest text-center flex items-center justify-center gap-1">
+                            <i data-lucide="edit-3" class="w-3 h-3"></i> Digite o Preço a Praticar
+                        </span>
+                        <input type="number" id="inpPrecoManual" step="0.01" class="w-full bg-[#0f172a] border border-sky-500/50 rounded-lg py-2 px-3 text-2xl font-black text-center text-sky-400 outline-none focus:ring-2 focus:ring-sky-500/30 transition-all mt-1 mb-2 shadow-inner" placeholder="R$ 0.00" oninput="calcularEngenhariaReversa()">
+                        
+                        <div class="grid grid-cols-2 gap-2 mt-1">
+                            <div class="bg-amber-500/10 border border-amber-500/30 p-2 rounded text-center">
+                                <span class="text-[8px] font-bold text-slate-400 uppercase">Margem Bruta</span>
+                                <span id="pnlMBReal" class="block font-black text-amber-400 text-xs mt-0.5">--</span>
+                            </div>
+                            <div id="boxMargemReal" class="bg-emerald-500/10 border border-emerald-500/30 p-2 rounded text-center transition-colors">
+                                <span class="text-[8px] font-bold text-slate-400 uppercase">Margem Líquida</span>
+                                <span id="pnlMargemRealTxt" class="block font-black text-emerald-400 text-xs mt-0.5">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="alertPrejuizo" class="hidden mt-4 bg-rose-500/10 border border-rose-500/30 p-3 rounded-lg flex items-center gap-3">
+                    <i data-lucide="alert-octagon" class="w-6 h-6 text-rose-500 shrink-0"></i>
+                    <div>
+                        <h4 class="text-[10px] font-black text-rose-400 uppercase tracking-widest">Atenção: Margem Líquida Negativa</h4>
+                        <p class="text-[10px] font-medium text-rose-300/80 mt-0.5 leading-tight">O preço informado não cobre o CMV e as Despesas configuradas. A venda gera destruição de caixa.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-[#1e293b] p-5 rounded-xl border border-[#334155] shadow-sm">
+                <h3 class="text-xs font-black text-slate-200 uppercase tracking-widest flex items-center gap-2 border-b border-[#334155] pb-3 mb-4">
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-purple-400"></i> Desmembramento da Venda (Rateio)
+                </h3>
+                
+                <div class="w-full h-8 flex rounded-lg overflow-hidden shadow-inner mb-4 bg-[#0f172a] border border-[#334155]" id="visualBar"></div>
+                <div class="grid grid-cols-2 gap-3" id="visualLegenda"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let apiHost = window.location.hostname;
+        if (!apiHost || apiHost.includes('goog') || apiHost === 'localhost' || apiHost === '') { apiHost = '177.70.102.16'; }
+        const API_BASE_URL = `http://${apiHost}:3001/api`;
+
+        let productsDb = [];
+        let salesMap = new Map(); 
+        let activeProduct = null;
+
+        const fmt = v => parseFloat(v || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        const num = v => parseFloat(v) || 0;
+
+        let toastTimer;
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            const icon = document.getElementById('toastIcon');
+            
+            document.getElementById('toastMessage').innerText = msg;
+            
+            if(isError) {
+                toast.classList.replace('border-slate-700', 'border-rose-500');
+                icon.setAttribute('data-lucide', 'alert-triangle');
+                icon.classList.replace('text-sky-400', 'text-rose-500');
+            } else {
+                toast.classList.replace('border-rose-500', 'border-slate-700');
+                icon.setAttribute('data-lucide', 'info');
+                icon.classList.replace('text-rose-500', 'text-sky-400');
+            }
+            lucide.createIcons({root: toast});
+
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            if(toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { toast.classList.add('translate-y-[-100px]', 'opacity-0'); }, 4000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            
+            const dtAte = document.getElementById('dtAteVenda');
+            const dtDe = document.getElementById('dtDeVenda');
+            
+            let hoje = new Date();
+            
+            dtAte.valueAsDate = hoje;
+            dtDe.valueAsDate = new Date(hoje.getFullYear(), 0, 1); 
+        });
+
+        function showLoading(show, title = 'Sincronizando...', desc = 'Aguarde...') {
+            const el = document.getElementById('loadingOverlay');
+            document.getElementById('loadingTitle').innerText = title;
+            document.getElementById('loadingDesc').innerText = desc;
+            
+            if(show) { 
+                el.classList.remove('hidden'); 
+                setTimeout(() => el.classList.remove('opacity-0'), 10);
+            } 
+            else { 
+                el.classList.add('opacity-0'); 
+                setTimeout(() => el.classList.add('hidden'), 300);
+            }
+        }
+
+        function getVariaveisGlobais() {
+            return {
+                imp: num(document.getElementById('glbImp').value),
+                com: num(document.getElementById('glbCom').value),
+                frete: num(document.getElementById('glbFrete').value),
+                fixo: num(document.getElementById('glbFixo').value),
+                lucro: num(document.getElementById('glbLucro').value)
+            };
+        }
+
+        async function sincronizarBaseGeral() {
+            const btn = document.getElementById('btnSync');
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Processando...`;
+            btn.disabled = true;
+            lucide.createIcons({root: btn.parentElement});
+            
+            const deData = document.getElementById('dtDeVenda').value.replace(/-/g, '');
+            const ateData = document.getElementById('dtAteVenda').value.replace(/-/g, '');
+
+            try {
+                showLoading(true, 'Consultando Estoque (SB1/SB2)', 'Baixando cadastro e custo médio...');
+                const resProd = await fetch(`${API_BASE_URL}/produtos/01?_t=${new Date().getTime()}`);
+                if(!resProd.ok) throw new Error("Erro na API de Produtos");
+                const jsonProd = await resProd.json();
+                
+                showLoading(true, 'Processando Faturamento (SD2)', 'Calculando preços médios de venda do período...');
+                const resSales = await fetch(`${API_BASE_URL}/estatisticas-vendas/consolidado?deData=${deData}&ateData=${ateData}&_t=${new Date().getTime()}`);
+                const jsonSales = resSales.ok ? await resSales.json() : { data: [] };
+
+                if(jsonSales.data && jsonSales.data.length === 0) {
+                    showToast('Aviso: Nenhuma venda faturada encontrada na SD2 para o período selecionado.', true);
+                }
+
+                salesMap.clear();
+                (jsonSales.data || []).forEach(s => {
+                    salesMap.set(String(s.CodigoProduto).trim(), {
+                        precoMedio: parseFloat(s.PrecoMedioVenda) || 0,
+                        qtdVenda: parseFloat(s.QuantidadeTotal) || 0
+                    });
+                });
+
+                productsDb = [];
+                let grupos = new Set();
+
+                (jsonProd.data || []).forEach((row, idx) => {
+                    const grp = row.grupo || 'GERAL';
+                    const cod = String(row.codigo).trim();
+                    grupos.add(grp);
+                    
+                    const salesData = salesMap.get(cod) || { precoMedio: 0, qtdVenda: 0 };
+                    let classeNome = row.classe;
+                    if(classeNome === 'VAZIO_ERP') classeNome = 'SEM CLASSE';
+                    
+                    productsDb.push({
+                        id: idx,
+                        codigo: cod,
+                        nome: row.nome,
+                        grupo: grp,
+                        classe: classeNome,
+                        isClasseVazia: row.classe === 'VAZIO_ERP',
+                        custo: parseFloat(row.custo) || 0,
+                        precoMedioVenda: salesData.precoMedio,
+                        qtdVendida: salesData.qtdVenda,
+                        precoSugerido: 0,
+                        margemSugerida: 0
+                    });
+                });
+
+                const selGrp = document.getElementById('filterGrupo');
+                selGrp.innerHTML = '<option value="ALL">Todos os Grupos</option>';
+                Array.from(grupos).sort().forEach(g => selGrp.innerHTML += `<option value="${g}">${g}</option>`);
+
+                recalcularMassa();
+                showToast(`Sincronização Concluída! ${productsDb.length} produtos carregados.`);
+
+            } catch (err) {
+                console.error(err);
+                showToast("Falha de Conexão com o Servidor Node.js.", true);
+            } finally {
+                btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sincronizar Tudo`;
+                btn.disabled = false;
+                lucide.createIcons({root: btn.parentElement});
+                showLoading(false);
+            }
+        }
+
+        function recalcularMassa() {
+            if(productsDb.length === 0) return;
+            const vars = getVariaveisGlobais();
+            const cargaTotal = vars.imp + vars.com + vars.frete + vars.fixo + vars.lucro;
+            
+            const divisor = cargaTotal >= 100 ? 0 : (100 - cargaTotal) / 100;
+
+            productsDb.forEach(p => {
+                if (divisor > 0 && p.custo > 0) {
+                    p.precoSugerido = p.custo / divisor;
+                    p.margemSugerida = vars.lucro;
+                } else {
+                    p.precoSugerido = 0;
+                    p.margemSugerida = 0;
+                }
+            });
+            
+            renderizarTabela();
+            if(activeProduct) calcularEngenhariaReversa();
+        }
+
+        function renderizarTabela() {
+            const term = document.getElementById('searchProduto').value.toUpperCase().trim();
+            const grp = document.getElementById('filterGrupo').value;
+            const apenasComCusto = document.getElementById('chkApenasComCusto').checked;
+            const vars = getVariaveisGlobais();
+            
+            const tbody = document.getElementById('tbodyProdutos');
+            let html = '';
+
+            let filtered = productsDb.filter(p => {
+                let matchGrp = (grp === 'ALL' || p.grupo === grp);
+                let matchTerm = !term || p.codigo.includes(term) || p.nome.toUpperCase().includes(term) || p.classe.toUpperCase().includes(term);
+                let matchCusto = apenasComCusto ? p.custo > 0 : true;
+                return matchGrp && matchTerm && matchCusto;
+            });
+
+            if(filtered.length === 0 && productsDb.length > 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="search-x" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Nenhum produto atende aos filtros atuais.</td></tr>`;
+                lucide.createIcons({root: tbody});
+                return;
+            }
+
+            filtered.slice(0, 300).forEach(p => {
+                const prcTxt = p.precoSugerido > 0 ? fmt(p.precoSugerido) : '--';
+                const corPrc = p.precoSugerido > 0 ? 'text-white' : 'text-slate-500';
+                
+                const prcVendaTxt = p.precoMedioVenda > 0 ? fmt(p.precoMedioVenda) : '--';
+                const corPrcVenda = p.precoMedioVenda > 0 ? 'text-sky-400' : 'text-slate-500';
+
+                let precoReferencia = p.precoMedioVenda > 0 ? p.precoMedioVenda : p.precoSugerido;
+                let isSugerido = p.precoMedioVenda <= 0;
+
+                let mbPerc = 0, mlPerc = 0;
+                let vImp = 0, vCom = 0, vFrete = 0, vFixo = 0;
+                let mbColor = 'text-slate-500', mlColor = 'text-slate-500';
+                
+                let classeColor = p.isClasseVazia ? 'text-rose-400 bg-rose-500/10 border-rose-500/30' : 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30';
+                let classeLabel = p.isClasseVazia ? 'SEM CLASSE <span class="text-[7px] text-rose-500 ml-0.5">[VAZIO ERP]</span>' : p.classe;
+
+                if (precoReferencia > 0) {
+                    mbPerc = ((precoReferencia - p.custo) / precoReferencia) * 100;
+                    mbColor = mbPerc > 0 ? 'text-amber-400' : 'text-rose-500';
+                    
+                    vImp = precoReferencia * (vars.imp / 100);
+                    vCom = precoReferencia * (vars.com / 100);
+                    vFrete = precoReferencia * (vars.frete / 100);
+                    vFixo = precoReferencia * (vars.fixo / 100);
+                    
+                    const lucroLiq = precoReferencia - p.custo - vImp - vCom - vFrete - vFixo;
+                    mlPerc = (lucroLiq / precoReferencia) * 100;
+                    mlColor = mlPerc > 0 ? 'text-emerald-400' : 'text-rose-500';
+                }
+
+                html += `
+                    <tr onclick="abrirModalProduto(${p.id})">
+                        <td class="font-mono text-slate-400 font-bold">${p.codigo}</td>
+                        <td class="truncate max-w-[220px]" title="${p.nome}">
+                            <span class="block text-[11px] font-bold text-slate-200">${p.nome}</span>
+                            <div class="flex gap-1 mt-1 items-center">
+                                <span class="bg-[#1e293b] text-slate-400 px-1 py-0.5 rounded text-[8px] border border-[#334155] font-bold">${p.grupo}</span>
+                                <span class="${classeColor} px-1 py-0.5 rounded text-[8px] border font-bold flex items-center">${classeLabel}</span>
+                            </div>
+                        </td>
+                        <td class="text-right text-rose-400 tabular-nums font-bold">${fmt(p.custo)}</td>
+                        <td class="text-right ${corPrcVenda} bg-sky-900/10 tabular-nums font-black">${prcVendaTxt}</td>
+                        <td class="text-right ${mbColor} bg-amber-900/10 tabular-nums font-black text-xs">
+                            ${precoReferencia > 0 ? mbPerc.toFixed(1)+'%' : '--'}
+                            ${isSugerido && precoReferencia > 0 ? '<span class="block text-[8px] font-normal text-slate-500 mt-0.5">(Sugerido)</span>' : ''}
+                        </td>
+                        <td class="p-0 border-x border-[#334155]">
+                            <div class="grid grid-cols-4 divide-x divide-[#334155] h-full text-center text-[9px] tabular-nums font-bold">
+                                <div class="py-2 text-rose-400/80 bg-rose-500/5 flex flex-col justify-center">${precoReferencia > 0 ? fmt(vImp) : '-'}</div>
+                                <div class="py-2 text-amber-400/80 bg-amber-500/5 flex flex-col justify-center">${precoReferencia > 0 ? fmt(vCom) : '-'}</div>
+                                <div class="py-2 text-blue-400/80 bg-blue-500/5 flex flex-col justify-center">${precoReferencia > 0 ? fmt(vFrete) : '-'}</div>
+                                <div class="py-2 text-purple-400/80 bg-purple-500/5 flex flex-col justify-center">${precoReferencia > 0 ? fmt(vFixo) : '-'}</div>
+                            </div>
+                        </td>
+                        <td class="text-right ${mlColor} bg-emerald-900/10 tabular-nums font-black text-xs">
+                            ${precoReferencia > 0 ? mlPerc.toFixed(1)+'%' : '--'}
+                            ${isSugerido && precoReferencia > 0 ? '<span class="block text-[8px] font-normal text-slate-500 mt-0.5">(Sugerido)</span>' : ''}
+                        </td>
+                        <td class="text-right ${corPrc} tabular-nums font-black text-sm border-l border-[#334155] bg-[#1e293b]/50">${prcTxt}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function abrirResumoClasses() {
+            if (productsDb.length === 0) return showToast("Sincronize a base de dados primeiro.", true);
+            
+            const apenasComCusto = document.getElementById('chkApenasComCusto').checked;
+            const vars = getVariaveisGlobais();
+            
+            let mapaClasses = new Map();
+
+            productsDb.forEach(p => {
+                if (apenasComCusto && p.custo <= 0) return;
+                
+                const key = `${p.grupo} - ${p.classe}`;
+                
+                if (!mapaClasses.has(key)) {
+                    mapaClasses.set(key, { grupo: p.grupo, classe: p.classe, isVazia: p.isClasseVazia, qtdProd: 0, receitaTotal: 0, custoTotal: 0, despesaTotal: 0 });
+                }
+                
+                let rep = mapaClasses.get(key);
+                rep.qtdProd++;
+                
+                let valVenda = p.precoMedioVenda > 0 ? p.precoMedioVenda : 0;
+                
+                if (valVenda > 0 && p.custo > 0) {
+                    rep.receitaTotal += valVenda;
+                    rep.custoTotal += p.custo;
+                    
+                    let deducoes = valVenda * ((vars.imp + vars.com + vars.frete + vars.fixo) / 100);
+                    rep.despesaTotal += deducoes;
+                }
+            });
+
+            let html = '';
+            let rTotalGeral = 0, cTotalGeral = 0, dTotalGeral = 0, qtdGeral = 0;
+
+            let lista = Array.from(mapaClasses.values()).sort((a, b) => b.receitaTotal - a.receitaTotal);
+
+            lista.forEach(dados => {
+                let mb = 0, ml = 0;
+                let mbCor = 'text-slate-500', mlCor = 'text-slate-500';
+
+                if (dados.receitaTotal > 0) {
+                    mb = ((dados.receitaTotal - dados.custoTotal) / dados.receitaTotal) * 100;
+                    ml = ((dados.receitaTotal - dados.custoTotal - dados.despesaTotal) / dados.receitaTotal) * 100;
+                    
+                    mbCor = mb > 0 ? 'text-amber-400' : 'text-rose-500';
+                    mlCor = ml > 0 ? 'text-emerald-400' : 'text-rose-500';
+                }
+
+                let clColor = dados.isVazia ? 'text-rose-400' : 'text-indigo-400';
+                let clNome = dados.isVazia ? 'SEM CLASSE [VAZIO ERP]' : dados.classe;
+
+                html += `
+                    <tr class="hover:bg-[#1e293b] transition-colors">
+                        <td class="text-left py-3 px-3 text-xs">
+                            <span class="font-bold text-slate-500 text-[9px] block">${dados.grupo}</span>
+                            <span class="font-black ${clColor}">${clNome}</span>
+                        </td>
+                        <td class="text-center py-3 px-3 text-xs font-bold text-slate-400">${dados.qtdProd}</td>
+                        <td class="text-right py-3 px-3 text-xs font-bold text-rose-400 tabular-nums">${fmt(dados.custoTotal)}</td>
+                        <td class="text-right py-3 px-3 text-xs font-bold text-sky-400 tabular-nums">${fmt(dados.receitaTotal)}</td>
+                        <td class="text-right py-3 px-3 text-sm font-black ${mbCor} tabular-nums">${dados.receitaTotal > 0 ? mb.toFixed(2)+'%' : '--'}</td>
+                        <td class="text-right py-3 px-3 text-sm font-black ${mlCor} tabular-nums">${dados.receitaTotal > 0 ? ml.toFixed(2)+'%' : '--'}</td>
+                    </tr>
+                `;
+
+                rTotalGeral += dados.receitaTotal;
+                cTotalGeral += dados.custoTotal;
+                dTotalGeral += dados.despesaTotal;
+                qtdGeral += dados.qtdProd;
+            });
+
+            let mbG = 0, mlG = 0;
+            if(rTotalGeral > 0) {
+                mbG = ((rTotalGeral - cTotalGeral) / rTotalGeral) * 100;
+                mlG = ((rTotalGeral - cTotalGeral - dTotalGeral) / rTotalGeral) * 100;
+            }
+
+            html += `
+                <tr class="bg-[#1e293b] border-t border-[#334155]">
+                    <td class="text-left py-3 px-3 text-xs font-black text-white uppercase">Total Consolidado (Com Venda)</td>
+                    <td class="text-center py-3 px-3 text-xs font-black text-white">${qtdGeral}</td>
+                    <td class="text-right py-3 px-3 text-xs font-black text-rose-400 tabular-nums">${fmt(cTotalGeral)}</td>
+                    <td class="text-right py-3 px-3 text-xs font-black text-sky-400 tabular-nums">${fmt(rTotalGeral)}</td>
+                    <td class="text-right py-3 px-3 text-sm font-black text-white tabular-nums">${rTotalGeral > 0 ? mbG.toFixed(2)+'%' : '--'}</td>
+                    <td class="text-right py-3 px-3 text-base font-black text-emerald-400 tabular-nums">${rTotalGeral > 0 ? mlG.toFixed(2)+'%' : '--'}</td>
+                </tr>
+            `;
+
+            document.getElementById('tbodyResumoClasses').innerHTML = html;
+            
+            document.getElementById('overlayClasses').classList.add('active');
+            document.getElementById('modalClasses').classList.add('active');
+        }
+
+        function fecharResumoClasses() {
+            document.getElementById('modalClasses').classList.remove('active');
+            document.getElementById('overlayClasses').classList.remove('active');
+        }
+
+        function abrirModalProduto(id) {
+            activeProduct = productsDb.find(p => p.id === id);
+            if(!activeProduct) return;
+
+            document.getElementById('pnlGrupo').innerText = activeProduct.grupo;
+            document.getElementById('pnlClasse').innerText = activeProduct.classe;
+            if(activeProduct.isClasseVazia) {
+                document.getElementById('pnlClasse').classList.replace('text-indigo-300', 'text-rose-300');
+                document.getElementById('pnlClasse').classList.replace('bg-indigo-900/30', 'bg-rose-900/30');
+                document.getElementById('pnlClasse').classList.replace('border-indigo-500/20', 'border-rose-500/20');
+            } else {
+                document.getElementById('pnlClasse').classList.replace('text-rose-300', 'text-indigo-300');
+                document.getElementById('pnlClasse').classList.replace('bg-rose-900/30', 'bg-indigo-900/30');
+                document.getElementById('pnlClasse').classList.replace('border-rose-500/20', 'border-indigo-500/20');
+            }
+
+            document.getElementById('pnlDescricao').innerText = activeProduct.nome;
+            document.getElementById('pnlCodigo').innerText = `CÓDIGO: ${activeProduct.codigo}`;
+            document.getElementById('pnlCusto').innerText = fmt(activeProduct.custo);
+            document.getElementById('pnlVendaMedia').innerText = activeProduct.precoMedioVenda > 0 ? fmt(activeProduct.precoMedioVenda) : '--';
+            
+            const vars = getVariaveisGlobais();
+            document.getElementById('pnlCarga').innerText = (vars.imp + vars.com + vars.frete + vars.fixo).toFixed(2) + '%';
+            document.getElementById('pnlPrecoSugerido').innerText = activeProduct.precoSugerido > 0 ? fmt(activeProduct.precoSugerido) : 'INVÁLIDO';
+            document.getElementById('pnlMargemAlvoTxt').innerText = vars.lucro.toFixed(2) + '%';
+
+            let initVal = activeProduct.precoMedioVenda > 0 ? activeProduct.precoMedioVenda : activeProduct.precoSugerido;
+            document.getElementById('inpPrecoManual').value = initVal > 0 ? initVal.toFixed(2) : '';
+            
+            calcularEngenhariaReversa();
+
+            document.getElementById('modalOverlay').classList.add('active');
+            document.getElementById('productPanel').classList.add('active');
+        }
+
+        function fecharModalProduto() {
+            document.getElementById('productPanel').classList.remove('active');
+            document.getElementById('modalOverlay').classList.remove('active');
+            activeProduct = null;
+        }
+
+        function calcularEngenhariaReversa() {
+            if(!activeProduct) return;
+            
+            const vars = getVariaveisGlobais();
+            let precoBase = num(document.getElementById('inpPrecoManual').value);
+            
+            if(precoBase <= 0) precoBase = activeProduct.precoSugerido;
+
+            const txtMb = document.getElementById('pnlMBReal');
+            const boxMargem = document.getElementById('boxMargemReal');
+            const txtMargem = document.getElementById('pnlMargemRealTxt');
+            const alertPrej = document.getElementById('alertPrejuizo');
+
+            if(precoBase <= 0) {
+                txtMb.innerText = '--'; txtMargem.innerText = '--';
+                desenharBarraVisual(0, vars, 0, 0);
+                return;
+            }
+
+            const vCusto = activeProduct.custo;
+            const vImp = precoBase * (vars.imp / 100);
+            const vCom = precoBase * (vars.com / 100);
+            const vFrete = precoBase * (vars.frete / 100);
+            const vFixo = precoBase * (vars.fixo / 100);
+            
+            const margemBrutaRs = precoBase - vCusto;
+            const mbPerc = (margemBrutaRs / precoBase) * 100;
+            
+            const lucroReais = margemBrutaRs - vImp - vCom - vFrete - vFixo;
+            const margemRealPerc = (lucroReais / precoBase) * 100;
+
+            txtMb.innerText = mbPerc.toFixed(2) + '%';
+            txtMb.className = `block font-black text-xs mt-0.5 ${mbPerc > 0 ? 'text-amber-400' : 'text-rose-500'}`;
+            
+            txtMargem.innerText = margemRealPerc.toFixed(2) + '%';
+            
+            if(margemRealPerc < 0) {
+                boxMargem.className = "bg-rose-500/10 border border-rose-500/30 p-2 rounded text-center transition-colors";
+                txtMargem.className = "block font-black text-rose-500 text-xs mt-0.5";
+                alertPrej.classList.remove('hidden'); alertPrej.classList.add('flex');
+            } else {
+                boxMargem.className = "bg-emerald-500/10 border border-emerald-500/30 p-2 rounded text-center transition-colors";
+                txtMargem.className = "block font-black text-emerald-400 text-xs mt-0.5";
+                alertPrej.classList.add('hidden'); alertPrej.classList.remove('flex');
+            }
+
+            desenharBarraVisual(precoBase, vars, vCusto, lucroReais);
+        }
+
+        function desenharBarraVisual(preco, vars, custo, lucroRs) {
+            const bar = document.getElementById('visualBar');
+            const leg = document.getElementById('visualLegenda');
+
+            if(preco <= 0) { bar.innerHTML = ''; leg.innerHTML = ''; return; }
+
+            const pCusto = (custo / preco) * 100;
+            const pImp = vars.imp;
+            const pCom = vars.com;
+            const pFrete = vars.frete;
+            const pFixo = vars.fixo;
+            const pLucro = (lucroRs / preco) * 100;
+
+            const wCusto = pCusto > 100 ? 100 : pCusto;
+            const wLucro = pLucro < 0 ? 0 : pLucro;
+
+            bar.innerHTML = `
+                <div class="visual-bar-segment h-full bg-slate-500" style="width: ${wCusto}%"></div>
+                <div class="visual-bar-segment h-full bg-rose-500" style="width: ${pImp}%"></div>
+                <div class="visual-bar-segment h-full bg-amber-500" style="width: ${pCom}%"></div>
+                <div class="visual-bar-segment h-full bg-blue-500" style="width: ${pFrete}%"></div>
+                <div class="visual-bar-segment h-full bg-purple-500" style="width: ${pFixo}%"></div>
+                <div class="visual-bar-segment h-full ${pLucro < 0 ? 'bg-red-900' : 'bg-emerald-500'}" style="width: ${wLucro}%"></div>
+            `;
+
+            leg.innerHTML = `
+                <div class="border-l-4 border-slate-500 pl-2 bg-[#0f172a] p-2 rounded">
+                    <span class="block text-[9px] font-black text-slate-500 uppercase">1. Custo (SB2)</span>
+                    <span class="block font-black text-sm text-slate-300 mt-0.5">${fmt(custo)} <span class="text-[9px] font-bold text-slate-500">(${pCusto.toFixed(1)}%)</span></span>
+                </div>
+                <div class="border-l-4 border-rose-500 pl-2 bg-[#0f172a] p-2 rounded">
+                    <span class="block text-[9px] font-black text-rose-500 uppercase">2. Impostos</span>
+                    <span class="block font-black text-sm text-slate-300 mt-0.5">${fmt(preco * (pImp/100))} <span class="text-[9px] font-bold text-slate-500">(${pImp.toFixed(1)}%)</span></span>
+                </div>
+                <div class="border-l-4 border-amber-500 pl-2 bg-[#0f172a] p-2 rounded">
+                    <span class="block text-[9px] font-black text-amber-500 uppercase">3. Comissões</span>
+                    <span class="block font-black text-sm text-slate-300 mt-0.5">${fmt(preco * (pCom/100))} <span class="text-[9px] font-bold text-slate-500">(${pCom.toFixed(1)}%)</span></span>
+                </div>
+                <div class="border-l-4 border-blue-500 pl-2 bg-[#0f172a] p-2 rounded">
+                    <span class="block text-[9px] font-black text-blue-500 uppercase">4. Frete Logística</span>
+                    <span class="block font-black text-sm text-slate-300 mt-0.5">${fmt(preco * (pFrete/100))} <span class="text-[9px] font-bold text-slate-500">(${pFrete.toFixed(1)}%)</span></span>
+                </div>
+                <div class="border-l-4 border-purple-500 pl-2 bg-[#0f172a] p-2 rounded">
+                    <span class="block text-[9px] font-black text-purple-500 uppercase">5. Desp. Fixa / Admin</span>
+                    <span class="block font-black text-sm text-slate-300 mt-0.5">${fmt(preco * (pFixo/100))} <span class="text-[9px] font-bold text-slate-500">(${pFixo.toFixed(1)}%)</span></span>
+                </div>
+                <div class="border-l-4 ${pLucro < 0 ? 'border-rose-500 bg-rose-500/10' : 'border-emerald-500 bg-emerald-500/10'} pl-2 p-2 rounded flex justify-between items-center shadow-sm">
+                    <span class="block text-[9px] font-black ${pLucro < 0 ? 'text-rose-500' : 'text-emerald-500'} uppercase">Resultado Líquido</span>
+                    <span class="block font-black text-sm ${pLucro < 0 ? 'text-rose-400' : 'text-emerald-400'}">${fmt(lucroRs)} <span class="text-[9px] font-bold opacity-70">(${pLucro.toFixed(1)}%)</span></span>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
