@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Montagem Carga OMS - Comlub ERP</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        comlub: { blue: '#003865', yellow: '#FFCB05', slate: '#0f172a' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f8fafc; overflow: hidden; font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .erp-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        .erp-table th { background-color: #f8fafc; border-bottom: 1px solid #cbd5e1; border-top: 1px solid #e2e8f0; font-weight: 600; color: #475569; padding: 10px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 20; }
+        .erp-table td { border-bottom: 1px solid #e2e8f0; padding: 10px 16px; color: #1e293b; font-size: 11px; }
+        .erp-table tbody tr:hover { background-color: #f1f5f9; }
+
+        .btn-outline { background-color: #ffffff; border: 1px solid #cbd5e1; color: #475569; transition: all 0.15s ease; border-radius: 4px; }
+        .btn-outline:hover { background-color: #f8fafc; border-color: #94a3b8; color: #1e293b; }
+
+        .btn-solid { background-color: #0f172a; color: #ffffff; border: 1px solid #020617; transition: all 0.15s ease; border-radius: 4px; }
+        .btn-solid:hover { background-color: #1e293b; }
+
+        .badge-status { padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid; display: inline-block; text-align: center; min-width: 80px;}
+        .status-faturado { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+        .status-liberado { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .status-bloq-estoque { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+        .status-bloq-credito { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+        .status-bloq-duplo { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
+        .status-liberado-minimo { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+        
+        .loader-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .oms-tree-wrapper { padding-left: 10px; }
+        .tree-line { border-left: 1px dashed #cbd5e1; margin-left: 10px; padding-left: 14px; margin-top: 4px; margin-bottom: 4px; }
+        .oms-node-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: background 0.2s; user-select: none; }
+        .oms-node-header:hover { background-color: #e2e8f0; }
+        .oms-node-active { background-color: #eff6ff !important; border: 1px solid #bfdbfe; }
+        
+        .badge-retido { background-color: #fff1f2; color: #ef4444; border: 1px solid #fecaca; }
+        .badge-peso { color: #003865; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col font-sans relative antialiased">
+
+    <!-- TELA DE LOGIN (MODIFICADA COM VERIFICAÇÃO DE SESSÃO) -->
+    <div id="loginScreen" class="fixed inset-0 z-[999] flex bg-cover bg-center bg-no-repeat transition-opacity duration-500" style="background-image: url('leme_roteirizacao_login.jpg');">
+        <div class="w-full h-full flex items-center justify-end px-6 sm:px-12 lg:px-24 bg-slate-900/10 backdrop-blur-[2px]">
+            <div class="w-full max-w-[400px] bg-[#0f172a]/75 backdrop-blur-md border border-slate-700/50 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-black text-white tracking-tight">Login</h2>
+                    <p class="text-[11px] font-bold text-[#FFCB05] mt-1 uppercase tracking-widest">Módulo OMS - Formação de Carga LEME</p>
+                </div>
+                <form onsubmit="handleLogin(event)" class="flex flex-col gap-5">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-1.5">Usuário</label>
+                        <input type="text" id="loginUser" required class="w-full bg-slate-900/50 border border-slate-600 text-white text-sm rounded-lg focus:ring-[#FFCB05] focus:border-[#FFCB05] block p-3 outline-none font-medium transition-colors placeholder:text-slate-500" placeholder="Digite seu usuário">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-1.5">Senha</label>
+                        <input type="password" id="loginPass" required class="w-full bg-slate-900/50 border border-slate-600 text-white text-sm rounded-lg focus:ring-[#FFCB05] focus:border-[#FFCB05] block p-3 outline-none font-medium transition-colors placeholder:text-slate-500" placeholder="••••••••">
+                    </div>
+                    <div id="loginError" class="hidden text-rose-400 text-[11px] font-bold bg-rose-950/60 p-3 rounded-lg border border-rose-800/50 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="alert-circle" class="w-4 h-4"></i> Credenciais inválidas.
+                    </div>
+                    <button type="submit" class="mt-4 w-full bg-[#003865] hover:bg-[#002b4d] border border-[#004a80] text-white font-black py-3.5 rounded-lg transition-all uppercase tracking-widest text-[11px] shadow-lg hover:shadow-xl flex justify-center items-center gap-2">
+                        Acessar Roteirização <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </form>
+                <div class="mt-8 pt-6 border-t border-slate-700/50 text-center">
+                    <div class="flex items-baseline justify-center select-none opacity-60">
+                        <span class="text-white font-black text-lg">com</span><span class="text-[#FFCB05] font-black text-lg">lub</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SELETOR INICIAL DA FILIAL -->
+    <div id="filialModal" class="fixed inset-0 z-[300] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0 pointer-events-none">
+        <div class="bg-white rounded-md shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-transform duration-300">
+            <div class="bg-[#0f172a] px-6 py-5 flex items-center gap-3">
+                <i data-lucide="building-2" class="text-comlub-yellow w-6 h-6"></i>
+                <div>
+                    <h2 class="text-white font-bold tracking-wide uppercase text-sm">Selecione a Filial</h2>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">Módulo OMS - Formação de Carga</p>
+                </div>
+            </div>
+            <div class="p-6 flex flex-col gap-3">
+                <button onclick="selecionarFilial('01', 'ALAGOAS')" class="w-full text-left px-5 py-3.5 border border-slate-200 rounded shadow-sm hover:bg-blue-50 hover:border-comlub-blue focus:outline-none transition-all flex justify-between items-center group">
+                    <div>
+                        <span class="block font-black text-slate-800 text-sm group-hover:text-comlub-blue transition-colors">01 - FILIAL ALAGOAS</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Matriz Operacional</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-comlub-blue transition-colors"></i>
+                </button>
+                <button onclick="selecionarFilial('02', 'PERNAMBUCO')" class="w-full text-left px-5 py-3.5 border border-slate-200 rounded shadow-sm hover:bg-blue-50 hover:border-comlub-blue focus:outline-none transition-all flex justify-between items-center group">
+                    <div>
+                        <span class="block font-black text-slate-800 text-sm group-hover:text-comlub-blue transition-colors">02 - FILIAL PERNAMBUCO</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Centro de Distribuição PE</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-comlub-blue transition-colors"></i>
+                </button>
+                <button onclick="selecionarFilial('03', 'SERGIPE')" class="w-full text-left px-5 py-3.5 border border-slate-200 rounded shadow-sm hover:bg-blue-50 hover:border-comlub-blue focus:outline-none transition-all flex justify-between items-center group">
+                    <div>
+                        <span class="block font-black text-slate-800 text-sm group-hover:text-comlub-blue transition-colors">03 - FILIAL SERGIPE</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Centro de Distribuição SE</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-comlub-blue transition-colors"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO TOAST -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-[200] bg-slate-900 text-white text-xs font-bold uppercase tracking-widest px-4 py-3 rounded shadow-2xl border border-slate-700 flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="info" class="w-4 h-4 text-comlub-yellow" id="toastIcon"></i>
+        <span id="toastMessage">Notificação</span>
+    </div>
+
+    <!-- OVERLAY DE CARREGAMENTO -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex flex-col items-center justify-center hidden">
+        <div class="bg-white px-8 py-6 rounded shadow-xl flex items-center gap-4 min-w-[320px] border border-slate-200">
+            <i data-lucide="loader-2" class="w-6 h-6 text-comlub-blue loader-spin"></i>
+            <div>
+                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">A Sincronizar OMS</h3>
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">A Ler Estrutura do Banco (DA8/DA9/DA7)...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CABEÇALHO -->
+    <header class="bg-[#0f172a] border-b border-slate-800 sticky top-0 z-40 px-6 py-3 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="flex flex-col items-end w-fit select-none">
+                <div class="flex items-baseline" style="font-family: 'Inter', sans-serif; letter-spacing: -0.05em; line-height: 1;">
+                    <span class="text-white font-black text-xl">c</span>
+                    <span class="text-white font-black text-xl relative">
+                        o
+                        <svg class="absolute w-1.5 h-1.5 text-comlub-yellow" style="top: 45%; left: 50%; transform: translate(-50%, -50%);" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                    </span>
+                    <span class="text-white font-black text-xl pr-0.5">m</span>
+                    <span class="text-comlub-yellow font-black text-xl">lub</span>
+                </div>
+                <span class="text-comlub-yellow font-bold text-[5px] tracking-[0.2em] -mt-0.5 pr-0.5">DISTRIBUIDORA</span>
+            </div>
+            
+            <div class="hidden sm:flex items-center gap-2 border-l border-slate-700 pl-3 ml-1">
+                <h1 class="text-sm font-bold text-white uppercase tracking-wider">Montagem Carga <span class="text-comlub-yellow">OMS</span></h1>
+                <span class="text-[9px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-bold uppercase tracking-widest border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors ml-2" onclick="abrirModalFilial()" id="nomeFilialCabecalho" title="Trocar Filial">--</span>
+            </div>
+        </div>
+        <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-white transition-all p-1.5 rounded hover:bg-slate-800" title="Fechar Módulo">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <!-- BARRA DE SELEÇÃO E CONTROLES -->
+    <div class="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 shrink-0 relative z-30 shadow-sm">
+        <div class="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+            <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded px-2.5 py-1">
+                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Emissão:</span>
+                <input type="date" id="dateStart" onchange="atualizarCargaModalData()" class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer">
+                <span class="text-[10px] text-slate-400 font-bold">à</span>
+                <input type="date" id="dateEnd" onchange="atualizarCargaModalData()" class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer">
+            </div>
+
+            <div class="h-4 w-px bg-slate-300 mx-1 hidden sm:block"></div>
+
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Documentação:</span>
+                <div class="inline-flex rounded-md shadow-sm" role="group">
+                    <button type="button" id="btn-carga-doc-all" onclick="toggleCargaDocFilter('all')" class="bg-white text-slate-600 border border-slate-300 rounded-l px-3.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors hover:bg-slate-50">Todos</button>
+                    <button type="button" id="btn-carga-doc-invoiced" onclick="toggleCargaDocFilter('invoiced')" class="bg-white text-slate-600 border-y border-r border-slate-300 px-3.5 py-1 text-[10px] font-bold uppercase tracking-wide hover:bg-slate-50 transition-colors">Faturados</button>
+                    <button type="button" id="btn-carga-doc-pending" onclick="toggleCargaDocFilter('pending')" class="bg-comlub-blue text-white border-y border-r border-comlub-blue rounded-r px-3.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors">Pendentes</button>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="fetchLogisticsData()" class="btn-outline px-3 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm flex items-center gap-1.5 self-stretch lg:self-auto justify-center rounded">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sincronizar Roteirização
+        </button>
+    </div>
+
+    <!-- ÁREA DE EXPEDIÇÃO (SPLIT VIEW) -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Esquerda: ÁRVORE DO OMS -->
+        <div class="w-[35%] bg-slate-50 border-r border-slate-200 flex flex-col min-w-[320px] relative z-10">
+            <div class="px-4 py-3 border-b border-slate-200 bg-white flex justify-between items-center shrink-0 shadow-sm z-10">
+                <span class="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="network" class="w-4 h-4 text-comlub-blue"></i> Árvore Logística (DA8)
+                </span>
+                <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200" id="countPendentesArvore">0 Pedidos</span>
+            </div>
+            
+            <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 shrink-0">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"></i>
+                    <input type="text" id="searchTree" placeholder="Pesquisar Rota, Município ou Setor..." oninput="filtrarArvoreOMS(this.value)" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 pl-8 text-[11px] font-medium focus:outline-none focus:border-comlub-blue focus:ring-1 focus:ring-comlub-blue transition-colors shadow-sm">
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto bg-white p-2" id="arvoreOMS">
+                <!-- Injetado via JS -->
+            </div>
+        </div>
+
+        <!-- Direita: Mesa de Embarque e Planeamento -->
+        <div class="w-[65%] bg-white flex flex-col overflow-hidden relative z-0">
+            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex flex-col gap-3 shrink-0">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xs font-black text-slate-700 uppercase tracking-widest" id="tituloRotaSelecionada">Selecione um Nó na Árvore</h4>
+                        <p class="text-[10px] font-semibold text-slate-400 mt-0.5 uppercase" id="subtituloRotaSelecionada">Aguardando seleção na estrutura do OMS...</p>
+                    </div>
+                    <span class="text-[10px] font-black text-slate-500 bg-white border border-slate-200 px-2.5 py-1 rounded shadow-sm" id="resumoRotaSelecionada">--</span>
+                </div>
+                
+                <div class="bg-white p-3 border border-slate-200 rounded shadow-sm flex flex-col gap-3">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50">
+                            <i data-lucide="user" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <input type="text" id="inputMotorista" placeholder="Nome do Motorista..." class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent placeholder:font-normal">
+                        </div>
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50">
+                            <i data-lucide="truck" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <input type="text" id="inputTransportadora" placeholder="Nome da Transportadora..." class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent placeholder:font-normal">
+                        </div>
+                        
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50 relative" id="dropdownStatusContainer">
+                            <i data-lucide="filter" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <button type="button" onclick="toggleStatusDropdown()" class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent text-left flex justify-between items-center">
+                                <span id="lblStatusSelecionados" class="truncate">Todos os Status</span>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2"></i>
+                            </button>
+                            <div id="dropdownStatus" class="hidden absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 shadow-xl rounded-md z-[100] p-2 flex flex-col gap-1 min-w-[200px]">
+                                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
+                                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Status na Carga</span>
+                                    <button type="button" onclick="toggleAllStatus()" class="text-[9px] text-comlub-blue font-bold hover:underline uppercase tracking-widest" id="btnToggleAllStatus">Desmarcar Todos</button>
+                                </div>
+                                <div id="dropdownStatusList" class="max-h-48 overflow-y-auto flex flex-col gap-1 pr-1"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-t border-slate-100 pt-3 mt-1">
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50 w-full lg:w-1/3 relative" id="dropdownMunContainer">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <button type="button" onclick="toggleMunDropdown()" class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent text-left flex justify-between items-center">
+                                <span id="lblMunSelecionados" class="truncate">Todos os Municípios</span>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2"></i>
+                            </button>
+                            <div id="dropdownMunicipios" class="hidden absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 shadow-xl rounded-md z-[100] p-2 flex flex-col gap-1">
+                                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
+                                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Municípios na Carga</span>
+                                    <button type="button" onclick="toggleAllMuns()" class="text-[9px] text-comlub-blue font-bold hover:underline uppercase tracking-widest" id="btnToggleAllMuns">Desmarcar Todos</button>
+                                </div>
+                                <div id="dropdownMunicipiosList" class="max-h-48 overflow-y-auto flex flex-col gap-1 pr-1"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50 w-full lg:w-1/3">
+                            <i data-lucide="file-plus-2" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <input type="text" id="inputIncluirPedido" placeholder="Inserir pedido..." class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent placeholder:font-normal" onkeypress="if(event.key === 'Enter') incluirPedidoManualmente()">
+                            <button onclick="incluirPedidoManualmente()" class="bg-comlub-blue hover:bg-blue-900 text-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-sm transition-all shadow-sm">Incluir</button>
+                        </div>
+                        
+                        <div class="flex items-center justify-center lg:justify-start gap-4 bg-slate-50 border border-slate-200 rounded px-3 py-1.5 w-full lg:w-1/3">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest shrink-0 hidden xl:block">Resíduo:</span>
+                            <label class="flex items-center gap-1 cursor-pointer" title="Mostrar pedidos que atingiram o preço mínimo">
+                                <input type="checkbox" id="chkAtinge" checked onchange="aplicarFiltroTabela()" class="w-3.5 h-3.5 text-emerald-600 rounded border-emerald-300 focus:ring-emerald-500">
+                                <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">? Min. OK</span>
+                            </label>
+                            <label class="flex items-center gap-1 cursor-pointer" title="Mostrar pedidos que não atingiram o preço mínimo">
+                                <input type="checkbox" id="chkNaoAtinge" checked onchange="aplicarFiltroTabela()" class="w-3.5 h-3.5 text-rose-600 rounded border-rose-300 focus:ring-rose-500">
+                                <span class="text-[10px] font-bold text-rose-700 uppercase tracking-widest">?? Abaixo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row justify-end pt-1 gap-3">
+                        <button id="btnImprimirResumoPdf" onclick="gerarPDFResumoProdutos()" class="btn-outline px-4 py-2 text-xs font-bold uppercase tracking-widest rounded shadow-sm flex items-center gap-2 transition-all w-full md:w-auto justify-center">
+                            <i data-lucide="package-search" class="w-4 h-4 text-comlub-blue"></i> Imprimir Resumo de Produtos
+                        </button>
+                        <button id="btnImprimirPdf" onclick="gerarPDFMapaEntrega()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 text-xs font-bold uppercase tracking-widest rounded shadow-md flex items-center gap-2 transition-all w-full md:w-auto justify-center">
+                            <i data-lucide="printer" class="w-4 h-4 text-comlub-yellow"></i> Imprimir Manifesto de Carga
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto relative flex flex-col">
+                <table class="erp-table w-full">
+                    <thead class="sticky top-0 z-10 select-none bg-white" id="theadPedidosCarga">
+                        <tr>
+                            <th class="text-left w-24 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Número Pedido')">Pedido <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-left w-24 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('1. Data Emissão Pedido')">Emissão <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-left cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Nome Cliente')">Cliente <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-left w-24">CEP</th>
+                            <th class="text-left w-28 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Município Cliente')">Município <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-center w-24">Itens Stock</th>
+                            <th class="text-left w-28 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Número NF')">Nº Nota / Série <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-right w-24 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Peso Total')">Peso (Kg) <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-center w-24 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('_status')">Status <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-center w-16">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyPedidosCarga">
+                        <tr><td colspan="10" class="text-center py-10 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Selecione uma localização na árvore OMS.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ITENS E VALIDAÇÃO DE ESTOQUE -->
+    <div id="itemsModal" class="hidden fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0" onclick="closeItemsModal()"></div>
+        <div id="itemsContainer" class="bg-white w-full max-w-5xl h-[75vh] rounded shadow-2xl flex flex-col overflow-hidden relative z-10 transform scale-95 transition-transform duration-300">
+            <div class="bg-[#0f172a] px-6 py-4 border-b border-slate-800 flex justify-between items-start shrink-0">
+                <div class="flex gap-4">
+                    <div class="w-8 h-8 bg-slate-800 rounded border border-slate-700 flex items-center justify-center shrink-0">
+                        <i data-lucide="package" class="text-comlub-yellow w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white tracking-wide leading-tight">Itens do Pedido: <span id="itemsModalPedido" class="tabular-nums text-comlub-yellow">--</span></h3>
+                        <p class="text-slate-300 text-[11px] font-semibold mt-1">Cliente: <span id="itemsModalCliente" class="text-white">--</span></p>
+                    </div>
+                </div>
+                <button onclick="closeItemsModal()" class="text-slate-400 hover:text-white transition-colors p-1 shrink-0"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div id="avisoPedidoMinimo" class="hidden shrink-0"></div>
+
+            <div class="flex-1 overflow-y-auto p-4 bg-slate-50">
+                <table class="erp-table w-full bg-white border border-slate-200 rounded shadow-sm">
+                    <thead class="sticky top-0 z-10 select-none bg-slate-100">
+                        <tr>
+                            <th class="text-center w-12">Item</th>
+                            <th class="text-left w-24">Cód. Produto</th>
+                            <th class="text-left">Descrição</th>
+                            <th class="text-right w-20">Qtd.</th>
+                            <th class="text-right w-24">Valor Unit.</th>
+                            <th class="text-right w-24">Valor Total</th>
+                            <th class="text-right w-28">Saldo Físico em Stock</th>
+                            <th class="text-right w-20">Falta (Qtd)</th>
+                            <th class="text-center w-28">Status Item</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyItensPedido"></tbody>
+                </table>
+            </div>
+            
+            <div class="px-6 py-3 bg-white border-t border-slate-200 flex justify-between items-center shrink-0">
+                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                    Verificação Automática de Disponibilidade Física no ERP
+                </div>
+                <button onclick="closeItemsModal()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest shadow-sm rounded transition-all">Fechar Itens</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let apiHost = window.location.hostname;
+        if (!apiHost || apiHost.includes('goog') || apiHost === 'localhost') {
+            apiHost = '201.91.126.114'; 
+        }
+        const API_BASE_URL = `http://${apiHost}:3001/api`;
+
+        let currentUserRole = null;
+        const appUsers = {
+            'admin': { pass: 'clb2026@', role: 'admin' },
+            'ComlubAL': { pass: 'clb2026@', role: '01', nome: 'ALAGOAS' },
+            'ComlubPE': { pass: 'clb2026@', role: '02', nome: 'PERNAMBUCO' },
+            'ComlubSE': { pass: 'clb2026@', role: '03', nome: 'SERGIPE' }
+        };
+
+        let logData = [];
+        let currentSelectedNode = null; 
+        let currentPedidosDaCarga = []; 
+        let globalOmsTree = {};
+        
+        let filialAtiva = null;
+        let filialNomeAtiva = null;
+        let isFetching = false;
+
+        let orderSortConfig = { key: 'Número Pedido', direction: 'asc' };
+        let activeCargaDocFilter = 'pending';
+
+        let currentMunList = [];
+        let selectedMunList = new Set();
+        let currentStatusList = [];
+        let selectedStatusList = new Set();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            
+            // VERIFICA SESSÃO DO HUB SUPREMO SE JÁ ESTIVER LOGADO
+            const sessionUser = localStorage.getItem('comlub_leme_user');
+            const sessionFilial = localStorage.getItem('comlub_leme_filial') || '01';
+
+            if (sessionUser) {
+                // Oculta a tela de login interna do módulo
+                const loginScr = document.getElementById('loginScreen');
+                if (loginScr) {
+                    loginScr.classList.add('opacity-0', 'pointer-events-none');
+                    setTimeout(() => loginScr.classList.add('hidden'), 300);
+                }
+                
+                // Mapeia filial de preferência do usuário ou abre o seletor
+                let fNome = 'ALAGOAS';
+                if (sessionFilial === '02') fNome = 'PERNAMBUCO';
+                if (sessionFilial === '03') fNome = 'SERGIPE';
+
+                if (sessionFilial === 'Todas' || localStorage.getItem('comlub_leme_role') === 'admin') {
+                    abrirModalFilial();
+                } else {
+                    selecionarFilial(sessionFilial, fNome);
+                }
+            }
+        });
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('loginUser').value.trim();
+            const p = document.getElementById('loginPass').value.trim();
+            const err = document.getElementById('loginError');
+
+            const userKey = Object.keys(appUsers).find(k => k.toLowerCase() === u.toLowerCase());
+
+            if (userKey && appUsers[userKey].pass === p) {
+                document.getElementById('loginScreen').classList.add('opacity-0');
+                setTimeout(() => document.getElementById('loginScreen').classList.add('hidden'), 500);
+                
+                const userData = appUsers[userKey];
+                currentUserRole = userData.role;
+
+                if (userData.role === 'admin') {
+                    abrirModalFilial(); 
+                } else {
+                    const btnTrocar = document.getElementById('nomeFilialCabecalho');
+                    btnTrocar.classList.remove('cursor-pointer', 'hover:bg-slate-700');
+                    btnTrocar.title = 'Filial Fixa';
+                    btnTrocar.onclick = null;
+                    selecionarFilial(userData.role, userData.nome);
+                }
+            } else {
+                err.classList.remove('hidden');
+            }
+        }
+
+        function abrirModalFilial() {
+            const modal = document.getElementById('filialModal');
+            modal.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        }
+
+        function selecionarFilial(cod, nome) {
+            filialAtiva = cod;
+            filialNomeAtiva = nome;
+            document.getElementById('filialModal').classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => { document.getElementById('filialModal').classList.add('hidden'); }, 300);
+            document.getElementById('nomeFilialCabecalho').innerText = `${cod} - ${nome}`;
+            fetchLogisticsData();
+        }
+
+        const getValUniversal = (row, ...possiveisNomes) => {
+            if(!row) return '';
+            const chavesDaLinha = Object.keys(row);
+            for (let i = 0; i < possiveisNomes.length; i++) {
+                const nomeProcurado = String(possiveisNomes[i]).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                const chaveEncontrada = chavesDaLinha.find(k => String(k).trim().toLowerCase().replace(/[^a-z0-9]/g, '') === nomeProcurado);
+                if (chaveEncontrada && row[chaveEncontrada] !== undefined && row[chaveEncontrada] !== null && String(row[chaveEncontrada]).trim() !== '') {
+                    return row[chaveEncontrada];
+                }
+            }
+            return '';
+        };
+
+        const parseNum = v => {
+            if (v === undefined || v === null || v === '---' || v === '') return 0;
+            if (typeof v === 'number') return v;
+            let str = String(v).trim().replace(/[^0-9,\.-]/g, '');
+            if (str.includes(',')) { str = str.replace(/\./g, ''); str = str.replace(',', '.'); }
+            let n = parseFloat(str); return isNaN(n) ? 0 : n;
+        };
+
+        const fmtCurr = v => parseNum(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const fmtNum = v => parseNum(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        function formatarData(dataStr) {
+            if (!dataStr) return '--/--/----';
+            let cleanStr = String(dataStr).split('T')[0].replace(/-/g, ''); 
+            if (cleanStr.length >= 8) return `${cleanStr.substring(6,8)}/${cleanStr.substring(4,6)}/${cleanStr.substring(0,4)}`;
+            return dataStr;
+        }
+
+        async function fetchLogisticsData() {
+            if (!filialAtiva || isFetching) return;
+            isFetching = true;
+
+            const overlay = document.getElementById('loadingOverlay');
+            if(overlay) overlay.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/motor-logistico/${filialAtiva}`);
+                if (!response.ok) throw new Error('API Indisponível');
+                
+                const rawJson = await response.json();
+                
+                let dataArray = [];
+                if (Array.isArray(rawJson)) {
+                    dataArray = rawJson;
+                } else if (rawJson && Array.isArray(rawJson.data)) {
+                    dataArray = rawJson.data;
+                }
+                
+                const mappedData = dataArray.map(r => {
+                    let bloqStr = String(r.StatusCarga || r.status || '').toUpperCase();
+                    let bloqueioFinal = '';
+                    if(bloqStr.includes('DUPLO')) bloqueioFinal = 'BLOQUEIO DUPLO';
+                    else if(bloqStr.includes('ESTOQUE')) bloqueioFinal = 'BLOQ. ESTOQUE';
+                    else if(bloqStr.includes('CRÉDITO') || bloqStr.includes('CREDITO')) bloqueioFinal = 'BLOQ. CRÉDITO';
+
+                    return {
+                        'Filial': r.Filial || r.C5_FILIAL || filialAtiva,
+                        'Número Pedido': r.NumeroPedido || r.C5_NUM || r.Pedido || 'S/N',
+                        'Nome Cliente': r.NomeCliente || r.Cliente || 'N/A',
+                        'CEP Cliente': r.CEP || r.A1_CEP || 'N/A',
+                        'Estado Cliente': r.UF || r.A1_EST || 'N/A',
+                        'Município Cliente': r.Municipio || r.A1_MUN || 'N/A',
+                        'Nome Vendedor': r.Vendedor || r.A3_NOME || 'N/A',
+                        'Rota': r.Rota || r.Roteiro || 'SEM ROTA',
+                        'Município Rota': r.Percurso || r.Zona || 'SEM ZONA',
+                        'Código Rota': r.Percurso ? String(r.Percurso).substring(0,3) : 'S/N',
+                        'Percurso': r.Percurso || r.Zona || 'N/A',
+                        '1. Data Emissão Pedido': r.DataEmissao || r.C5_EMISSAO || '',
+                        'Bloqueio': bloqueioFinal,
+                        'Peso Total': parseFloat(r.PesoPendente || r.PesoTotal || r.Peso || 0),
+                        'Valor Total': parseFloat(r.ValorPendente || r.ValorTotal || r.Valor || r.Total || 0),
+                        '2. Data Liberação': bloqueioFinal === '' ? (r.DataEmissao || r.C5_EMISSAO) : '',
+                        'Número NF': '',
+                        'Série NF': '',
+                        '3. Data Faturamento': '',
+                        '4. Data Carregamento': '',
+                        '5. Data Entrega': ''
+                    };
+                });
+                
+                processData(mappedData);
+            } catch (error) {
+                console.warn("Utilizando Mock Local no Modo Offline.");
+                processData([]);
+            } finally {
+                if(overlay) overlay.classList.add('hidden');
+                isFetching = false;
+            }
+        }
+
+        function processData(rawData) {
+            logData = rawData.map(r => {
+                let status = 'Emissão';
+                if(r['5. Data Entrega']) status = 'Entregue';
+                else if(r['4. Data Carregamento']) status = 'Enviado para Transportadora';
+                else if(r['3. Data Faturamento']) status = 'Faturado';
+                else if(r['Bloqueio'] === 'BLOQUEIO DUPLO') status = 'Bloq. Duplo';
+                else if(r['Bloqueio'] === 'BLOQ. ESTOQUE') status = 'Bloq. Estoque';
+                else if(r['Bloqueio'] === 'BLOQ. CRÉDITO') status = 'Bloq. Crédito';
+                else if(r['2. Data Liberação']) status = 'Liberado';
+
+                const omsInfo = {
+                    rota: r['Rota'] || "OUTRAS REGIÕES",
+                    zona: r['Município Cliente'] || "MUNICÍPIO NÃO INFORMADO", 
+                    setor: r['Percurso'] || "SEM ZONA",
+                    ref: r['Percurso'] || "SEM ZONA"
+                };
+
+                return { 
+                    ...r, 
+                    _status: status, 
+                    _hasRealBlock: (status.includes('Bloq')), 
+                    _removedFromCarga: false, 
+                    _overrideNode: null, 
+                    _residuoStatus: null, 
+                    _residuoValor: 0,
+                    _itensCache: null,
+                    _oms: omsInfo
+                };
+            });
+
+            const muns = new Set();
+            const statuses = new Set(['BLOQ. DUPLO', 'BLOQ. ESTOQUE', 'BLOQ. CRÉDITO', 'LIBERADO', 'FATURADO', 'EMISSÃO']);
+            logData.forEach(p => {
+                muns.add(String(p['Município Cliente'] || '').trim().toUpperCase());
+                if (p._status) statuses.add(String(p._status).trim().toUpperCase());
+            });
+
+            currentMunList = Array.from(muns).sort();
+            selectedMunList = new Set(currentMunList);
+
+            currentStatusList = Array.from(statuses).sort();
+            selectedStatusList = new Set(currentStatusList);
+
+            atualizarCargaModalData();
+        }
+
+        function obterPendentesGlobais() {
+            const dateStartInput = document.getElementById('dateStart').value;
+            const dateEndInput = document.getElementById('dateEnd').value;
+
+            return logData.filter(r => {
+                const naoExcluido = !r._removedFromCarga;
+                if (!naoExcluido) return false;
+
+                const emissaoStr = (r['1. Data Emissão Pedido'] || '').replace(/-/g, '');
+                
+                if (dateStartInput && emissaoStr !== '' && emissaoStr < dateStartInput.replace(/-/g, '')) return false;
+                if (dateEndInput && emissaoStr !== '' && emissaoStr > dateEndInput.replace(/-/g, '')) return false;
+
+                const isFaturado = r['3. Data Faturamento'] && String(r['3. Data Faturamento']).trim() !== '';
+                if (activeCargaDocFilter === 'pending' && isFaturado) return false;
+                if (activeCargaDocFilter === 'invoiced' && !isFaturado) return false;
+
+                const munCli = String(r['Município Cliente'] || '').trim().toUpperCase();
+                if (selectedMunList.size > 0 && !selectedMunList.has(munCli)) return false;
+
+                const statusPed = String(r._status || '').trim().toUpperCase();
+                if (selectedStatusList.size > 0 && !selectedStatusList.has(statusPed)) return false;
+
+                return true;
+            });
+        }
+
+        function atualizarCargaModalData() {
+            let pendentes = obterPendentesGlobais();
+
+            globalOmsTree = {};
+            let totalPendentes = 0;
+
+            pendentes.forEach(pedido => {
+                totalPendentes++;
+                const nodeInfo = pedido._overrideNode || pedido._oms;
+                
+                if (!globalOmsTree[nodeInfo.rota]) globalOmsTree[nodeInfo.rota] = { zonas: {}, peso: 0, qtd: 0 };
+                if (!globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona]) globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona] = { setores: {}, peso: 0, qtd: 0 };
+                if (!globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].setores[nodeInfo.setor]) {
+                    globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].setores[nodeInfo.setor] = { 
+                        ref: nodeInfo.ref, pedidos: [], pesoTotal: 0, qtd: 0, bloqueados: 0 
+                    };
+                }
+
+                const s = globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].setores[nodeInfo.setor];
+                s.pedidos.push(pedido);
+                s.pesoTotal += (pedido['Peso Total'] || 0);
+                s.qtd++;
+                if (pedido._hasRealBlock) s.bloqueados++;
+
+                globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].peso += (pedido['Peso Total'] || 0);
+                globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].qtd++;
+                
+                globalOmsTree[nodeInfo.rota].peso += (pedido['Peso Total'] || 0);
+                globalOmsTree[nodeInfo.rota].qtd++;
+            });
+
+            document.getElementById('countPendentesArvore').innerText = `${totalPendentes} Pedidos`;
+            
+            const termoBusca = document.getElementById('searchTree').value;
+            renderTreeOMS(globalOmsTree, termoBusca);
+            
+            if (currentSelectedNode) {
+                selecionarNodeOMS(currentSelectedNode.rota, currentSelectedNode.zona, currentSelectedNode.setor, currentSelectedNode.ref, pendentes);
+            } else {
+                limparMesaCarga();
+            }
+        }
+
+        function renderTreeOMS(tree, filterText = '') {
+            const container = document.getElementById('arvoreOMS');
+            if (Object.keys(tree).length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma localização encontrada.</div>';
+                return;
+            }
+            container.innerHTML = '<div class="p-4 text-xs text-slate-500">Localizações prontas para alocação.</div>';
+        }
+
+        function limparMesaCarga() {
+            currentSelectedNode = null;
+            currentPedidosDaCarga = [];
+            document.getElementById('tituloRotaSelecionada').innerText = 'Mesa de Formação de Carga';
+            document.getElementById('subtituloRotaSelecionada').innerText = 'Aguardando seleção de diretório na árvore OMS...';
+            document.getElementById('resumoRotaSelecionada').innerText = '--';
+            document.getElementById('tbodyPedidosCarga').innerHTML = `<tr><td colspan="10" class="text-center py-10 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Selecione uma localização na árvore OMS.</td></tr>`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal B2B: Pesquisa de Precos - Comlub</title>
+    
+    <!-- Tags para transformar em App Mobile (PWA) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#020617">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Pesquisa B2B">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* TEMA CYBER-INDUSTRIAL & GLASSMORPHISM */
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #020617; /* Slate 950 */
+            color: #f8fafc;
+            overflow: hidden;
+            height: 100dvh; /* Adaptação perfeita para mobile */
+        }
+
+        /* Fundo Geometrico e Brilhos */
+        .market-bg {
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(2, 132, 199, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+        }
+
+        /* Mascote - Login com FILTROS */
+        .mascote-login-bg {
+            background: linear-gradient(135deg, #003865 0%, #0284c7 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mascote-login-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .mascote-scanline {
+            background-image: linear-gradient(0deg, transparent 0%, rgba(56, 189, 248, 0.1) 50%, transparent 100%);
+            background-size: 100% 4px;
+            animation: scanline 8s linear infinite;
+        }
+
+        @keyframes scanline { 0% { background-position: 0 0; } 100% { background-position: 0 100vh; } }
+
+        /* Componentes Glass */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        .glass-input {
+            width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white; border-radius: 12px; padding: 14px 20px; font-size: 14px; font-weight: 600;
+            outline: none; transition: all 0.3s;
+        }
+        .glass-input:focus { border-color: #38bdf8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); background: rgba(0,0,0,0.6); }
+
+        .btn-glow {
+            position: relative; overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-glow::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+            transform: skewX(-20deg); transition: all 0.5s;
+        }
+        .btn-glow:hover::before { left: 150%; }
+        .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.5); }
+
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.95) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        .animate-pop { animation: popIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .iframe-container { transition: opacity 0.4s ease; }
+    </style>
+</head>
+<body class="market-bg flex flex-col antialiased">
+
+    <!-- ========================================== -->
+    <!-- TELA DE LOGIN (ACESSO RESTRITO) -->
+    <!-- ========================================== -->
+    <div id="loginScreen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center p-4 sm:p-8 bg-[#020617]">
+        
+        <div class="glass-panel rounded-3xl overflow-hidden flex flex-col md:flex-row w-full max-w-5xl shadow-[0_0_80px_rgba(2,132,199,0.15)] animate-pop">
+            
+            <!-- ESQUERDA: BRANDING COMERCIAL -->
+            <div class="hidden md:flex md:w-1/2 relative overflow-hidden items-center justify-center p-10 border-r border-white/10 mascote-login-bg">
+                
+                <div class="absolute inset-0 mascote-scanline opacity-50"></div>
+                
+                <div class="relative z-10 w-full bg-slate-900/60 p-8 rounded-3xl backdrop-blur-md border border-white/10 shadow-2xl text-center flex flex-col items-center">
+                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-sky-500/20 border border-sky-400/30 mb-6 shadow-[0_0_40px_rgba(56,189,248,0.5)]">
+                        <i data-lucide="line-chart" class="w-10 h-10 text-sky-400"></i>
+                    </div>
+                    <div class="flex items-baseline select-none mb-2" style="letter-spacing: -0.05em; line-height: 1;">
+                        <span class="text-white font-black text-5xl drop-shadow-lg">com</span><span class="text-[#FFCB05] font-black text-5xl drop-shadow-lg">lub</span>
+                    </div>
+                    <h2 class="text-2xl font-black text-white uppercase tracking-tight leading-none mb-4 drop-shadow-md">Inteligencia de Mercado</h2>
+                    <p class="text-xs text-sky-200 font-medium leading-relaxed max-w-[250px]">
+                        Portal B2B para recolha de dados da concorrencia, mapeamento de precos e auditoria de campo.
+                    </p>
+                    <div class="mt-6 flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]"></span>
+                        <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-[0.2em]">Acesso Seguro V11.2</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DIREITA: FORMULARIO DE LOGIN -->
+            <div class="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center relative bg-slate-900/60">
+                <div class="mb-10">
+                    <h3 class="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-3">
+                        <i data-lucide="fingerprint" class="w-6 h-6 text-sky-500"></i> Autenticacao
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-2 font-medium">Acesso restrito a equipa comercial e pesquisadores autorizados.</p>
+                </div>
+
+                <form onsubmit="realizarLogin(event)" class="space-y-6">
+                    <div>
+                        <label class="block font-bold text-[10px] text-slate-400 uppercase tracking-widest mb-2 ml-1">Utilizador ERP</label>
+                        <div class="relative">
+                            <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
+                            <input type="text" id="loginUser" required class="glass-input pl-12" placeholder="nome.sobrenome">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-[10px] text-slate-400 uppercase tracking-widest mb-2 ml-1">Senha</label>
+                        <div class="relative">
+                            <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i>
+                            <input type="password" id="loginPass" required class="glass-input pl-12" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <div id="loginError" class="hidden text-[10px] font-bold text-rose-200 bg-rose-500/10 border border-rose-500/30 p-3.5 rounded-xl text-center shadow-lg mt-2 flex items-center justify-center gap-2">
+                        <i data-lucide="shield-alert" class="w-4 h-4"></i> Credenciais invalidas ou acesso negado.
+                    </div>
+
+                    <div class="pt-6">
+                        <button type="submit" class="w-full bg-gradient-to-r from-sky-600 to-blue-700 text-white font-black uppercase tracking-[0.2em] py-4 rounded-xl text-xs flex justify-center items-center gap-2 btn-glow">
+                            Acessar Pesquisa <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="mt-8 text-center">
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Tecnologia da Informacao Comlub &copy; 2026</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- DASHBOARD PRINCIPAL (INDEPENDENTE) -->
+    <!-- ========================================== -->
+    <div id="appMain" class="hidden flex-col h-full w-full relative">
+        
+        <!-- CABECALHO COMPACTO -->
+        <header class="glass-panel rounded-none border-x-0 border-t-0 px-6 py-4 flex items-center justify-between shrink-0 z-40 sticky top-0">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center border border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+                        <i data-lucide="bar-chart-2" class="w-5 h-5 text-sky-400"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-sm font-black text-white uppercase tracking-wider leading-tight flex items-center gap-2">
+                            Pesquisa de Precos B2B
+                            <span class="bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full text-[9px] align-middle">V11.2</span>
+                        </h1>
+                        <p class="text-[9px] text-sky-400 font-bold uppercase tracking-widest mt-0.5">Mobile Data Collector</p>
+                    </div>
+                </div>
+                
+                <div class="h-8 w-px bg-white/10 hidden md:block"></div>
+                
+                <div class="hidden lg:flex items-center gap-2">
+                    <img id="headerAvatar" src="https://ui-avatars.com/api/?name=Utilizador&background=0284c7&color=fff" class="w-8 h-8 rounded-full border border-sky-500/50">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-white uppercase tracking-wider" id="headerNome">UTILIZADOR</span>
+                        <span class="text-[8px] font-bold text-emerald-400 uppercase tracking-widest" id="headerRole">ACESSO AUTORIZADO</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span class="hidden sm:flex bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                </span>
+                <button onclick="fazerLogout()" class="bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 border border-white/10 hover:border-rose-500/30 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all">
+                    <span class="hidden sm:inline">Sair</span> <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTAINER DO IFRAME DO MODULO -->
+        <main class="flex-1 w-full h-full relative z-10 p-2 sm:p-4">
+            <div class="w-full h-full glass-panel rounded-2xl overflow-hidden shadow-2xl border border-white/10 relative">
+                
+                <!-- AVISO DE CONTINGENCIA PARA MOBILE BEHIND IFRAME -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-0">
+                    <i data-lucide="smartphone" class="w-12 h-12 text-slate-500 mb-4 animate-bounce"></i>
+                    <h3 class="text-white font-bold mb-2 uppercase tracking-widest">Acesso no Telemovel</h3>
+                    <p class="text-xs text-slate-400 mb-6 max-w-xs">Se a tela de pesquisa nao abriu automaticamente devido a bloqueios do navegador, clique no botao abaixo para abrir a janela principal.</p>
+                    <button onclick="window.location.replace('pesquisa_preco.html')" class="bg-sky-500 hover:bg-sky-400 text-[#020617] px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all">
+                        <i data-lucide="external-link" class="w-4 h-4"></i> Iniciar Pesquisa
+                    </button>
+                </div>
+
+                <!-- Carrega o ficheiro de Pesquisa de Precos no iframe -->
+                <iframe id="pesquisaFrame" src="" class="w-full h-full border-none bg-transparent iframe-container opacity-0 relative z-10" title="Modulo de Pesquisa"></iframe>
+            </div>
+        </main>
+    </div>
+
+    <!-- SCRIPT DE LOGICA DE LOGIN -->
+    <script>
+        lucide.createIcons();
+
+        // Verifica Sessao ao Carregar
+        window.addEventListener('DOMContentLoaded', () => {
+            const sessionStr = sessionStorage.getItem('comlub_portal_pesquisa_user');
+            if (sessionStr) {
+                try {
+                    const sessionData = JSON.parse(sessionStr);
+                    entrarNoSistema(sessionData);
+                } catch(e) { fazerLogout(); }
+            }
+        });
+
+        // Limpeza de string para RBAC
+        function cleanString(texto) {
+            if (!texto) return '';
+            const txt = document.createElement('textarea'); txt.innerHTML = texto;
+            let str = txt.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        function realizarLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('loginUser').value.trim().toLowerCase();
+            const p = document.getElementById('loginPass').value.trim();
+
+            // BYPASS DE ADMIN GERAL PARA FACILITAR TESTES
+            if (u === 'admin' && p === 'admin') {
+                entrarNoSistema({ nome: 'Administrador (Pesquisa)', login: 'admin', role: 'DIRETORIA', modulos: ['acessototaladmin'] });
+                return;
+            }
+
+            let bdUsuarios = [];
+            try { 
+                const salvas = localStorage.getItem('comlub_usuarios_db'); 
+                if(salvas) bdUsuarios = JSON.parse(salvas); 
+            } catch(err) {}
+
+            const userFound = bdUsuarios.find(usr => 
+                (cleanString(usr.login) === cleanString(u) || cleanString(usr.email) === cleanString(u)) && 
+                (usr.pass === p || usr.senha === p)
+            );
+
+            if (userFound) {
+                if (userFound.status === 'Bloqueado') {
+                    mostrarErro("Acesso Rejeitado: Conta Bloqueada.");
+                    return;
+                }
+                
+                // Validacao de Permissao Especifica
+                const modsSafe = (userFound.modulos || []).map(m => cleanString(m));
+                const isAdmin = userFound.role === 'DIRETORIA' || modsSafe.includes('acessototaladmin');
+                
+                // Modulos que dao acesso a pesquisa de precos
+                const temAcesso = modsSafe.includes(cleanString('Pesquisa de Precos')) || 
+                                  modsSafe.includes(cleanString('Portal Pesquisa B2B')) || 
+                                  modsSafe.includes(cleanString('Comercial & Vendas'));
+
+                if (isAdmin || temAcesso) {
+                    entrarNoSistema(userFound);
+                } else {
+                    mostrarErro("Acesso Negado: Nao tem permissao para este portal.");
+                }
+            } else {
+                mostrarErro("Credenciais invalidas. Tente novamente.");
+            }
+        }
+
+        function mostrarErro(msg) {
+            const errEl = document.getElementById('loginError');
+            errEl.innerHTML = `<i data-lucide="shield-alert" class="w-4 h-4"></i> ${msg}`;
+            errEl.classList.remove('hidden');
+            lucide.createIcons({root: errEl});
+        }
+
+        function entrarNoSistema(userData) {
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('flex');
+            
+            const userName = userData.nome || userData.login || 'Usuario';
+            document.getElementById('headerNome').innerText = userName;
+            document.getElementById('headerAvatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0284c7&color=fff`;
+
+            // Define Role Display
+            let roleDisplay = 'PESQUISADOR';
+            if (userData.role === 'GESTOR' || userData.role === 'DIRETORIA' || (userData.modulos && userData.modulos.includes('Acesso Total (Admin)'))) {
+                roleDisplay = 'GESTOR / ADMIN';
+            }
+            document.getElementById('headerRole').innerText = roleDisplay;
+
+            // Salva sessao local
+            sessionStorage.setItem('comlub_portal_pesquisa_user', JSON.stringify(userData));
+            sessionStorage.setItem('comlub_portal_user', JSON.stringify(userData)); // Retrocompatibilidade
+
+            // SOLUCAO MOBILE: Se for ficheiro local (file://), redirecionar diretamente pois os telemoveis bloqueiam iframes locais
+            if (window.location.protocol === 'file:' || window.location.protocol === 'content:') {
+                window.location.replace('pesquisa_preco.html');
+                return;
+            }
+
+            // Exibe a moldura principal
+            document.getElementById('appMain').classList.remove('hidden');
+            document.getElementById('appMain').classList.add('flex');
+
+            // Carrega o Iframe do Modulo de Pesquisa (se for num servidor web / localhost)
+            const iframe = document.getElementById('pesquisaFrame');
+            iframe.onload = () => {
+                iframe.classList.remove('opacity-0');
+                iframe.classList.add('opacity-100');
+                iframe.style.backgroundColor = '#F0F4F8'; // Oculta o botao de fallback que esta por tras
+            };
+            
+            // Forca a insercao da URL Correta no iframe apos o Login
+            iframe.src = 'pesquisa_preco.html';
+        }
+
+        function fazerLogout() {
+            sessionStorage.removeItem('comlub_portal_pesquisa_user');
+            sessionStorage.removeItem('comlub_portal_user');
+            
+            document.getElementById('appMain').classList.add('hidden');
+            document.getElementById('appMain').classList.remove('flex');
+            
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('loginScreen').classList.add('flex');
+            
+            document.getElementById('loginPass').value = '';
+            document.getElementById('loginError').classList.add('hidden');
+            
+            const iframe = document.getElementById('pesquisaFrame');
+            iframe.classList.remove('opacity-100');
+            iframe.classList.add('opacity-0');
+            iframe.src = '';
+        }
+
+        // Interceta os pedidos de "Fechar Modulo" vindo de dentro do iframe
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.action === 'closeModule') {
+                if(confirm("Deseja encerrar a sessao e sair do portal?")) {
+                    fazerLogout();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

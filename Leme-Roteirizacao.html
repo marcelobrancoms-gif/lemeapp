@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Montagem Carga OMS - Comlub ERP</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] },
+                    colors: {
+                        comlub: { blue: '#003865', yellow: '#FFCB05', slate: '#0f172a' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f8fafc; overflow: hidden; font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .erp-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        .erp-table th { background-color: #f8fafc; border-bottom: 1px solid #cbd5e1; border-top: 1px solid #e2e8f0; font-weight: 600; color: #475569; padding: 10px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 20; }
+        .erp-table td { border-bottom: 1px solid #e2e8f0; padding: 10px 16px; color: #1e293b; font-size: 11px; }
+        .erp-table tbody tr:hover { background-color: #f1f5f9; }
+
+        .btn-outline { background-color: #ffffff; border: 1px solid #cbd5e1; color: #475569; transition: all 0.15s ease; border-radius: 4px; }
+        .btn-outline:hover { background-color: #f8fafc; border-color: #94a3b8; color: #1e293b; }
+
+        .btn-solid { background-color: #0f172a; color: #ffffff; border: 1px solid #020617; transition: all 0.15s ease; border-radius: 4px; }
+        .btn-solid:hover { background-color: #1e293b; }
+
+        .badge-status { padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid; display: inline-block; text-align: center; min-width: 80px;}
+        .status-faturado { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+        .status-liberado { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .status-bloq-estoque { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+        .status-bloq-credito { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+        .status-bloq-duplo { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
+        .status-liberado-minimo { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+        
+        .loader-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Estilos da Árvore OMS Hierárquica */
+        .oms-tree-wrapper { padding-left: 10px; }
+        .tree-line { border-left: 1px dashed #cbd5e1; margin-left: 10px; padding-left: 14px; margin-top: 4px; margin-bottom: 4px; }
+        .oms-node-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: background 0.2s; user-select: none; }
+        .oms-node-header:hover { background-color: #e2e8f0; }
+        .oms-node-active { background-color: #eff6ff !important; border: 1px solid #bfdbfe; }
+        
+        .badge-retido { background-color: #fff1f2; color: #ef4444; border: 1px solid #fecaca; }
+        .badge-peso { color: #003865; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col font-sans relative antialiased">
+
+    <!-- SELETOR INICIAL DA FILIAL -->
+    <div id="filialModal" class="fixed inset-0 z-[300] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-md shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-transform duration-300">
+            <div class="bg-[#0f172a] px-6 py-5 flex items-center gap-3">
+                <i data-lucide="building-2" class="text-comlub-yellow w-6 h-6"></i>
+                <div>
+                    <h2 class="text-white font-bold tracking-wide uppercase text-sm">Selecione a Filial</h2>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">Módulo OMS - Formação de Carga</p>
+                </div>
+            </div>
+            <div class="p-6 flex flex-col gap-3">
+                <button onclick="selecionarFilial('01', 'ALAGOAS')" class="w-full text-left px-5 py-3.5 border border-slate-200 rounded shadow-sm hover:bg-blue-50 hover:border-comlub-blue focus:outline-none transition-all flex justify-between items-center group">
+                    <div>
+                        <span class="block font-black text-slate-800 text-sm group-hover:text-comlub-blue transition-colors">01 - FILIAL ALAGOAS</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Matriz Operacional</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-comlub-blue transition-colors"></i>
+                </button>
+                <button onclick="selecionarFilial('02', 'PERNAMBUCO')" class="w-full text-left px-5 py-3.5 border border-slate-200 rounded shadow-sm hover:bg-blue-50 hover:border-comlub-blue focus:outline-none transition-all flex justify-between items-center group">
+                    <div>
+                        <span class="block font-black text-slate-800 text-sm group-hover:text-comlub-blue transition-colors">02 - FILIAL PERNAMBUCO</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Centro de Distribuição PE</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-comlub-blue transition-colors"></i>
+                </button>
+                <button onclick="selecionarFilial('03', 'SERGIPE')" class="w-full text-left px-5 py-3.5 border border-slate-200 rounded shadow-sm hover:bg-blue-50 hover:border-comlub-blue focus:outline-none transition-all flex justify-between items-center group">
+                    <div>
+                        <span class="block font-black text-slate-800 text-sm group-hover:text-comlub-blue transition-colors">03 - FILIAL SERGIPE</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Centro de Distribuição SE</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-comlub-blue transition-colors"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO TOAST -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-[200] bg-slate-900 text-white text-xs font-bold uppercase tracking-widest px-4 py-3 rounded shadow-2xl border border-slate-700 flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="info" class="w-4 h-4 text-comlub-yellow" id="toastIcon"></i>
+        <span id="toastMessage">Notificação</span>
+    </div>
+
+    <!-- OVERLAY DE CARREGAMENTO -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex flex-col items-center justify-center hidden">
+        <div class="bg-white px-8 py-6 rounded shadow-xl flex items-center gap-4 min-w-[320px] border border-slate-200">
+            <i data-lucide="loader-2" class="w-6 h-6 text-comlub-blue loader-spin"></i>
+            <div>
+                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">A Sincronizar OMS</h3>
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">A Ler Estrutura do Banco (DA8/DA9/DA7)...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CABEÇALHO -->
+    <header class="bg-[#0f172a] border-b border-slate-800 sticky top-0 z-40 px-6 py-3 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="flex flex-col items-end w-fit select-none">
+                <div class="flex items-baseline" style="font-family: 'Inter', sans-serif; letter-spacing: -0.05em; line-height: 1;">
+                    <span class="text-white font-black text-xl">c</span>
+                    <span class="text-white font-black text-xl relative">
+                        o
+                        <svg class="absolute w-1.5 h-1.5 text-comlub-yellow" style="top: 45%; left: 50%; transform: translate(-50%, -50%);" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                    </span>
+                    <span class="text-white font-black text-xl pr-0.5">m</span>
+                    <span class="text-comlub-yellow font-black text-xl">lub</span>
+                </div>
+                <span class="text-comlub-yellow font-bold text-[5px] tracking-[0.2em] -mt-0.5 pr-0.5">DISTRIBUIDORA</span>
+            </div>
+            
+            <div class="hidden sm:flex items-center gap-2 border-l border-slate-700 pl-3 ml-1">
+                <h1 class="text-sm font-bold text-white uppercase tracking-wider">Montagem Carga <span class="text-comlub-yellow">OMS</span></h1>
+                <span class="text-[9px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-bold uppercase tracking-widest border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors ml-2" onclick="abrirModalFilial()" id="nomeFilialCabecalho" title="Trocar Filial">--</span>
+            </div>
+        </div>
+        <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-white transition-all p-1.5 rounded hover:bg-slate-800" title="Fechar Módulo">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <!-- BARRA DE SELEÇÃO E CONTROLES -->
+    <div class="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 shrink-0 relative z-30 shadow-sm">
+        <div class="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+            
+            <!-- SELETOR DE PERÍODO COM CALENDÁRIO -->
+            <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded px-2.5 py-1">
+                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Emissão:</span>
+                <input type="date" id="dateStart" onchange="atualizarCargaModalData()" class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer">
+                <span class="text-[10px] text-slate-400 font-bold">à</span>
+                <input type="date" id="dateEnd" onchange="atualizarCargaModalData()" class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer">
+            </div>
+
+            <div class="h-4 w-px bg-slate-300 mx-1 hidden sm:block"></div>
+
+            <!-- FILTRO DE STATUS DA DOCUMENTAÇÃO -->
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Documentação:</span>
+                <div class="inline-flex rounded-md shadow-sm" role="group">
+                    <button type="button" id="btn-carga-doc-all" onclick="toggleCargaDocFilter('all')" class="bg-white text-slate-600 border border-slate-300 rounded-l px-3.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors hover:bg-slate-50">Todos</button>
+                    <button type="button" id="btn-carga-doc-invoiced" onclick="toggleCargaDocFilter('invoiced')" class="bg-white text-slate-600 border-y border-r border-slate-300 px-3.5 py-1 text-[10px] font-bold uppercase tracking-wide hover:bg-slate-50 transition-colors">Faturados</button>
+                    <button type="button" id="btn-carga-doc-pending" onclick="toggleCargaDocFilter('pending')" class="bg-comlub-blue text-white border-y border-r border-comlub-blue rounded-r px-3.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors">Pendentes</button>
+                </div>
+            </div>
+
+        </div>
+
+        <button onclick="fetchLogisticsData()" class="btn-outline px-3 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm flex items-center gap-1.5 self-stretch lg:self-auto justify-center rounded">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sincronizar Roteirização
+        </button>
+    </div>
+
+    <!-- ÁREA DE EXPEDIÇÃO (SPLIT VIEW) -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Esquerda: ÁRVORE DO OMS -->
+        <div class="w-[35%] bg-slate-50 border-r border-slate-200 flex flex-col min-w-[320px] relative z-10">
+            <div class="px-4 py-3 border-b border-slate-200 bg-white flex justify-between items-center shrink-0 shadow-sm z-10">
+                <span class="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="network" class="w-4 h-4 text-comlub-blue"></i> Árvore Logística (DA8)
+                </span>
+                <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200" id="countPendentesArvore">0 Pedidos</span>
+            </div>
+            
+            <!-- CAIXA DE PESQUISA PARA A ÁRVORE OMS -->
+            <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 shrink-0">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"></i>
+                    <input type="text" id="searchTree" placeholder="Pesquisar Rota, Município ou Setor..." oninput="filtrarArvoreOMS(this.value)" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 pl-8 text-[11px] font-medium focus:outline-none focus:border-comlub-blue focus:ring-1 focus:ring-comlub-blue transition-colors shadow-sm">
+                </div>
+            </div>
+
+            <!-- CONTAINER DA ÁRVORE -->
+            <div class="flex-1 overflow-y-auto bg-white p-2" id="arvoreOMS">
+                <!-- Injetado via JS -->
+            </div>
+        </div>
+
+        <!-- Direita: Mesa de Embarque e Planeamento -->
+        <div class="w-[65%] bg-white flex flex-col overflow-hidden relative z-0">
+            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex flex-col gap-3 shrink-0">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xs font-black text-slate-700 uppercase tracking-widest" id="tituloRotaSelecionada">Selecione um Nó na Árvore</h4>
+                        <p class="text-[10px] font-semibold text-slate-400 mt-0.5 uppercase" id="subtituloRotaSelecionada">Aguardando seleção na estrutura do OMS...</p>
+                    </div>
+                    <span class="text-[10px] font-black text-slate-500 bg-white border border-slate-200 px-2.5 py-1 rounded shadow-sm" id="resumoRotaSelecionada">--</span>
+                </div>
+                
+                <!-- Dados Operacionais e Múltiplos Filtros -->
+                <div class="bg-white p-3 border border-slate-200 rounded shadow-sm flex flex-col gap-3">
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50">
+                            <i data-lucide="user" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <input type="text" id="inputMotorista" placeholder="Nome do Motorista..." class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent placeholder:font-normal">
+                        </div>
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50">
+                            <i data-lucide="truck" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <input type="text" id="inputTransportadora" placeholder="Nome da Transportadora..." class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent placeholder:font-normal">
+                        </div>
+                        
+                        <!-- DROPDOWN DE STATUS MULTI-SELECT -->
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50 relative" id="dropdownStatusContainer">
+                            <i data-lucide="filter" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <button type="button" onclick="toggleStatusDropdown()" class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent text-left flex justify-between items-center">
+                                <span id="lblStatusSelecionados" class="truncate">Todos os Status</span>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2"></i>
+                            </button>
+                            <!-- Listagem de Status -->
+                            <div id="dropdownStatus" class="hidden absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 shadow-xl rounded-md z-[100] p-2 flex flex-col gap-1 min-w-[200px]">
+                                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
+                                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Status na Carga</span>
+                                    <button type="button" onclick="toggleAllStatus()" class="text-[9px] text-comlub-blue font-bold hover:underline uppercase tracking-widest" id="btnToggleAllStatus">Desmarcar Todos</button>
+                                </div>
+                                <div id="dropdownStatusList" class="max-h-48 overflow-y-auto flex flex-col gap-1 pr-1">
+                                    <!-- Injetado dinamicamente -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LINHA 2: DROPDOWN DE MUNICÍPIOS + INCLUIR MANUAL + RESÍDUO -->
+                    <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-t border-slate-100 pt-3 mt-1">
+                        
+                        <!-- DROPDOWN DE MUNICÍPIOS MULTI-SELECT -->
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50 w-full lg:w-1/3 relative" id="dropdownMunContainer">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <button type="button" onclick="toggleMunDropdown()" class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent text-left flex justify-between items-center">
+                                <span id="lblMunSelecionados" class="truncate">Todos os Municípios</span>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2"></i>
+                            </button>
+                            <!-- Listagem de Checkboxes -->
+                            <div id="dropdownMunicipios" class="hidden absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 shadow-xl rounded-md z-[100] p-2 flex flex-col gap-1">
+                                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
+                                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Municípios na Carga</span>
+                                    <button type="button" onclick="toggleAllMuns()" class="text-[9px] text-comlub-blue font-bold hover:underline uppercase tracking-widest" id="btnToggleAllMuns">Desmarcar Todos</button>
+                                </div>
+                                <div id="dropdownMunicipiosList" class="max-h-48 overflow-y-auto flex flex-col gap-1 pr-1">
+                                    <!-- Injetado dinamicamente -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- INCLUIR MANUAL -->
+                        <div class="flex items-center gap-2 px-2 border border-slate-150 rounded bg-slate-50 w-full lg:w-1/3">
+                            <i data-lucide="file-plus-2" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <input type="text" id="inputIncluirPedido" placeholder="Inserir pedido..." class="w-full py-1.5 text-xs font-semibold text-slate-700 outline-none bg-transparent placeholder:font-normal" onkeypress="if(event.key === 'Enter') incluirPedidoManualmente()">
+                            <button onclick="incluirPedidoManualmente()" class="bg-comlub-blue hover:bg-blue-900 text-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-sm transition-all shadow-sm">
+                                Incluir
+                            </button>
+                        </div>
+                        
+                        <!-- FILTRO: CHEQUES DO PEDIDO MÍNIMO -->
+                        <div class="flex items-center justify-center lg:justify-start gap-4 bg-slate-50 border border-slate-200 rounded px-3 py-1.5 w-full lg:w-1/3">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest shrink-0 hidden xl:block">Resíduo:</span>
+                            <label class="flex items-center gap-1 cursor-pointer" title="Mostrar pedidos que atingiram o preço mínimo">
+                                <input type="checkbox" id="chkAtinge" checked onchange="aplicarFiltroTabela()" class="w-3.5 h-3.5 text-emerald-600 rounded border-emerald-300 focus:ring-emerald-500">
+                                <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">✅ Min. OK</span>
+                            </label>
+                            <label class="flex items-center gap-1 cursor-pointer" title="Mostrar pedidos que não atingiram o preço mínimo">
+                                <input type="checkbox" id="chkNaoAtinge" checked onchange="aplicarFiltroTabela()" class="w-3.5 h-3.5 text-rose-600 rounded border-rose-300 focus:ring-rose-500">
+                                <span class="text-[10px] font-bold text-rose-700 uppercase tracking-widest">⚠️ Abaixo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row justify-end pt-1 gap-3">
+                        <button id="btnImprimirResumoPdf" onclick="gerarPDFResumoProdutos()" class="btn-outline px-4 py-2 text-xs font-bold uppercase tracking-widest rounded shadow-sm flex items-center gap-2 transition-all w-full md:w-auto justify-center">
+                            <i data-lucide="package-search" class="w-4 h-4 text-comlub-blue"></i> Imprimir Resumo de Produtos
+                        </button>
+                        <button id="btnImprimirPdf" onclick="gerarPDFMapaEntrega()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 text-xs font-bold uppercase tracking-widest rounded shadow-md flex items-center gap-2 transition-all w-full md:w-auto justify-center">
+                            <i data-lucide="printer" class="w-4 h-4 text-comlub-yellow"></i> Imprimir Manifesto de Carga
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Lista de Pedidos na Carga -->
+            <div class="flex-1 overflow-y-auto relative flex flex-col">
+                <table class="erp-table w-full">
+                    <thead class="sticky top-0 z-10 select-none bg-white" id="theadPedidosCarga">
+                        <tr>
+                            <th class="text-left w-24 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Número Pedido')">Pedido <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-left w-24 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('1. Data Emissão Pedido')">Emissão <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-left cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Nome Cliente')">Cliente <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-left w-24">CEP</th>
+                            <th class="text-left w-28 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Município Cliente')">Município <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-center w-24">Itens Stock</th>
+                            <th class="text-left w-28 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Número NF')">Nº Nota / Série <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-right w-24 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('Peso Total')">Peso (Kg) <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-center w-24 cursor-pointer hover:bg-slate-200 transition-all" onclick="handleOrderSort('_status')">Status <i data-lucide="chevrons-up-down" class="inline w-3 h-3 text-slate-300"></i></th>
+                            <th class="text-center w-16">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyPedidosCarga">
+                        <tr><td colspan="10" class="text-center py-10 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Selecione uma localização na árvore OMS.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ITENS E VALIDAÇÃO DE ESTOQUE -->
+    <div id="itemsModal" class="hidden fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0" onclick="closeItemsModal()"></div>
+        <div id="itemsContainer" class="bg-white w-full max-w-5xl h-[75vh] rounded shadow-2xl flex flex-col overflow-hidden relative z-10 transform scale-95 transition-transform duration-300">
+            <div class="bg-[#0f172a] px-6 py-4 border-b border-slate-800 flex justify-between items-start shrink-0">
+                <div class="flex gap-4">
+                    <div class="w-8 h-8 bg-slate-800 rounded border border-slate-700 flex items-center justify-center shrink-0">
+                        <i data-lucide="package" class="text-comlub-yellow w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white tracking-wide leading-tight">Itens do Pedido: <span id="itemsModalPedido" class="tabular-nums text-comlub-yellow">--</span></h3>
+                        <p class="text-slate-300 text-[11px] font-semibold mt-1">Cliente: <span id="itemsModalCliente" class="text-white">--</span></p>
+                    </div>
+                </div>
+                <button onclick="closeItemsModal()" class="text-slate-400 hover:text-white transition-colors p-1 shrink-0"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div id="avisoPedidoMinimo" class="hidden shrink-0"></div>
+
+            <div class="flex-1 overflow-y-auto p-4 bg-slate-50">
+                <table class="erp-table w-full bg-white border border-slate-200 rounded shadow-sm">
+                    <thead class="sticky top-0 z-10 select-none bg-slate-100">
+                        <tr>
+                            <th class="text-center w-12">Item</th>
+                            <th class="text-left w-24">Cód. Produto</th>
+                            <th class="text-left">Descrição</th>
+                            <th class="text-right w-20">Qtd.</th>
+                            <th class="text-right w-24">Valor Unit.</th>
+                            <th class="text-right w-24">Valor Total</th>
+                            <th class="text-right w-28">Saldo Físico em Stock</th>
+                            <th class="text-right w-20">Falta (Qtd)</th>
+                            <th class="text-center w-28">Status Item</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyItensPedido">
+                        <!-- Injetado dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="px-6 py-3 bg-white border-t border-slate-200 flex justify-between items-center shrink-0">
+                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                    Verificação Automática de Disponibilidade Física no ERP
+                </div>
+                <button onclick="closeItemsModal()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest shadow-sm rounded transition-all">Fechar Itens</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÕES GLOBAIS
+        let apiHost = window.location.hostname;
+        if (!apiHost || apiHost.includes('goog') || apiHost === 'localhost') {
+            apiHost = '201.91.126.114'; 
+        }
+        const API_BASE_URL = `http://${apiHost}:3001/api`;
+
+        let logData = [];
+        let currentSelectedNode = null; 
+        let currentPedidosDaCarga = []; 
+        let globalOmsTree = {};
+        
+        let filialAtiva = null;
+        let filialNomeAtiva = null;
+        let isFetching = false;
+
+        let orderSortConfig = { key: 'Número Pedido', direction: 'asc' };
+        let activeCargaDocFilter = 'pending';
+
+        let currentMunList = [];
+        let selectedMunList = new Set();
+        let currentStatusList = [];
+        let selectedStatusList = new Set();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            abrirModalFilial();
+        });
+
+        // Fechar Dropdowns se clicar fora
+        document.addEventListener('click', (e) => {
+            const containerMun = document.getElementById('dropdownMunContainer');
+            if (containerMun && !containerMun.contains(e.target)) {
+                const drop = document.getElementById('dropdownMunicipios');
+                if (drop && !drop.classList.contains('hidden')) {
+                    drop.classList.add('hidden');
+                }
+            }
+            const containerStatus = document.getElementById('dropdownStatusContainer');
+            if (containerStatus && !containerStatus.contains(e.target)) {
+                const drop = document.getElementById('dropdownStatus');
+                if (drop && !drop.classList.contains('hidden')) {
+                    drop.classList.add('hidden');
+                }
+            }
+        });
+
+        // ==========================================
+        // UTILS
+        // ==========================================
+        const getValUniversal = (row, ...possiveisNomes) => {
+            if(!row) return '';
+            const chavesDaLinha = Object.keys(row);
+            for (let i = 0; i < possiveisNomes.length; i++) {
+                const nomeProcurado = String(possiveisNomes[i]).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                const chaveEncontrada = chavesDaLinha.find(k => String(k).trim().toLowerCase().replace(/[^a-z0-9]/g, '') === nomeProcurado);
+                if (chaveEncontrada && row[chaveEncontrada] !== undefined && row[chaveEncontrada] !== null && String(row[chaveEncontrada]).trim() !== '') {
+                    return row[chaveEncontrada];
+                }
+            }
+            return '';
+        };
+
+        const parseNum = v => {
+            if (v === undefined || v === null || v === '---' || v === '') return 0;
+            if (typeof v === 'number') return v;
+            let str = String(v).trim().replace(/[^0-9,\.-]/g, '');
+            if (str.includes(',')) { str = str.replace(/\./g, ''); str = str.replace(',', '.'); }
+            let n = parseFloat(str); return isNaN(n) ? 0 : n;
+        };
+
+        const fmtCurr = v => parseNum(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const fmtNum = v => parseNum(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        function formatarData(dataStr) {
+            if (!dataStr) return '--/--/----';
+            let cleanStr = String(dataStr).split('T')[0].replace(/-/g, ''); 
+            if (cleanStr.length >= 8) return `${cleanStr.substring(6,8)}/${cleanStr.substring(4,6)}/${cleanStr.substring(0,4)}`;
+            return dataStr;
+        }
+
+        // ==========================================
+        // GESTÃO DE MUNICÍPIOS MULTI-SELECT
+        // ==========================================
+        function toggleMunDropdown() {
+            document.getElementById('dropdownMunicipios').classList.toggle('hidden');
+        }
+
+        function toggleAllMuns() {
+            const btn = document.getElementById('btnToggleAllMuns');
+            if (selectedMunList.size > 0) {
+                selectedMunList.clear(); 
+            } else {
+                currentMunList.forEach(m => selectedMunList.add(m)); 
+            }
+            renderMunDropdown(); 
+            atualizarCargaModalData();
+        }
+
+        function renderMunDropdown() {
+            const dropList = document.getElementById('dropdownMunicipiosList');
+            const btnAll = document.getElementById('btnToggleAllMuns');
+            
+            if (selectedMunList.size > 0) btnAll.innerText = 'Desmarcar Todos';
+            else btnAll.innerText = 'Marcar Todos';
+
+            let html = '';
+            if (currentMunList.length === 0) {
+                html = '<div class="text-[10px] text-slate-400 text-center py-2">Nenhum município na filial</div>';
+            } else {
+                currentMunList.forEach(m => {
+                    const isChecked = selectedMunList.has(m) ? 'checked' : '';
+                    html += `
+                        <label class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded cursor-pointer transition-colors border border-transparent hover:border-slate-200">
+                            <input type="checkbox" value="${m}" ${isChecked} onchange="toggleMunSelection(this)" class="w-3.5 h-3.5 text-comlub-blue rounded border-slate-300 focus:ring-comlub-blue shrink-0">
+                            <span class="text-[10px] font-bold text-slate-700 uppercase truncate" title="${m}">${m || 'NÃO INFORMADO'}</span>
+                        </label>
+                    `;
+                });
+            }
+            dropList.innerHTML = html;
+            updateMunLabel();
+        }
+
+        function toggleMunSelection(cb) {
+            if (cb.checked) selectedMunList.add(cb.value);
+            else selectedMunList.delete(cb.value);
+            updateMunLabel();
+            atualizarCargaModalData(); 
+        }
+
+        function updateMunLabel() {
+            const lbl = document.getElementById('lblMunSelecionados');
+            if (selectedMunList.size === currentMunList.length && currentMunList.length > 0) {
+                lbl.innerText = `Todos os Municípios (${currentMunList.length})`;
+            } else if (selectedMunList.size === 0) {
+                lbl.innerText = `Nenhum Selecionado`;
+            } else {
+                lbl.innerText = `${selectedMunList.size} Selecionados`;
+            }
+        }
+
+        // ==========================================
+        // GESTÃO DE STATUS MULTI-SELECT
+        // ==========================================
+        function toggleStatusDropdown() {
+            document.getElementById('dropdownStatus').classList.toggle('hidden');
+        }
+
+        function toggleAllStatus() {
+            const btn = document.getElementById('btnToggleAllStatus');
+            if (selectedStatusList.size > 0) {
+                selectedStatusList.clear(); 
+            } else {
+                currentStatusList.forEach(s => selectedStatusList.add(s)); 
+            }
+            renderStatusDropdown(); 
+            atualizarCargaModalData();
+        }
+
+        function renderStatusDropdown() {
+            const dropList = document.getElementById('dropdownStatusList');
+            const btnAll = document.getElementById('btnToggleAllStatus');
+            
+            if (selectedStatusList.size > 0) btnAll.innerText = 'Desmarcar Todos';
+            else btnAll.innerText = 'Marcar Todos';
+
+            let html = '';
+            if (currentStatusList.length === 0) {
+                html = '<div class="text-[10px] text-slate-400 text-center py-2">Nenhum status disponível</div>';
+            } else {
+                currentStatusList.forEach(s => {
+                    const isChecked = selectedStatusList.has(s) ? 'checked' : '';
+                    html += `
+                        <label class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded cursor-pointer transition-colors border border-transparent hover:border-slate-200">
+                            <input type="checkbox" value="${s}" ${isChecked} onchange="toggleStatusSelection(this)" class="w-3.5 h-3.5 text-comlub-blue rounded border-slate-300 focus:ring-comlub-blue shrink-0">
+                            <span class="text-[10px] font-bold text-slate-700 uppercase truncate" title="${s}">${s}</span>
+                        </label>
+                    `;
+                });
+            }
+            dropList.innerHTML = html;
+            updateStatusLabel();
+        }
+
+        function toggleStatusSelection(cb) {
+            if (cb.checked) selectedStatusList.add(cb.value);
+            else selectedStatusList.delete(cb.value);
+            updateStatusLabel();
+            atualizarCargaModalData(); 
+        }
+
+        function updateStatusLabel() {
+            const lbl = document.getElementById('lblStatusSelecionados');
+            if (selectedStatusList.size === currentStatusList.length && currentStatusList.length > 0) {
+                lbl.innerText = `Todos os Status (${currentStatusList.length})`;
+            } else if (selectedStatusList.size === 0) {
+                lbl.innerText = `Nenhum Selecionado`;
+            } else {
+                lbl.innerText = `${selectedStatusList.size} Selecionados`;
+            }
+        }
+
+        // ==========================================
+        // FLUXO PRINCIPAL: FILIAL E API
+        // ==========================================
+        function abrirModalFilial() {
+            document.getElementById('filialModal').classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        }
+
+        function selecionarFilial(cod, nome) {
+            filialAtiva = cod;
+            filialNomeAtiva = nome;
+            document.getElementById('filialModal').classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => { document.getElementById('filialModal').classList.add('hidden'); }, 300);
+            document.getElementById('nomeFilialCabecalho').innerText = `${cod} - ${nome}`;
+            fetchLogisticsData();
+        }
+
+        let toastTimer;
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            toastMsg.innerText = msg;
+            if(isError) {
+                toast.classList.replace('border-slate-700', 'border-rose-500');
+                toastIcon.setAttribute('data-lucide', 'alert-circle');
+            } else {
+                toast.classList.replace('border-rose-500', 'border-slate-700');
+                toastIcon.setAttribute('data-lucide', 'check-circle');
+            }
+            lucide.createIcons({ root: toast });
+
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            if(toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            }, 3500);
+        }
+
+        function toggleCargaDocFilter(val) {
+            activeCargaDocFilter = val;
+            ['all', 'invoiced', 'pending'].forEach(btn => {
+                const el = document.getElementById(`btn-carga-doc-${btn}`);
+                el.className = "bg-white text-slate-600 border border-slate-300 px-3.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors hover:bg-slate-50" + (btn === 'all' ? ' rounded-l' : '') + (btn === 'pending' ? ' rounded-r border-y border-r' : ' border-y border-r');
+            });
+            const activeEl = document.getElementById(`btn-carga-doc-${val}`);
+            activeEl.className = "bg-comlub-blue text-white border-comlub-blue px-3.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors" + (val === 'all' ? ' rounded-l border' : '') + (val === 'pending' ? ' rounded-r border-y border-r' : ' border-y border-r');
+            
+            atualizarCargaModalData();
+        }
+
+        // ==========================================
+        // CONSUMO DA API MOTOR-LOGISTICO (BLINDADA)
+        // ==========================================
+        async function fetchLogisticsData() {
+            if (!filialAtiva || isFetching) return;
+            isFetching = true;
+
+            const overlay = document.getElementById('loadingOverlay');
+            if(overlay) overlay.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/motor-logistico/${filialAtiva}`);
+                if (!response.ok) throw new Error('API Indisponível');
+                
+                const rawJson = await response.json();
+                
+                let dataArray = [];
+                if (Array.isArray(rawJson)) {
+                    dataArray = rawJson;
+                } else if (rawJson && Array.isArray(rawJson.data)) {
+                    dataArray = rawJson.data;
+                }
+                
+                // Mapeia os dados devolvidos do SQL para a estrutura esperada pela tela
+                const mappedData = dataArray.map(r => {
+                    let bloqStr = String(r.StatusCarga || r.status || '').toUpperCase();
+                    let bloqueioFinal = '';
+                    if(bloqStr.includes('DUPLO')) bloqueioFinal = 'BLOQUEIO DUPLO';
+                    else if(bloqStr.includes('ESTOQUE')) bloqueioFinal = 'BLOQ. ESTOQUE';
+                    else if(bloqStr.includes('CRÉDITO') || bloqStr.includes('CREDITO')) bloqueioFinal = 'BLOQ. CRÉDITO';
+
+                    return {
+                        'Filial': r.Filial || r.C5_FILIAL || filialAtiva,
+                        'Número Pedido': r.NumeroPedido || r.C5_NUM || r.Pedido || 'S/N',
+                        'Nome Cliente': r.NomeCliente || r.Cliente || 'N/A',
+                        'CEP Cliente': r.CEP || r.A1_CEP || 'N/A',
+                        'Estado Cliente': r.UF || r.A1_EST || 'N/A',
+                        'Município Cliente': r.Municipio || r.A1_MUN || 'N/A',
+                        'Nome Vendedor': r.Vendedor || r.A3_NOME || 'N/A',
+                        
+                        'Rota': r.Rota || r.Roteiro || 'SEM ROTA',
+                        'Município Rota': r.Percurso || r.Zona || 'SEM ZONA',
+                        'Código Rota': r.Percurso ? String(r.Percurso).substring(0,3) : 'S/N',
+                        'Percurso': r.Percurso || r.Zona || 'N/A',
+                        
+                        '1. Data Emissão Pedido': r.DataEmissao || r.C5_EMISSAO || '',
+                        'Bloqueio': bloqueioFinal,
+                        'Peso Total': parseFloat(r.PesoPendente || r.PesoTotal || r.Peso || 0),
+                        'Valor Total': parseFloat(r.ValorPendente || r.ValorTotal || r.Valor || r.Total || 0),
+                        
+                        // Campos estruturais para controlo visual
+                        '2. Data Liberação': bloqueioFinal === '' ? (r.DataEmissao || r.C5_EMISSAO) : '',
+                        'Número NF': '',
+                        'Série NF': '',
+                        '3. Data Faturamento': '',
+                        '4. Data Carregamento': '',
+                        '5. Data Entrega': ''
+                    };
+                });
+                
+                processData(mappedData);
+                
+            } catch (error) {
+                console.warn("Utilizando Mock Local no Modo Offline.");
+                
+                const mockData = [
+                    { "Filial": "01", "Número Pedido": "005123", "Nome Cliente": "INDÚSTRIA METALÚRGICA SUL", "CEP Cliente": "57005-120", "Estado Cliente": "AL", "Município Cliente": "MACEIÓ", "Rota": "MACEIO", "Município Rota": "MACEIÓ SUL", "Código Rota": "S01", "Percurso": "MACEIÓ - PARTE BAIXA", "1. Data Emissão Pedido": "20260401", "Bloqueio": "", "Peso Total": 450.50, "Valor Total": 1800.00, "Número NF": "001452", "Série NF": "1", "3. Data Faturamento": "20260405" },
+                    { "Filial": "01", "Número Pedido": "005125", "Nome Cliente": "TRANSPORTADORA RÁPIDO", "CEP Cliente": "57084-330", "Estado Cliente": "AL", "Município Cliente": "MACEIÓ", "Rota": "MACEIO", "Município Rota": "MACEIÓ ALTA", "Código Rota": "S05", "Percurso": "BENEDITO BENTES", "1. Data Emissão Pedido": "20260505", "Bloqueio": "", "Peso Total": 890.30, "Valor Total": 950.00, "Número NF": "", "Série NF": "" },
+                    { "Filial": "01", "Número Pedido": "629300", "Nome Cliente": "ALAGOAS AMBIENTAL", "CEP Cliente": "57040-005", "Estado Cliente": "AL", "Município Cliente": "MACEIÓ", "Rota": "MACEIO", "Município Rota": "MACEIÓ NORTE", "Código Rota": "S03", "Percurso": "LITORAL NORTE", "1. Data Emissão Pedido": "20260520", "Bloqueio": "BLOQ. ESTOQUE", "Peso Total": 230.15, "Valor Total": 5200.00, "Número NF": "" },
+                    { "Filial": "01", "Número Pedido": "629301", "Nome Cliente": "SUPERMERCADO SERTÃO", "CEP Cliente": "57450-001", "Estado Cliente": "AL", "Município Cliente": "SANTANA DO IPANEMA", "Rota": "INTERIOR", "Município Rota": "SERTÃO E MATA", "Código Rota": "S08", "Percurso": "SERTÃO", "1. Data Emissão Pedido": "20260520", "Bloqueio": "", "Peso Total": 150.00, "Valor Total": 1400.00, "Número NF": "001999", "Série NF": "1", "3. Data Faturamento": "20260521" },
+                    { "Filial": "01", "Número Pedido": "629302", "Nome Cliente": "COMERCIO LITORAL SUL", "CEP Cliente": "57150-000", "Estado Cliente": "AL", "Município Cliente": "MARECHAL DEODORO", "Rota": "INTERIOR", "Município Rota": "SUL E AGRESTE", "Código Rota": "S06", "Percurso": "LITORAL SUL", "1. Data Emissão Pedido": "20260520", "Bloqueio": "BLOQ. CRÉDITO", "Peso Total": 100.00, "Valor Total": 6000.00, "Número NF": "" }
+                ];
+                let expandedMock = [];
+                for(let i=0; i<20; i++) expandedMock = expandedMock.concat(mockData.map(d => ({...d, "Número Pedido": d["Número Pedido"] + i})));
+                const mockFiltrado = expandedMock.filter(r => r.Filial === filialAtiva);
+                processData(mockFiltrado);
+            } finally {
+                if(overlay) overlay.classList.add('hidden');
+                isFetching = false;
+            }
+        }
+
+        function processData(rawData) {
+            logData = rawData.map(r => {
+                let status = 'Emissão';
+                if(r['5. Data Entrega']) status = 'Entregue';
+                else if(r['4. Data Carregamento']) status = 'Enviado para Transportadora';
+                else if(r['3. Data Faturamento']) status = 'Faturado';
+                else if(r['Bloqueio'] === 'BLOQUEIO DUPLO') status = 'Bloq. Duplo';
+                else if(r['Bloqueio'] === 'BLOQ. ESTOQUE') status = 'Bloq. Estoque';
+                else if(r['Bloqueio'] === 'BLOQ. CRÉDITO') status = 'Bloq. Crédito';
+                else if(r['2. Data Liberação']) status = 'Liberado';
+
+                const omsInfo = {
+                    rota: r['Rota'] || "OUTRAS REGIÕES",
+                    zona: r['Município Cliente'] || "MUNICÍPIO NÃO INFORMADO", 
+                    setor: r['Percurso'] || "SEM ZONA",
+                    ref: r['Percurso'] || "SEM ZONA"
+                };
+
+                return { 
+                    ...r, 
+                    _status: status, 
+                    _hasRealBlock: (status.includes('Bloq')), 
+                    _removedFromCarga: false, 
+                    _overrideNode: null, 
+                    _residuoStatus: null, 
+                    _residuoValor: 0,
+                    _itensCache: null, // CACHE DE ITENS PARA PERFORMANCE E HEALING
+                    _oms: omsInfo
+                };
+            });
+
+            // POPULA OS FILTROS GLOBAIS DE MUN E STATUS COM TODA A BASE DA FILIAL
+            const muns = new Set();
+            const statuses = new Set(['BLOQ. DUPLO', 'BLOQ. ESTOQUE', 'BLOQ. CRÉDITO', 'LIBERADO', 'FATURADO', 'EMISSÃO']);
+            logData.forEach(p => {
+                muns.add(String(p['Município Cliente'] || '').trim().toUpperCase());
+                if (p._status) statuses.add(String(p._status).trim().toUpperCase());
+            });
+
+            currentMunList = Array.from(muns).sort();
+            selectedMunList = new Set(currentMunList);
+            renderMunDropdown();
+
+            currentStatusList = Array.from(statuses).sort();
+            selectedStatusList = new Set(currentStatusList);
+            renderStatusDropdown();
+
+            atualizarCargaModalData();
+        }
+
+        function obterPendentesGlobais() {
+            const dateStartInput = document.getElementById('dateStart').value;
+            const dateEndInput = document.getElementById('dateEnd').value;
+
+            return logData.filter(r => {
+                const naoExcluido = !r._removedFromCarga;
+                if (!naoExcluido) return false;
+
+                const emissaoStr = (r['1. Data Emissão Pedido'] || '').replace(/-/g, '');
+                
+                if (dateStartInput && emissaoStr !== '' && emissaoStr < dateStartInput.replace(/-/g, '')) return false;
+                if (dateEndInput && emissaoStr !== '' && emissaoStr > dateEndInput.replace(/-/g, '')) return false;
+
+                const isFaturado = r['3. Data Faturamento'] && String(r['3. Data Faturamento']).trim() !== '';
+                if (activeCargaDocFilter === 'pending' && isFaturado) return false;
+                if (activeCargaDocFilter === 'invoiced' && !isFaturado) return false;
+
+                // APLICAÇÃO DOS FILTROS GLOBAIS
+                const munCli = String(r['Município Cliente'] || '').trim().toUpperCase();
+                if (selectedMunList.size > 0 && !selectedMunList.has(munCli)) return false;
+
+                const statusPed = String(r._status || '').trim().toUpperCase();
+                if (selectedStatusList.size > 0 && !selectedStatusList.has(statusPed)) return false;
+
+                return true;
+            });
+        }
+
+        function atualizarCargaModalData() {
+            let pendentes = obterPendentesGlobais();
+
+            globalOmsTree = {};
+            let totalPendentes = 0;
+
+            pendentes.forEach(pedido => {
+                totalPendentes++;
+                const nodeInfo = pedido._overrideNode || pedido._oms;
+                
+                if (!globalOmsTree[nodeInfo.rota]) globalOmsTree[nodeInfo.rota] = { zonas: {}, peso: 0, qtd: 0 };
+                if (!globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona]) globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona] = { setores: {}, peso: 0, qtd: 0 };
+                if (!globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].setores[nodeInfo.setor]) {
+                    globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].setores[nodeInfo.setor] = { 
+                        ref: nodeInfo.ref, pedidos: [], pesoTotal: 0, qtd: 0, bloqueados: 0 
+                    };
+                }
+
+                const s = globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].setores[nodeInfo.setor];
+                s.pedidos.push(pedido);
+                s.pesoTotal += (pedido['Peso Total'] || 0);
+                s.qtd++;
+                if (pedido._hasRealBlock) s.bloqueados++;
+
+                globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].peso += (pedido['Peso Total'] || 0);
+                globalOmsTree[nodeInfo.rota].zonas[nodeInfo.zona].qtd++;
+                
+                globalOmsTree[nodeInfo.rota].peso += (pedido['Peso Total'] || 0);
+                globalOmsTree[nodeInfo.rota].qtd++;
+            });
+
+            document.getElementById('countPendentesArvore').innerText = `${totalPendentes} Pedidos`;
+            
+            const termoBusca = document.getElementById('searchTree').value;
+            renderTreeOMS(globalOmsTree, termoBusca);
+            
+            if (currentSelectedNode) {
+                selecionarNodeOMS(currentSelectedNode.rota, currentSelectedNode.zona, currentSelectedNode.setor, currentSelectedNode.ref, pendentes);
+            } else {
+                limparMesaCarga();
+            }
+        }
+
+        function filtrarArvoreOMS(val) {
+            renderTreeOMS(globalOmsTree, val);
+        }
+
+        function createNodeHtml(title, qtd, weight, blocked, type, isExpanded, rotaArgs) {
+            const badgeRetido = blocked > 0 ? `<span class="badge-retido px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ml-2 flex items-center gap-1 shrink-0"><i data-lucide="shield-alert" class="w-3 h-3"></i> ${blocked} RETIDO</span>` : '';
+            
+            let paddingLeftClass = type === 'rota' ? 'px-3' : (type === 'zona' ? 'pl-2 pr-3' : 'pl-4 pr-3');
+            let titleSize = type === 'rota' ? 'text-xs' : 'text-[11px]';
+            let iconColor = type === 'rota' ? 'text-comlub-blue' : (type === 'zona' ? 'text-comlub-yellow' : 'text-slate-400');
+            let iconType = type === 'setor' ? 'navigation' : (type === 'zona' ? 'map-pin' : 'map');
+            
+            let toggleIcon = type === 'setor' ? '<div class="w-4 h-4 shrink-0"></div>' : `<i data-lucide="chevron-${isExpanded ? 'down' : 'right'}" class="w-4 h-4 text-slate-400 chevron-icon shrink-0"></i>`;
+            
+            let idElem = '';
+            if (type === 'rota') idElem = `node-${rotaArgs.rota}`;
+            else if (type === 'zona') idElem = `node-${rotaArgs.rota}-${rotaArgs.zona}`;
+            else idElem = `node-${rotaArgs.rota}-${rotaArgs.zona}-${rotaArgs.setor}`;
+            idElem = idElem.replace(/\s+/g, '-');
+
+            const clickAction = type === 'setor' 
+                ? `onclick="selecionarNodeOMS('${rotaArgs.rota}', '${rotaArgs.zona}', '${rotaArgs.setor}', '${rotaArgs.ref}')"`
+                : `onclick="toggleChildren(this.nextElementSibling, this); selecionarNodeOMS('${rotaArgs.rota}', ${rotaArgs.zona ? `'${rotaArgs.zona}'` : 'null'}, null, null)"`;
+
+            return `
+                <div id="${idElem}" class="oms-node-header group ${paddingLeftClass}" ${clickAction}>
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        ${toggleIcon}
+                        <i data-lucide="${iconType}" class="w-4 h-4 ${iconColor} shrink-0"></i>
+                        <span class="font-bold text-slate-800 ${titleSize} uppercase truncate" title="${title}">${title}</span>
+                        ${badgeRetido}
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="text-[9px] font-bold text-slate-500">${qtd} Ped</span>
+                        <span class="text-[9px] font-black badge-peso">${weight.toFixed(0)} Kg</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTreeOMS(tree, filterText = '') {
+            const container = document.getElementById('arvoreOMS');
+            if (Object.keys(tree).length === 0) {
+                container.innerHTML = '<div class="p-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma localização encontrada.</div>';
+                return;
+            }
+
+            const search = filterText.toLowerCase().trim();
+            const forceExpand = search !== '';
+            let html = '<div class="space-y-1 py-2">';
+
+            for (const [rota, rData] of Object.entries(tree)) {
+                const matchRota = rota.toLowerCase().includes(search);
+                let htmlZonas = '';
+                let hasVisibleZonas = false;
+
+                for (const [zona, zData] of Object.entries(rData.zonas)) {
+                    const matchZona = zona.toLowerCase().includes(search);
+                    let htmlSetores = '';
+                    let hasVisibleSetores = false;
+
+                    for (const [setor, sData] of Object.entries(zData.setores)) {
+                        const matchSetor = setor.toLowerCase().includes(search) || sData.ref.toLowerCase().includes(search);
+                        
+                        if (search === '' || matchRota || matchZona || matchSetor) {
+                            hasVisibleSetores = true;
+                            htmlSetores += createNodeHtml(sData.ref, sData.qtd, sData.pesoTotal, sData.bloqueados, 'setor', false, {rota, zona, setor, ref: sData.ref});
+                        }
+                    }
+
+                    if (hasVisibleSetores || matchZona || matchRota) {
+                        hasVisibleZonas = true;
+                        const isExpandedClass = forceExpand ? 'block' : 'hidden';
+                        htmlZonas += `
+                            <div>
+                                ${createNodeHtml(zona, zData.qtd, zData.peso, 0, 'zona', forceExpand, {rota, zona})}
+                                <div class="tree-line ${isExpandedClass}">
+                                    ${htmlSetores}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                if (hasVisibleZonas || matchRota) {
+                    const isExpandedClass = forceExpand ? 'block' : 'hidden';
+                    html += `
+                        <div class="mb-2">
+                            ${createNodeHtml(rota, rData.qtd, rData.peso, 0, 'rota', forceExpand, {rota})}
+                            <div class="tree-line ${isExpandedClass}">
+                                ${htmlZonas}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            html += '</div>';
+
+            if (html.includes('mb-2') === false) html = '<div class="p-6 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma localização encontrada.</div>';
+
+            container.innerHTML = html;
+            lucide.createIcons({ root: container });
+
+            if (currentSelectedNode) {
+                let idElem = '';
+                if (currentSelectedNode.setor) idElem = `node-${currentSelectedNode.rota}-${currentSelectedNode.zona}-${currentSelectedNode.setor}`;
+                else if (currentSelectedNode.zona) idElem = `node-${currentSelectedNode.rota}-${currentSelectedNode.zona}`;
+                else idElem = `node-${currentSelectedNode.rota}`;
+                
+                const el = document.getElementById(idElem.replace(/\s+/g, '-'));
+                if (el) el.classList.add('oms-node-active');
+            }
+        }
+
+        function toggleChildren(container, headerNode) {
+            if (!container || !container.classList.contains('tree-line')) return; 
+            const icon = headerNode.querySelector('.chevron-icon');
+            if(container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                container.classList.add('block');
+                if(icon) { icon.setAttribute('data-lucide', 'chevron-down'); lucide.createIcons({root: headerNode}); }
+            } else {
+                container.classList.remove('block');
+                container.classList.add('hidden');
+                if(icon) { icon.setAttribute('data-lucide', 'chevron-right'); lucide.createIcons({root: headerNode}); }
+            }
+        }
+
+        function limparMesaCarga() {
+            currentSelectedNode = null;
+            currentPedidosDaCarga = [];
+            document.getElementById('tituloRotaSelecionada').innerText = 'Mesa de Formação de Carga';
+            document.getElementById('subtituloRotaSelecionada').innerText = 'Aguardando seleção de diretório na árvore OMS...';
+            document.getElementById('resumoRotaSelecionada').innerText = '--';
+            document.getElementById('tbodyPedidosCarga').innerHTML = `<tr><td colspan="10" class="text-center py-10 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Selecione uma localização na árvore OMS.</td></tr>`;
+        }
+
+        function selecionarNodeOMS(rota, zona, setor, ref, pendingContext = null) {
+            document.querySelectorAll('.oms-node-active').forEach(el => el.classList.remove('oms-node-active'));
+            
+            let idElem = '';
+            if (setor) idElem = `node-${rota}-${zona}-${setor}`;
+            else if (zona) idElem = `node-${rota}-${zona}`;
+            else idElem = `node-${rota}`;
+            
+            const el = document.getElementById(idElem.replace(/\s+/g, '-'));
+            if (el) el.classList.add('oms-node-active');
+
+            currentSelectedNode = { rota, zona, setor, ref };
+            
+            const titleRef = ref || zona || rota;
+            document.getElementById('tituloRotaSelecionada').innerText = `Agrupamento Logístico: ${titleRef}`;
+            document.getElementById('subtituloRotaSelecionada').innerText = `${rota} > ${zona || 'Geral'} > ${setor || 'Geral'}`;
+
+            let base = pendingContext;
+            if (!base) base = obterPendentesGlobais();
+
+            currentPedidosDaCarga = base.filter(p => {
+                const n = p._overrideNode || p._oms;
+                if (setor) return n.rota === rota && n.zona === zona && n.setor === setor;
+                if (zona) return n.rota === rota && n.zona === zona;
+                if (rota) return n.rota === rota;
+                return false;
+            });
+
+            let pesoTotal = 0;
+            currentPedidosDaCarga.forEach(p => pesoTotal += (p['Peso Total'] || 0));
+            document.getElementById('resumoRotaSelecionada').innerHTML = `<span class="mr-2"><b>${currentPedidosDaCarga.length}</b> Pedidos</span> <span class="mr-2 text-slate-300">|</span> <span><b>${pesoTotal.toFixed(2)}</b> Kg</span>`;
+
+            renderizarMesaCarga();
+        }
+
+        function handleOrderSort(key) {
+            if (orderSortConfig.key === key) orderSortConfig.direction = orderSortConfig.direction === 'asc' ? 'desc' : 'asc';
+            else { orderSortConfig.key = key; orderSortConfig.direction = 'asc'; }
+            renderizarMesaCarga();
+        }
+
+        function renderizarMesaCarga() {
+            if (!currentSelectedNode || currentPedidosDaCarga.length === 0) {
+                document.getElementById('tbodyPedidosCarga').innerHTML = `<tr><td colspan="10" class="text-center py-10 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Sem dados para exibir na localização.</td></tr>`;
+                return;
+            }
+
+            if (orderSortConfig.key) {
+                currentPedidosDaCarga.sort((a, b) => {
+                    let valA = a[orderSortConfig.key]; let valB = b[orderSortConfig.key];
+                    if (valA === undefined || valA === null) valA = '';
+                    if (valB === undefined || valB === null) valB = '';
+                    if (typeof valA === 'number' && typeof valB === 'number') return orderSortConfig.direction === 'asc' ? valA - valB : valB - valA;
+                    valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase();
+                    if (valA < valB) return orderSortConfig.direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return orderSortConfig.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            let html = '';
+            let pedidosParaVerificacaoAsync = [];
+            const pedMinConfig = parseFloat(localStorage.getItem('comlub_ped_min') || 1500);
+
+            currentPedidosDaCarga.forEach(p => {
+                let isFaturado = p['3. Data Faturamento'] && String(p['3. Data Faturamento']).trim() !== '';
+                
+                // Em cada render, alistamos para a auto-correção dos Itens se não tiver sido faturado nem verificado.
+                if (!isFaturado && p._residuoStatus === null) {
+                    pedidosParaVerificacaoAsync.push(String(p['Número Pedido']).trim());
+                }
+
+                let statusBadge = '';
+                const valorTotalPed = p['Valor Total'] || 0;
+
+                if (isFaturado) statusBadge = `<span class="badge-status status-faturado">Faturado</span>`;
+                else if (p._status.includes('Bloq. Estoque')) statusBadge = `<span class="badge-status status-bloq-estoque">Bloq. Estoque</span>`;
+                else if (p._status.includes('Bloq. Crédito')) statusBadge = `<span class="badge-status status-bloq-credito">Bloq. Crédito</span>`;
+                else if (p._status.includes('Bloq. Duplo')) statusBadge = `<span class="badge-status status-bloq-duplo">Bloq. Duplo</span>`;
+                else if (valorTotalPed < pedMinConfig) statusBadge = `<span class="badge-status status-liberado-minimo" title="Valor do Pedido: ${fmtCurr(valorTotalPed)}">Lib. s/ Ped. Mín.</span>`;
+                else statusBadge = `<span class="badge-status status-liberado">Liberado</span>`;
+                
+                let pEmissao = formatarData(p['1. Data Emissão Pedido'] || p.emissao);
+                
+                let pNfNum = (p['Número NF'] && String(p['Número NF']).trim() !== '') ? `${p['Número NF']} <span class="text-slate-400 font-semibold">/ ${p['Série NF'] || '1'}</span>` : '<span class="text-slate-400">Pendente</span>';
+                
+                let pCep = p['CEP Cliente'] || 'N/A';
+                let munCli = String(p['Município Cliente'] || '--').trim().toUpperCase();
+                let estCli = String(p['Estado Cliente'] || '--').trim().toUpperCase();
+                
+                let isStockRetido = p._status.includes('Bloq. Estoque') || p._status.includes('Bloq. Duplo');
+                let isCreditRetido = p._status.includes('Bloq. Crédito');
+                let stockPill = '';
+                
+                if (isStockRetido) stockPill = `<span class="text-[9px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded shadow-sm inline-block">⚠️ Retido Físico</span>`;
+                else if (isCreditRetido) stockPill = `<span class="text-[9px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded shadow-sm inline-block">⚠️ Retido Crédito</span>`;
+                else stockPill = `<span class="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm inline-block">✅ Liberados</span>`;
+
+                let iconMinOrder = '';
+                if (p._hasRealBlock && !isFaturado) {
+                    if (p._residuoStatus === 'ATINGE') {
+                        iconMinOrder = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 cursor-help" title="Resíduo atinge o Pedido Mínimo (${fmtCurr(p._residuoValor)})"></i>`;
+                    } else if (p._residuoStatus === 'NAO_ATINGE') {
+                        iconMinOrder = `<i data-lucide="trending-down" class="w-4 h-4 text-rose-600 cursor-help" title="Atenção: Resíduo não atinge Pedido Mínimo (${fmtCurr(p._residuoValor)})"></i>`;
+                    }
+                }
+
+                html += `
+                    <tr id="tr-pedido-${String(p['Número Pedido']).trim()}" class="${p._hasRealBlock && !isFaturado ? 'bg-rose-50/30' : (isFaturado ? 'bg-emerald-50/20' : '')}">
+                        <td class="font-bold text-slate-800">
+                            <div class="flex items-center gap-1.5">
+                                ${p['Número Pedido']}
+                                <span id="icon-min-order-${String(p['Número Pedido']).trim()}" class="flex items-center">${iconMinOrder}</span>
+                            </div>
+                        </td>
+                        <td class="tabular-nums">${pEmissao}</td>
+                        <td><div class="font-bold text-[11px]">${p['Nome Cliente']}</div></td>
+                        <td class="tabular-nums font-bold text-slate-600">${pCep}</td>
+                        <td class="font-semibold text-slate-700 uppercase text-[10px]">${munCli}/${estCli}</td>
+                        
+                        <td class="text-center">
+                            <div class="flex flex-col items-center gap-1">
+                                ${stockPill}
+                                <button onclick="abrirModalItens('${p['Número Pedido']}')" class="text-[10px] text-comlub-blue font-bold hover:underline flex items-center gap-1 mt-0.5 group">
+                                    <i data-lucide="package" class="w-3 h-3 text-comlub-blue group-hover:scale-115 transition-transform"></i> Ver Itens
+                                </button>
+                            </div>
+                        </td>
+
+                        <td class="font-bold text-slate-800 tabular-nums text-xs">${pNfNum}</td>
+                        <td class="text-right font-bold tabular-nums">${(p['Peso Total'] || 0).toFixed(2)}</td>
+                        <td class="text-center">${statusBadge}</td>
+                        <td class="text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="removerPedidoCarga('${p['Número Pedido']}')" class="btn-outline text-rose-600 border-rose-200 hover:bg-rose-50 px-2 py-1 text-[9px] font-bold rounded shadow-sm transition-colors" title="Remover da Carga"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            document.getElementById('tbodyPedidosCarga').innerHTML = html;
+            lucide.createIcons({ root: document.getElementById('tbodyPedidosCarga') });
+            
+            const thead = document.getElementById('theadPedidosCarga');
+            if (thead) {
+                thead.querySelectorAll('i[data-lucide]').forEach(icon => {
+                    icon.setAttribute('data-lucide', 'chevrons-up-down');
+                    icon.className = 'inline w-3 h-3 text-slate-300';
+                });
+                if (orderSortConfig.key) {
+                    const ths = thead.querySelectorAll('th');
+                    ths.forEach(th => {
+                        const clickAttr = th.getAttribute('onclick');
+                        if (clickAttr && clickAttr.includes(`'${orderSortConfig.key}'`)) {
+                            const icon = th.querySelector('i');
+                            if (icon) {
+                                icon.setAttribute('data-lucide', orderSortConfig.direction === 'asc' ? 'chevron-up' : 'chevron-down');
+                                icon.className = 'inline w-3.5 h-3.5 text-slate-600';
+                            }
+                        }
+                    });
+                }
+                lucide.createIcons({ root: thead });
+            }
+
+            if (pedidosParaVerificacaoAsync.length > 0) {
+                verificarResiduoMinimoAsync(pedidosParaVerificacaoAsync);
+            } else {
+                aplicarFiltroTabela();
+            }
+        }
+
+        // ==========================================
+        // VALIDAÇÃO INTELIGENTE: SINCRONIZA STATUS COM OS ITENS E FAZ HEALING NA GRELHA
+        // ==========================================
+        async function verificarResiduoMinimoAsync(pedidosPendentes) {
+            const pedMinConfig = parseFloat(localStorage.getItem('comlub_ped_min') || 1500);
+            
+            const chunk = 5; 
+            for (let i = 0; i < pedidosPendentes.length; i += chunk) {
+                const lote = pedidosPendentes.slice(i, i + chunk);
+                
+                await Promise.all(lote.map(async (pedidoNum) => {
+                    let order = logData.find(p => String(p['Número Pedido']).trim() === pedidoNum);
+                    if (!order) return;
+                    
+                    try {
+                        let itens = order._itensCache;
+                        if (!itens) {
+                            const response = await fetch(`${API_BASE_URL}/pedido-itens/${filialAtiva}/${pedidoNum}`);
+                            if (response.ok) {
+                                itens = await response.json();
+                                order._itensCache = itens; 
+                            } else {
+                                throw new Error("API Indisponível");
+                            }
+                        }
+                        
+                        let somaBloqueados = 0;
+                        let valorTotalPedido = 0;
+                        let hasFisica = false;
+                        let hasCredito = false;
+                        let hasBlocked = false;
+
+                        itens.forEach(it => {
+                            const statusEstoque = String(getValUniversal(it, 'StatusEstoque', 'Status', 'C6_BLQ')).toUpperCase();
+                            const saldoFisico = parseNum(getValUniversal(it, 'SaldoEstoque', 'B2_QATU'));
+                            const qtdPedida = parseNum(getValUniversal(it, 'QtdVendida', 'C6_QTDVEN'));
+                            
+                            const isBlock = statusEstoque.includes('BLOQ') || saldoFisico < qtdPedida;
+
+                            let pUnit = parseNum(getValUniversal(it, 'PrecoUnitario', 'C6_PRCVEN'));
+                            let valTot = parseNum(getValUniversal(it, 'ValorTotal', 'C6_VALOR')) || (qtdPedida * pUnit);
+                            
+                            valorTotalPedido += valTot;
+
+                            if (isBlock) {
+                                hasBlocked = true;
+                                if (statusEstoque.includes('ESTOQUE') || saldoFisico < qtdPedida) hasFisica = true;
+                                if (statusEstoque.includes('CREDITO')) hasCredito = true;
+                                if (!hasFisica && !hasCredito) hasCredito = true; 
+                                
+                                if (hasFisica) {
+                                    somaBloqueados += valTot;
+                                }
+                            }
+                        });
+                        
+                        order['Valor Total'] = valorTotalPedido;
+                        
+                        // Sincroniza o cabeçalho do pedido (SQL) com a realidade verdadeira dos Itens
+                        if (hasBlocked) {
+                            order._hasRealBlock = true;
+                            if (hasFisica && hasCredito) { order._status = 'Bloq. Duplo'; order.Bloqueio = 'BLOQUEIO DUPLO'; }
+                            else if (hasFisica) { order._status = 'Bloq. Estoque'; order.Bloqueio = 'BLOQ. ESTOQUE'; }
+                            else { order._status = 'Bloq. Crédito'; order.Bloqueio = 'BLOQ. CRÉDITO'; }
+                        } else {
+                            order._hasRealBlock = false;
+                            order._status = 'Liberado';
+                            order.Bloqueio = '';
+                        }
+
+                        order._residuoValor = somaBloqueados;
+                        order._residuoStatus = somaBloqueados >= pedMinConfig ? 'ATINGE' : 'NAO_ATINGE';
+
+                    } catch (e) {
+                        order._residuoValor = 0;
+                        order._residuoStatus = 'NAO_ATINGE';
+                        order._itensCache = null;
+                    }
+                    
+                    // Repinta (Heals) apenas a linha especifica no ecrã para não travar a UI
+                    const tr = document.getElementById(`tr-pedido-${pedidoNum}`);
+                    if (tr) {
+                        const isFaturado = order['3. Data Faturamento'] && String(order['3. Data Faturamento']).trim() !== '';
+                        
+                        let statusBadge = '';
+                        if (isFaturado) statusBadge = `<span class="badge-status status-faturado">Faturado</span>`;
+                        else if (order._status.includes('Bloq. Estoque')) statusBadge = `<span class="badge-status status-bloq-estoque">Bloq. Estoque</span>`;
+                        else if (order._status.includes('Bloq. Crédito')) statusBadge = `<span class="badge-status status-bloq-credito">Bloq. Crédito</span>`;
+                        else if (order._status.includes('Bloq. Duplo')) statusBadge = `<span class="badge-status status-bloq-duplo">Bloq. Duplo</span>`;
+                        else if (order['Valor Total'] < pedMinConfig) statusBadge = `<span class="badge-status status-liberado-minimo" title="Valor do Pedido: ${fmtCurr(order['Valor Total'])}">Lib. s/ Ped. Mín.</span>`;
+                        else statusBadge = `<span class="badge-status status-liberado">Liberado</span>`;
+                        tr.cells[8].innerHTML = statusBadge;
+
+                        let isStockRetido = order._status.includes('Bloq. Estoque') || order._status.includes('Bloq. Duplo');
+                        let isCreditRetido = order._status.includes('Bloq. Crédito');
+                        let stockPill = '';
+                        if (isStockRetido) stockPill = `<span class="text-[9px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded shadow-sm inline-block">⚠️ Retido Físico</span>`;
+                        else if (isCreditRetido) stockPill = `<span class="text-[9px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded shadow-sm inline-block">⚠️ Retido Crédito</span>`;
+                        else stockPill = `<span class="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm inline-block">✅ Liberados</span>`;
+                        tr.cells[5].innerHTML = `<div class="flex flex-col items-center gap-1">${stockPill}<button onclick="abrirModalItens('${pedidoNum}')" class="text-[10px] text-comlub-blue font-bold hover:underline flex items-center gap-1 mt-0.5 group"><i data-lucide="package" class="w-3 h-3 text-comlub-blue group-hover:scale-115 transition-transform"></i> Ver Itens</button></div>`;
+                        lucide.createIcons({ root: tr.cells[5] });
+
+                        const iconSpan = document.getElementById(`icon-min-order-${pedidoNum}`);
+                        if (iconSpan) {
+                            if (order._hasRealBlock && !isFaturado) {
+                                if (order._residuoStatus === 'ATINGE') iconSpan.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 cursor-help" title="Resíduo atinge o Pedido Mínimo (${fmtCurr(order._residuoValor)})"></i>`;
+                                else iconSpan.innerHTML = `<i data-lucide="trending-down" class="w-4 h-4 text-rose-600 cursor-help" title="Atenção: Resíduo não atinge Pedido Mínimo (${fmtCurr(order._residuoValor)})"></i>`;
+                            } else {
+                                iconSpan.innerHTML = '';
+                            }
+                            lucide.createIcons({ root: iconSpan });
+                        }
+
+                        tr.className = (order._hasRealBlock && !isFaturado) ? 'bg-rose-50/30' : (isFaturado ? 'bg-emerald-50/20' : '');
+                    }
+                }));
+
+                await new Promise(resolve => setTimeout(resolve, 200)); 
+            }
+            aplicarFiltroTabela(); 
+        }
+
+        function aplicarFiltroTabela() {
+            if (!currentSelectedNode) return;
+            const elAtinge = document.getElementById('chkAtinge');
+            const elNaoAtinge = document.getElementById('chkNaoAtinge');
+            
+            if (!elAtinge || !elNaoAtinge) return;
+            
+            const showAtinge = elAtinge.checked;
+            const showNaoAtinge = elNaoAtinge.checked;
+            
+            let qtdVisivel = 0;
+            let pesoVisivel = 0;
+            
+            currentPedidosDaCarga.forEach(p => {
+                const pedidoId = String(p['Número Pedido']).trim();
+                const tr = document.getElementById(`tr-pedido-${pedidoId}`);
+                
+                let isVisible = true;
+                let isStockRetido = p._status.includes('Bloq. Estoque') || p._status.includes('Bloq. Duplo');
+                
+                if (isStockRetido && isVisible) {
+                    if (p._residuoStatus === 'ATINGE' && !showAtinge) isVisible = false;
+                    if (p._residuoStatus === 'NAO_ATINGE' && !showNaoAtinge) isVisible = false;
+                }
+                
+                if (tr) tr.style.display = isVisible ? '' : 'none';
+                
+                if (isVisible) {
+                    qtdVisivel++;
+                    pesoVisivel += (parseFloat(p['Peso Total']) || 0);
+                }
+            });
+            
+            const resumoEl = document.getElementById('resumoRotaSelecionada');
+            if (resumoEl) {
+                resumoEl.innerHTML = `<span class="mr-2"><b>${qtdVisivel}</b> Pedidos</span> <span class="mr-2 text-slate-300">|</span> <span><b>${pesoVisivel.toFixed(2)}</b> Kg</span>`;
+            }
+        }
+
+        function incluirPedidoManualmente() {
+            const num = document.getElementById('inputIncluirPedido').value.trim();
+            if(!num) { showToast("Digite o número do pedido para incluir.", true); return; }
+            if(!currentSelectedNode) { showToast("Selecione um Setor do OMS antes de incluir um pedido manualmente.", true); return; }
+            
+            const pedido = logData.find(p => String(p['Número Pedido']).trim() === num);
+            if(pedido) {
+                pedido._overrideNode = currentSelectedNode;
+                pedido._removedFromCarga = false; 
+                showToast(`Pedido ${num} foi alocado com sucesso no Setor ${currentSelectedNode.setor}!`);
+                document.getElementById('inputIncluirPedido').value = '';
+                atualizarCargaModalData(); 
+            } else {
+                showToast(`Pedido ${num} não localizado na filial ${filialAtiva}.`, true);
+            }
+        }
+
+        function removerPedidoCarga(num) {
+            const order = logData.find(p => p['Número Pedido'] === num);
+            if (order) {
+                order._removedFromCarga = true;
+                showToast(`Pedido ${num} removido da carga com sucesso.`);
+                atualizarCargaModalData();
+            }
+        }
+
+        // ==========================================
+        // MODAL DE ITENS (COM CACHE LIGADO E FALTA ESTOQUE)
+        // ==========================================
+        async function abrirModalItens(pedidoNum) {
+            const order = logData.find(p => p['Número Pedido'] === pedidoNum);
+            if(!order) return;
+
+            document.getElementById('itemsModalPedido').innerText = pedidoNum;
+            document.getElementById('itemsModalCliente').innerText = order['Nome Cliente'];
+
+            const tbody = document.getElementById('tbodyItensPedido');
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-slate-400 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-3 text-[#003865]"></i> Consultando Protheus via API...</td></tr>`;
+
+            const modal = document.getElementById('itemsModal');
+            const container = document.getElementById('itemsContainer');
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                modal.classList.remove('opacity-0');
+                container.classList.remove('scale-95');
+                container.classList.add('scale-100');
+            });
+            lucide.createIcons({ root: modal });
+
+            try {
+                let itens = order._itensCache;
+                if (!itens) {
+                    const response = await fetch(`${API_BASE_URL}/pedido-itens/${filialAtiva}/${pedidoNum}`);
+                    if (!response.ok) throw new Error("API Indisponível");
+                    itens = await response.json();
+                    order._itensCache = itens; 
+                }
+                renderItensModal(itens, order);
+            } catch (error) {
+                console.warn("API Offline. Gerando itens mock.");
+                let isStockBlocked = order._status.includes('Bloq. Estoque') || order._status.includes('Bloq. Duplo');
+                const mockItens = [
+                    { Item: "01", Produto: "LUB0042", Descricao: "ÓLEO COMLUB HIDRÁULICO 68 - BALDE 20L", QtdVendida: 1.00, PrecoUnitario: 9198.52, ValorTotal: 9198.52, SaldoEstoque: 0.00, StatusEstoque: isStockBlocked ? "BLOQUEADO" : "LIBERADO" }
+                ];
+                renderItensModal(mockItens, order);
+            }
+        }
+
+        function renderItensModal(itens, order) {
+            const tbody = document.getElementById('tbodyItensPedido');
+            const avisoMinimo = document.getElementById('avisoPedidoMinimo');
+            
+            if (!itens || itens.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Nenhum item encontrado.</td></tr>`;
+                if(avisoMinimo) avisoMinimo.classList.add('hidden');
+                return;
+            }
+
+            let html = '';
+            let somaBloqueados = 0;
+
+            itens.forEach(it => {
+                const itemPed = getValUniversal(it, 'Item', 'C6_ITEM');
+                const prodCod = getValUniversal(it, 'Produto', 'C6_PRODUTO');
+                const desc = getValUniversal(it, 'Descricao', 'B1_DESC');
+                const qtd = parseNum(getValUniversal(it, 'QtdVendida', 'C6_QTDVEN'));
+                const pUnit = parseNum(getValUniversal(it, 'PrecoUnitario', 'C6_PRCVEN'));
+                const valTot = parseNum(getValUniversal(it, 'ValorTotal', 'C6_VALOR')) || (qtd * pUnit);
+                const saldoFis = parseNum(getValUniversal(it, 'SaldoEstoque', 'B2_QATU'));
+                const statusEst = String(getValUniversal(it, 'StatusEstoque', 'Status', 'C6_BLQ')).toUpperCase();
+
+                let isFaltaFisica = statusEst.includes('ESTOQUE') || statusEst.includes('DUPLO') || saldoFis < qtd;
+                let isFaltaCredito = statusEst.includes('CREDITO') || statusEst.includes('DUPLO') || statusEst.includes('BLOQ');
+                let isBlocked = statusEst.includes('BLOQ') || isFaltaFisica || isFaltaCredito;
+                
+                let alertColor = isBlocked ? 'text-red-700 bg-red-50 border border-red-200' : 'text-emerald-700 bg-emerald-50 border border-emerald-200';
+                let rowBg = isBlocked ? 'bg-red-50/20' : '';
+                
+                let statusText = statusEst;
+                if (isFaltaFisica && !statusEst.includes('ESTOQUE') && !statusEst.includes('DUPLO')) {
+                    statusText = 'FALTA ESTOQUE FÍSICO';
+                } else if (!isBlocked) {
+                    statusText = 'LIVRE (A EXPEDIR)';
+                }
+                
+                let qtdFaltante = isFaltaFisica ? Math.max(0, qtd - saldoFis) : (isFaltaCredito ? qtd : 0);
+
+                if (isBlocked) somaBloqueados += valTot; 
+
+                html += `
+                    <tr class="${rowBg}">
+                        <td class="font-bold text-slate-800 tabular-nums text-center">${itemPed}</td>
+                        <td class="font-semibold text-slate-600">${prodCod}</td>
+                        <td class="font-bold text-slate-800 text-xs">${desc}</td>
+                        <td class="text-right font-bold tabular-nums">${fmtNum(qtd)} un</td>
+                        <td class="text-right font-semibold tabular-nums text-slate-600">${fmtCurr(pUnit)}</td>
+                        <td class="text-right font-bold tabular-nums text-slate-800">${fmtCurr(valTot)}</td>
+                        <td class="text-right font-bold tabular-nums ${isFaltaFisica ? 'text-red-600' : 'text-comlub-blue'}">${fmtNum(saldoFis)}</td>
+                        <td class="text-right font-bold tabular-nums ${qtdFaltante > 0 ? 'text-red-600' : 'text-slate-400'}">${qtdFaltante > 0 ? fmtNum(qtdFaltante) : '-'}</td>
+                        <td class="text-center">
+                            <span class="text-[9px] font-bold px-2 py-0.5 rounded shadow-sm inline-block ${alertColor}">
+                                ${statusText}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+
+            const pedMinConfig = parseFloat(localStorage.getItem('comlub_ped_min') || 1500);
+
+            if (order) {
+                order._residuoValor = somaBloqueados;
+                order._residuoStatus = somaBloqueados >= pedMinConfig ? 'ATINGE' : 'NAO_ATINGE';
+            }
+
+            if (somaBloqueados > 0) {
+                avisoMinimo.classList.remove('hidden');
+                if (somaBloqueados >= pedMinConfig) {
+                    avisoMinimo.className = "px-6 py-3 bg-emerald-50 border-b border-emerald-200 flex items-start gap-3 shrink-0";
+                    avisoMinimo.innerHTML = `
+                        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 mt-0.5 shrink-0"></i>
+                        <div>
+                            <h4 class="text-xs font-bold text-emerald-800 uppercase tracking-wide">Resíduo de Retenção Acima do Mínimo</h4>
+                            <p class="text-[11px] text-emerald-700 font-medium mt-0.5">A soma dos itens retidos neste pedido (Total: <strong class="tabular-nums">${fmtCurr(somaBloqueados)}</strong>) atinge o Pedido Mínimo de R$ ${pedMinConfig}. Este saldo é suficiente para prosseguir assim que desbloqueado.</p>
+                        </div>
+                    `;
+                } else {
+                    avisoMinimo.className = "px-6 py-3 bg-rose-50 border-b border-rose-200 flex items-start gap-3 shrink-0";
+                    avisoMinimo.innerHTML = `
+                        <i data-lucide="trending-down" class="w-5 h-5 text-rose-600 mt-0.5 shrink-0"></i>
+                        <div>
+                            <h4 class="text-xs font-bold text-rose-800 uppercase tracking-wide">Atenção: Resíduo Abaixo do Mínimo</h4>
+                            <p class="text-[11px] text-rose-700 font-medium mt-0.5">O valor retido deste pedido (Total: <strong class="tabular-nums">${fmtCurr(somaBloqueados)}</strong>) é inferior ao Pedido Mínimo de R$ ${pedMinConfig} configurado no ERP.</p>
+                        </div>
+                    `;
+                }
+            } else {
+                avisoMinimo.classList.add('hidden');
+            }
+            
+            lucide.createIcons({ root: document.getElementById('itemsContainer') });
+        }
+
+        function closeItemsModal() {
+            const modal = document.getElementById('itemsModal');
+            const container = document.getElementById('itemsContainer');
+            container.classList.remove('scale-100');
+            container.classList.add('scale-95');
+            modal.classList.add('opacity-0');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+            
+            if (currentSelectedNode) selecionarNodeOMS(currentSelectedNode.rota, currentSelectedNode.zona, currentSelectedNode.setor, currentSelectedNode.ref);
+        }
+
+        // ==========================================
+        // GERAÇÃO DE PDFS (COM CACHE LIGADO E CHECAGEM CORRETA DE ESTOQUE E CRÉDITO)
+        // ==========================================
+        async function gerarPDFResumoProdutos() {
+            if(!currentSelectedNode || currentPedidosDaCarga.length === 0) {
+                showToast("Selecione um Setor OMS com pedidos para emitir o resumo.", true);
+                return;
+            }
+
+            const btnImprimir = document.getElementById('btnImprimirResumoPdf');
+            const btnHtmlOld = btnImprimir.innerHTML;
+            btnImprimir.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 text-comlub-blue animate-spin"></i> Agrupando...`;
+            btnImprimir.disabled = true;
+            lucide.createIcons({ root: btnImprimir });
+
+            const showAtinge = document.getElementById('chkAtinge').checked;
+            const showNaoAtinge = document.getElementById('chkNaoAtinge').checked;
+
+            let pedidosParaPDF = currentPedidosDaCarga.filter(p => {
+                let isStockRetido = p._status.includes('Bloq. Estoque') || p._status.includes('Bloq. Duplo');
+                if (isStockRetido) {
+                    if (p._residuoStatus === 'ATINGE' && !showAtinge) return false;
+                    if (p._residuoStatus === 'NAO_ATINGE' && !showNaoAtinge) return false;
+                }
+                return true;
+            });
+
+            if (pedidosParaPDF.length === 0) {
+                showToast("Nenhum pedido atende aos filtros para agrupamento.", true);
+                btnImprimir.innerHTML = btnHtmlOld;
+                btnImprimir.disabled = false;
+                lucide.createIcons({ root: btnImprimir });
+                return;
+            }
+
+            let produtosAgrupados = {};
+
+            const promessasFetch = pedidosParaPDF.map(async p => {
+                try {
+                    let itens = p._itensCache;
+                    if (!itens) {
+                        const response = await fetch(`${API_BASE_URL}/pedido-itens/${filialAtiva}/${p['Número Pedido']}`);
+                        if (response.ok) {
+                            itens = await response.json();
+                            p._itensCache = itens;
+                        }
+                    }
+                    
+                    if (itens) {
+                        itens.forEach(it => {
+                            const prodCod = getValUniversal(it, 'Produto', 'C6_PRODUTO');
+                            const desc = getValUniversal(it, 'Descricao', 'B1_DESC');
+                            const qtd = parseNum(getValUniversal(it, 'QtdVendida', 'C6_QTDVEN'));
+                            const peso = parseNum(getValUniversal(it, 'PesoProduto', 'B1_PESO'));
+                            const saldoFis = parseNum(getValUniversal(it, 'SaldoEstoque', 'B2_QATU'));
+                            const statusEst = String(getValUniversal(it, 'StatusEstoque', 'Status', 'C6_BLQ')).toUpperCase();
+
+                            const isFaltaFis = statusEst.includes('ESTOQUE') || statusEst.includes('DUPLO') || saldoFis < qtd;
+                            const isFaltaCred = statusEst.includes('CREDITO') || statusEst.includes('DUPLO') || statusEst.includes('BLOQ');
+
+                            if (!produtosAgrupados[prodCod]) {
+                                produtosAgrupados[prodCod] = {
+                                    codigo: prodCod,
+                                    nome: desc,
+                                    qtd: 0,
+                                    peso: 0,
+                                    saldoFisico: saldoFis,
+                                    qtdFaltaFisica: 0,
+                                    qtdBloqCredito: 0
+                                };
+                            }
+                            produtosAgrupados[prodCod].qtd += qtd;
+                            produtosAgrupados[prodCod].peso += peso;
+                            
+                            if (isFaltaFis) {
+                                produtosAgrupados[prodCod].qtdFaltaFisica += qtd;
+                            } else if (isFaltaCred) {
+                                produtosAgrupados[prodCod].qtdBloqCredito += qtd;
+                            }
+                        });
+                    }
+                } catch(e) {
+                     const isStockBlocked = p._status.includes('Bloq. Estoque') || p._status.includes('Bloq. Duplo');
+                     const isCreditoBlocked = p._status.includes('Bloq. Crédito') || p._status.includes('Bloq. Duplo');
+                     const pCod = "LUB0042";
+                     
+                     if (!produtosAgrupados[pCod]) {
+                         produtosAgrupados[pCod] = {
+                             codigo: pCod,
+                             nome: "ÓLEO COMLUB HIDRÁULICO 68 - BALDE 20L",
+                             qtd: 0,
+                             peso: 0,
+                             saldoFisico: 0,
+                             qtdFaltaFisica: 0,
+                             qtdBloqCredito: 0
+                         };
+                     }
+                     produtosAgrupados[pCod].qtd += 1;
+                     produtosAgrupados[pCod].peso += 18.4;
+                     
+                     if (isStockBlocked) produtosAgrupados[pCod].qtdFaltaFisica += 1;
+                     else if (isCreditoBlocked) produtosAgrupados[pCod].qtdBloqCredito += 1;
+                }
+            });
+
+            await Promise.all(promessasFetch);
+
+            let rows = '';
+            let totalQtd = 0;
+            let totalPeso = 0;
+
+            Object.values(produtosAgrupados).sort((a,b) => b.qtd - a.qtd).forEach((prod, idx) => {
+                totalQtd += prod.qtd;
+                let pesoReal = prod.peso;
+                totalPeso += pesoReal;
+
+                let qtdFaltanteTexto = '-';
+                let estoqueStatus = '<span style="color:#059669; font-weight:bold;">Em Estoque / Livre</span>';
+                let bgRow = '';
+
+                if (prod.qtdFaltaFisica > 0 && prod.qtdBloqCredito > 0) {
+                    qtdFaltanteTexto = (prod.qtdFaltaFisica + prod.qtdBloqCredito).toFixed(2);
+                    estoqueStatus = '<span style="color:#dc2626; font-weight:bold;">Falta Fís. + Crédito</span>';
+                    bgRow = 'background-color: #fff1f2;';
+                } else if (prod.qtdFaltaFisica > 0) {
+                    qtdFaltanteTexto = prod.qtdFaltaFisica.toFixed(2);
+                    estoqueStatus = '<span style="color:#dc2626; font-weight:bold;">Falta Física (SB2)</span>';
+                    bgRow = 'background-color: #fff1f2;';
+                } else if (prod.qtdBloqCredito > 0) {
+                    qtdFaltanteTexto = prod.qtdBloqCredito.toFixed(2);
+                    estoqueStatus = '<span style="color:#b91c1c; font-weight:bold;">Bloq. Crédito</span>';
+                    bgRow = 'background-color: #fef2f2;';
+                }
+
+                rows += `
+                    <tr style="${bgRow}">
+                        <td style="text-align:center; padding: 6px; border: 1px solid #cbd5e1;">${idx+1}</td>
+                        <td style="font-weight:bold; padding: 6px; border: 1px solid #cbd5e1;">${prod.codigo}</td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1;">${prod.nome}</td>
+                        <td style="text-align:right; padding: 6px; border: 1px solid #cbd5e1; font-weight:bold;">${prod.qtd.toFixed(2)}</td>
+                        <td style="text-align:right; padding: 6px; border: 1px solid #cbd5e1; font-weight:bold; color:#dc2626;">${qtdFaltanteTexto}</td>
+                        <td style="text-align:right; padding: 6px; border: 1px solid #cbd5e1;">${pesoReal.toFixed(2)} Kg</td>
+                        <td style="text-align:center; padding: 6px; border: 1px solid #cbd5e1;">${estoqueStatus}</td>
+                    </tr>
+                `;
+            });
+
+            btnImprimir.innerHTML = btnHtmlOld;
+            btnImprimir.disabled = false;
+            lucide.createIcons({ root: btnImprimir });
+
+            const dataHora = new Date().toLocaleString('pt-BR');
+            const html = `
+                <html>
+                <head>
+                    <style>
+                        @media print {
+                            @page { size: A4 portrait; margin: 10mm; }
+                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        }
+                    </style>
+                </head>
+                <body style="font-family:Arial, sans-serif; padding:10px; color:#1e293b; margin:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #003865; padding-bottom:10px; margin-bottom:15px;">
+                        <div style="width: 150px;">
+                            <svg viewBox="0 0 150 40" xmlns="http://www.w3.org/2000/svg">
+                                <text x="0" y="28" font-family="Arial, sans-serif" font-weight="900" font-size="34" letter-spacing="-2" fill="#003865">com</text>
+                                <text x="65" y="28" font-family="Arial, sans-serif" font-weight="900" font-size="34" letter-spacing="-2" fill="#FFCB05">lub</text>
+                                <g transform="translate(18, 10) scale(0.45)"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" fill="#FFCB05"/></g>
+                                <text x="68" y="37" font-family="Arial, sans-serif" font-weight="bold" font-size="8" letter-spacing="2" fill="#FFCB05">DISTRIBUIDORA</text>
+                            </svg>
+                        </div>
+                        <div style="text-align: right;">
+                            <h2 style="color:#003865; margin:0; text-transform:uppercase; font-size:16px;">Resumo Agrupado de Produtos (Picking)</h2>
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size: 11px;">
+                        <div>
+                            <p style="margin:4px 0;"><b>ROTA:</b> ${currentSelectedNode.rota || 'Todas'}</p>
+                            <p style="margin:4px 0;"><b>MUNICÍPIO:</b> ${currentSelectedNode.zona || 'Todas'} &nbsp;|&nbsp; <b>CÓDIGO:</b> ${currentSelectedNode.setor || 'Todos'} - ${currentSelectedNode.ref || 'Geral'}</p>
+                            <p style="margin:4px 0;"><b>Total de Pedidos na Seleção:</b> ${pedidosParaPDF.length}</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <p style="margin:4px 0;"><b>Filial de Origem:</b> ${filialAtiva} - ${filialNomeAtiva}</p>
+                            <p style="margin:4px 0;"><b>Qtd Total de Itens:</b> ${totalQtd.toFixed(2)}</p>
+                            <p style="margin:4px 0;"><b>Peso Total Calculado:</b> ${totalPeso.toFixed(2)} Kg</p>
+                        </div>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; margin-top:15px; font-size:10px;">
+                        <thead>
+                            <tr style="background:#f1f5f9;">
+                                <th style="padding: 6px; border: 1px solid #cbd5e1; width:5%;">#</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1; width:15%; text-align:left;">Código</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1; width:35%; text-align:left;">Produto</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1; width:8%; text-align:right;">Qtd</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1; width:10%; text-align:right;">Falta (Qtd)</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1; width:12%; text-align:right;">Peso Real</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1; width:15%; text-align:center;">Situação Físico (SB2)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <div style="font-size:9px; color:#64748b; text-align:center; margin-top: 20px;">
+                        Relatório gerado eletronicamente através da Roteirização OMS em ${dataHora}
+                    </div>
+                </body>
+                </html>
+            `;
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            setTimeout(() => { win.focus(); win.print(); }, 500);
+        }
+
+        async function gerarPDFMapaEntrega() {
+            if(!currentSelectedNode || currentPedidosDaCarga.length === 0) {
+                showToast("Selecione um Setor OMS com pedidos para emitir o PDF.", true);
+                return;
+            }
+
+            const btnImprimir = document.getElementById('btnImprimirPdf');
+            const btnHtmlOld = btnImprimir.innerHTML;
+            btnImprimir.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 text-comlub-yellow animate-spin"></i> Preparando PDF...`;
+            btnImprimir.disabled = true;
+            lucide.createIcons({ root: btnImprimir });
+
+            const pedMinConfig = parseFloat(localStorage.getItem('comlub_ped_min') || 1500);
+
+            const pendingBlocks = currentPedidosDaCarga.filter(p => p._hasRealBlock && !p._residuoStatus);
+            if (pendingBlocks.length > 0) {
+                const promessasFetch = pendingBlocks.map(async p => {
+                    try {
+                        let itens = p._itensCache;
+                        if (!itens) {
+                            const response = await fetch(`${API_BASE_URL}/pedido-itens/${filialAtiva}/${p['Número Pedido']}`);
+                            if (response.ok) {
+                                itens = await response.json();
+                                p._itensCache = itens;
+                            }
+                        }
+                        
+                        if (itens) {
+                            let somaBloqueados = 0;
+                            itens.forEach(it => {
+                                const statusEst = String(getValUniversal(it, 'StatusEstoque', 'Status', 'C6_BLQ')).toUpperCase();
+                                const saldoFis = parseNum(getValUniversal(it, 'SaldoEstoque', 'B2_QATU'));
+                                const qtd = parseNum(getValUniversal(it, 'QtdVendida', 'C6_QTDVEN'));
+                                const isFaltaFis = statusEst.includes('ESTOQUE') || statusEst.includes('DUPLO') || saldoFis < qtd;
+                                
+                                if (isFaltaFis || statusEst.includes('BLOQ')) {
+                                    let pUnit = parseNum(getValUniversal(it, 'PrecoUnitario', 'C6_PRCVEN'));
+                                    somaBloqueados += parseNum(getValUniversal(it, 'ValorTotal', 'C6_VALOR')) || (qtd * pUnit);
+                                }
+                            });
+                            p._residuoValor = somaBloqueados;
+                            p._residuoStatus = somaBloqueados >= pedMinConfig ? 'ATINGE' : 'NAO_ATINGE';
+                        }
+                    } catch(e) {
+                         p._residuoStatus = Math.random() > 0.5 ? 'ATINGE' : 'NAO_ATINGE';
+                    }
+                });
+                await Promise.all(promessasFetch);
+            }
+
+            const motorista = document.getElementById('inputMotorista').value.trim() || 'Não Informado';
+            const transp = document.getElementById('inputTransportadora').value.trim() || 'Frota Própria';
+            const dataHora = new Date().toLocaleString('pt-BR');
+
+            const showAtinge = document.getElementById('chkAtinge').checked;
+            const showNaoAtinge = document.getElementById('chkNaoAtinge').checked;
+
+            let pedidosParaPDF = currentPedidosDaCarga.filter(p => {
+                let isStockRetido = p._status.includes('Bloq. Estoque') || p._status.includes('Bloq. Duplo');
+                
+                if (isStockRetido) {
+                    if (p._residuoStatus === 'ATINGE' && !showAtinge) return false;
+                    if (p._residuoStatus === 'NAO_ATINGE' && !showNaoAtinge) return false;
+                }
+                
+                return true;
+            });
+
+            let rows = '';
+            let qtdRealPedidosImpressos = 0;
+            let pesoRealImpresso = 0;
+
+            const chunkPdf = 5;
+            for(let i=0; i<pedidosParaPDF.length; i+=chunkPdf) {
+                const loteP = pedidosParaPDF.slice(i, i+chunkPdf);
+                await Promise.all(loteP.map(async p => {
+                    let temLivres = false;
+                    try {
+                        let itens = p._itensCache;
+                        if (!itens) {
+                            const response = await fetch(`${API_BASE_URL}/pedido-itens/${filialAtiva}/${p['Número Pedido']}`);
+                            if (response.ok) {
+                                itens = await response.json();
+                                p._itensCache = itens;
+                            }
+                        }
+                        if (itens) {
+                            itens.forEach(it => {
+                                const statusEst = String(getValUniversal(it, 'StatusEstoque', 'Status', 'C6_BLQ')).toUpperCase();
+                                const saldoFis = parseNum(getValUniversal(it, 'SaldoEstoque', 'B2_QATU'));
+                                const qtd = parseNum(getValUniversal(it, 'QtdVendida', 'C6_QTDVEN'));
+                                const isFaltaFis = statusEst.includes('ESTOQUE') || statusEst.includes('DUPLO') || saldoFis < qtd;
+                                const isFaltaCred = statusEst.includes('CREDITO') || statusEst.includes('DUPLO');
+                                if (!isFaltaFis && !isFaltaCred && !statusEst.includes('BLOQ')) temLivres = true;
+                            });
+                        }
+                    } catch(e) { temLivres = true; } // mock
+                    p._temLivres = temLivres;
+                }));
+            }
+
+            pedidosParaPDF.forEach((p, idx) => {
+                qtdRealPedidosImpressos++;
+                pesoRealImpresso += (p['Peso Total'] || 0);
+
+                let orderDate = formatarData(p['1. Data Emissão Pedido'] || p.emissao);
+                let nfNum = p['Número NF'] ? p['Número NF'] + '/' + (p['Série NF'] || '1') : 'Pendente';
+                let clientName = p['Nome Cliente'];
+                let mun = `${p['Município Cliente'] || '--'}/${p['Estado Cliente'] || '--'}`;
+                let cep = p['CEP Cliente'] || 'N/A';
+                
+                let isStockRetido = p._status.includes('Bloq. Estoque') || p._status.includes('Bloq. Duplo');
+                let isCreditRetido = p._status.includes('Bloq. Crédito') || p._status.includes('Bloq. Duplo');
+                
+                let bgRow = (isStockRetido || isCreditRetido) ? 'background-color: #fff1f2;' : '';
+                
+                let valResiduoPdf = '--';
+                if (isStockRetido) {
+                    if (p._residuoStatus === 'ATINGE') valResiduoPdf = '<span style="color:#059669; font-weight:bold;">✅ Min. OK</span>';
+                    else if (p._residuoStatus === 'NAO_ATINGE') valResiduoPdf = '<span style="color:#dc2626; font-weight:bold;">⚠️ Abaixo</span>';
+                } else {
+                    valResiduoPdf = '<span style="color:#64748b; font-weight:bold;">N/A (Sem Falta)</span>';
+                }
+                
+                let colorStatus = '#059669';
+                let statusDisplay = p._status.toUpperCase();
+                
+                if (isStockRetido) {
+                    colorStatus = '#dc2626';
+                } else if (isCreditRetido) {
+                    colorStatus = '#d97706';
+                } else if (statusDisplay.includes('PENDENTE') || statusDisplay.includes('EMISSÃO')) {
+                    colorStatus = '#d97706';
+                } else if (statusDisplay === 'LIBERADO' && (p['Valor Total'] || 0) < pedMinConfig) {
+                    statusDisplay = 'LIB. S/ PED. MÍN.';
+                    colorStatus = '#b45309';
+                }
+
+                if (isStockRetido && p._temLivres === false) {
+                    statusDisplay = 'CORTE 100% (ESTOQUE)';
+                } else if (isCreditRetido && p._temLivres === false) {
+                    statusDisplay = 'CORTE 100% (CRÉDITO)';
+                }
+
+                let liberadoHtml = `<span style="color:${colorStatus}; font-weight:bold;">${statusDisplay}</span>`;
+
+                rows += `
+                    <tr style="${bgRow}">
+                        <td style="text-align:center; padding: 6px; border: 1px solid #cbd5e1;">${idx+1}</td>
+                        <td style="font-weight:bold; padding: 6px; border: 1px solid #cbd5e1;">${p['Número Pedido']}</td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1;">${orderDate}</td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1;">${nfNum}</td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1;"><strong>${clientName}</strong></td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1;">${cep}</td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1; font-weight:bold;">${mun}</td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1; text-align:center;">${valResiduoPdf}</td>
+                        <td style="text-align:right; padding: 6px; border: 1px solid #cbd5e1;">${(p['Peso Total'] || 0).toFixed(2)} Kg</td>
+                        <td style="text-align:center; font-size:10px; padding: 6px; border: 1px solid #cbd5e1;">${liberadoHtml}</td>
+                    </tr>
+                `;
+            });
+
+            btnImprimir.innerHTML = btnHtmlOld;
+            btnImprimir.disabled = false;
+            lucide.createIcons({ root: btnImprimir });
+
+            const html = `
+                <html>
+                <head>
+                    <style>
+                        @media print {
+                            @page { size: A4 landscape; margin: 10mm; }
+                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        }
+                    </style>
+                </head>
+                <body style="font-family:Arial, sans-serif; padding:10px; color:#1e293b; margin:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #003865; padding-bottom:10px; margin-bottom:15px;">
+                        <div style="width: 150px;">
+                            <svg viewBox="0 0 150 40" xmlns="http://www.w3.org/2000/svg">
+                                <text x="0" y="28" font-family="Arial, sans-serif" font-weight="900" font-size="34" letter-spacing="-2" fill="#003865">com</text>
+                                <text x="65" y="28" font-family="Arial, sans-serif" font-weight="900" font-size="34" letter-spacing="-2" fill="#FFCB05">lub</text>
+                                <g transform="translate(18, 10) scale(0.45)"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" fill="#FFCB05"/></g>
+                                <text x="68" y="37" font-family="Arial, sans-serif" font-weight="bold" font-size="8" letter-spacing="2" fill="#FFCB05">DISTRIBUIDORA</text>
+                            </svg>
+                        </div>
+                        <div style="text-align: right;">
+                            <h2 style="color:#003865; margin:0; text-transform:uppercase; font-size:16px;">Manifesto e Mapa de Carga</h2>
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size: 11px;">
+                        <div>
+                            <p style="margin:4px 0;"><b>ROTA:</b> ${currentSelectedNode.rota || 'Todas'}</p>
+                            <p style="margin:4px 0;"><b>MUNICÍPIO:</b> ${currentSelectedNode.zona || 'Todas'} &nbsp;|&nbsp; <b>CÓDIGO/ZONA:</b> ${currentSelectedNode.setor || 'Todos'} - ${currentSelectedNode.ref || 'Geral'}</p>
+                            <p style="margin:4px 0;"><b>Motorista:</b> ${motorista} &nbsp;|&nbsp; <b>Transportadora:</b> ${transp}</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <p style="margin:4px 0;"><b>Filial de Origem:</b> ${filialAtiva} - ${filialNomeAtiva}</p>
+                            <p style="margin:4px 0;"><b>Peso Total da Carga:</b> ${pesoRealImpresso.toFixed(2)} Kg</p>
+                            <p style="margin:4px 0;"><b>Total de Pedidos Embarcados:</b> ${qtdRealPedidosImpressos}</p>
+                        </div>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; margin-top:15px; font-size:10px;">
+                        <thead>
+                            <tr style="background:#f1f5f9;">
+                                <th style="padding: 6px; border: 1px solid #cbd5e1;">#</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1;">Pedido</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1;">Emissão Ped.</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1;">Nota Fiscal</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1;">Cliente</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1;">CEP</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1;">Município</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1; text-align:center;">Validação Resíduo</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1; text-align:right;">Peso</th>
+                                <th style="padding: 6px; border: 1px solid #cbd5e1;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <div style="font-size:9px; color:#64748b; text-align:center; margin-top: 20px;">
+                        Manifesto gerado eletronicamente através da Roteirização OMS em ${dataHora}
+                    </div>
+                </body>
+                </html>
+            `;
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            setTimeout(() => { win.focus(); win.print(); }, 500);
+        }
+    </script>
+</body>
+</html>

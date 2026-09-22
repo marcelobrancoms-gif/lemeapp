@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liberação de Crédito - LEME ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Padrão Supreme Slate-3D */
+        body { 
+            background-color: #0f172a; 
+            color: #e2e8f0; 
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; 
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+
+        .dash-card {
+            background-color: #1e293b; 
+            border: 1px solid #334155; 
+            border-radius: 8px;
+        }
+
+        .icon-3d {
+            background: linear-gradient(135deg, #334155 0%, #0f172a 100%);
+            border: 1px solid #475569;
+            box-shadow: 
+                inset 0px 1px 1px rgba(255, 255, 255, 0.15),
+                inset 0px -1px 1px rgba(0, 0, 0, 0.25),
+                0px 4px 6px rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #e2e8f0;
+        }
+
+        .corp-input {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .corp-input:focus { border-color: #64748b; }
+
+        /* Tabela Slate */
+        .table-slate { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .table-slate th { 
+            background-color: #1e293b; 
+            border-bottom: 2px solid #334155; 
+            border-top: 1px solid #334155;
+            color: #94a3b8; 
+            padding: 12px 16px; 
+            font-size: 10px; 
+            font-weight: 700;
+            text-transform: uppercase; 
+            letter-spacing: 0.05em; 
+            text-align: left; 
+            position: sticky; 
+            top: 0; 
+            z-index: 20; 
+        }
+        .table-slate td { 
+            padding: 12px 16px; 
+            font-size: 11px; 
+            border-bottom: 1px solid #1e293b; 
+            background-color: #0f172a;
+            color: #cbd5e1;
+            transition: background-color 0.15s; 
+            white-space: nowrap;
+        }
+        .table-slate tbody tr:hover td { background-color: #1e293b; }
+
+        /* Status Badges e Píulas Dark */
+        .badge-block { padding: 4px 10px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; display: inline-flex; align-items: center; justify-content: center; gap: 4px;}
+        .badge-credito { background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2); }
+        .badge-duplo { background: rgba(190, 24, 93, 0.1); color: #f472b6; border: 1px solid rgba(190, 24, 93, 0.3); }
+        .badge-estoque { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+
+        .status-pill { padding: 4px 10px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; justify-content: center; }
+        .status-excelente { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .status-razoavel { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.2); }
+        .status-atencao { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .status-critico { background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2); }
+
+        /* Drawers e Modais Dark */
+        #analysisDrawer { transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); transform: translateX(100%); z-index: 100; width: 1000px; max-width: 95vw; background-color: #0f172a; border-left: 1px solid #1e293b;}
+        #analysisDrawer.open { transform: translateX(0); }
+        
+        .modal-overlay { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); transform: scale(0.98); opacity: 0; background-color: #1e293b; border: 1px solid #334155; }
+        .modal-active .modal-content { transform: scale(1); opacity: 1; }
+        
+        .tab-btn { padding: 10px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; background: #0f172a; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-pop { animation: fadeIn 0.4s ease-out forwards; opacity: 0; }
+        .delay-1 { animation-delay: 100ms; }
+        .delay-2 { animation-delay: 200ms; }
+    </style>
+</head>
+<body class="text-slate-200 h-screen flex flex-col antialiased relative">
+
+    <!-- SELETOR INICIAL DA FILIAL (MODAL DARK) -->
+    <div id="filialModal" class="fixed inset-0 z-[300] bg-[#0f172a]/90 backdrop-blur-md flex items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0 pointer-events-none">
+        <div class="bg-[#1e293b] border border-[#334155] rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-transform duration-300">
+            <div class="bg-[#0f172a] border-b border-[#334155] px-6 py-5 flex items-center gap-3">
+                <i data-lucide="shield-check" class="text-sky-400 w-6 h-6"></i>
+                <div>
+                    <h2 class="text-slate-100 font-bold tracking-wide uppercase text-sm">Selecione o Contexto</h2>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">Mesa de Liberação de Crédito</p>
+                </div>
+            </div>
+            <div class="p-6 flex flex-col gap-3 bg-[#1e293b]">
+                <button onclick="selecionarFilialInicial('consolidado')" class="w-full text-left px-5 py-4 border border-[#334155] rounded-lg shadow-sm hover:bg-[#334155] focus:outline-none transition-all flex justify-between items-center group bg-[#0f172a]">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-[#1e293b] flex items-center justify-center border border-[#334155]">
+                            <i data-lucide="layers" class="w-5 h-5 text-slate-400 group-hover:text-sky-400 transition-colors"></i>
+                        </div>
+                        <div>
+                            <span class="block font-bold text-slate-200 text-sm group-hover:text-white transition-colors">VISÃO CONSOLIDADA</span>
+                            <span class="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-0.5 block">Análise Global (Todas)</span>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-slate-500 group-hover:text-sky-400 transition-colors"></i>
+                </button>
+                <div class="h-px w-full bg-[#334155] my-1"></div>
+                <button onclick="selecionarFilialInicial('01')" class="w-full text-left px-5 py-3 border border-[#334155] rounded-lg shadow-sm hover:bg-[#334155] focus:outline-none transition-all flex justify-between items-center group bg-[#0f172a]">
+                    <span class="block font-bold text-slate-300 text-xs group-hover:text-white transition-colors">01 - FILIAL ALAGOAS</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-sky-400 transition-colors"></i>
+                </button>
+                <button onclick="selecionarFilialInicial('02')" class="w-full text-left px-5 py-3 border border-[#334155] rounded-lg shadow-sm hover:bg-[#334155] focus:outline-none transition-all flex justify-between items-center group bg-[#0f172a]">
+                    <span class="block font-bold text-slate-300 text-xs group-hover:text-white transition-colors">02 - FILIAL PERNAMBUCO</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-sky-400 transition-colors"></i>
+                </button>
+                <button onclick="selecionarFilialInicial('03')" class="w-full text-left px-5 py-3 border border-[#334155] rounded-lg shadow-sm hover:bg-[#334155] focus:outline-none transition-all flex justify-between items-center group bg-[#0f172a]">
+                    <span class="block font-bold text-slate-300 text-xs group-hover:text-white transition-colors">03 - FILIAL SERGIPE</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-sky-400 transition-colors"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY DE CARREGAMENTO DARK -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[600] bg-[#0f172a]/90 backdrop-blur-sm flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-[#1e293b] border border-[#334155] p-8 rounded-xl shadow-2xl flex flex-col items-center w-full max-w-[360px] transform scale-95 transition-transform duration-300" id="loadingBox">
+            
+            <div class="relative w-20 h-20 mb-6">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#334155" stroke-width="8"></circle>
+                    <circle id="progressCircle" cx="50" cy="50" r="45" fill="none" stroke="#38bdf8" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round" class="transition-all duration-500 ease-out"></circle>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span id="progressText" class="text-lg font-bold text-sky-400 tabular-nums">0%</span>
+                </div>
+            </div>
+
+            <div class="text-center w-full mb-6">
+                <h3 class="text-xs font-bold text-slate-200 uppercase tracking-widest mb-1">Sincronizando Dados</h3>
+                <p id="loadingStageText" class="text-[10px] uppercase tracking-widest text-slate-400">Iniciando...</p>
+            </div>
+
+            <div class="w-full space-y-3 bg-[#0f172a] p-4 rounded-lg border border-[#334155]">
+                <div class="flex items-center gap-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest" id="step1">
+                    <i data-lucide="circle-dashed" class="w-4 h-4" id="step1-icon"></i> <span>1. Motor Logístico (DA8)</span>
+                </div>
+                <div class="flex items-center gap-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest" id="step2">
+                    <i data-lucide="circle-dashed" class="w-4 h-4" id="step2-icon"></i> <span>2. Malha Comercial (C5)</span>
+                </div>
+                <div class="flex items-center gap-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest" id="step3">
+                    <i data-lucide="circle-dashed" class="w-4 h-4" id="step3-icon"></i> <span>3. Score V8 (Crédito)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CABEÇALHO DARK -->
+    <header class="bg-[#0f172a] border-b border-[#1e293b] sticky top-0 z-40 px-6 h-14 flex items-center justify-between shrink-0 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="flex items-baseline select-none">
+                <span class="text-white font-bold text-lg tracking-tight">LEME</span><span class="text-[#cbd5e1] font-bold text-lg tracking-tight ml-1">SUPREME</span>
+            </div>
+            <div class="h-5 w-px bg-[#334155] ml-2"></div>
+            <div class="flex items-center gap-3 ml-2">
+                <span class="bg-rose-500/10 text-rose-500 border border-rose-500/20 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <i data-lucide="lock" class="w-3 h-3"></i> Crédito
+                </span>
+                <h1 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Mesa de Liberação V8</h1>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <span id="apiStatus" class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest items-center gap-1.5 hidden">
+                <i data-lucide="check-circle" class="w-3 h-3"></i> Sincronizado
+            </span>
+            <button onclick="abrirModalFilial()" class="text-slate-400 hover:text-slate-200 text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 border border-[#334155] rounded bg-[#1e293b] hover:bg-[#334155] transition-colors mr-2">
+                Trocar Filial
+            </button>
+            <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-400 hover:text-slate-200 transition-colors p-1.5 rounded hover:bg-[#1e293b]" title="Fechar Módulo">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col min-h-0 overflow-hidden bg-[#0f172a] relative z-0">
+        
+        <!-- BARRA DE FILTROS DARK -->
+        <div class="bg-[#1e293b] border-b border-[#334155] px-6 py-3 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 shrink-0 shadow-sm relative z-10">
+            <div class="flex flex-wrap items-center gap-4">
+                
+                <select id="filtroFilial" class="hidden">
+                    <option value="consolidado">Consolidado</option>
+                    <option value="01">01</option>
+                    <option value="02">02</option>
+                    <option value="03">03</option>
+                </select>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Emissão:</span>
+                    <div class="flex items-center gap-1 bg-[#0f172a] border border-[#334155] rounded px-2 py-1">
+                        <input type="date" id="dateStart" onchange="renderTabela()" class="bg-transparent text-[11px] text-slate-300 outline-none cursor-pointer [color-scheme:dark]">
+                        <span class="text-[10px] text-slate-500 font-bold mx-1">a</span>
+                        <input type="date" id="dateEnd" onchange="renderTabela()" class="bg-transparent text-[11px] text-slate-300 outline-none cursor-pointer [color-scheme:dark]">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Exibir:</span>
+                    <select id="filtroTipoBloqueio" onchange="renderTabela()" class="corp-input py-1.5 cursor-pointer">
+                        <option value="TODOS">Todos os Bloqueios</option>
+                        <option value="CREDITO">Apenas Crédito</option>
+                        <option value="DUPLO">Apenas Bloqueio Duplo</option>
+                        <option value="ESTOQUE">Apenas Estoque</option>
+                    </select>
+                </div>
+                
+                <button onclick="limparFiltrosEFetch()" class="bg-[#0f172a] border border-[#334155] hover:bg-[#334155] text-slate-300 px-3 py-1.5 text-[9px] font-bold uppercase tracking-wide flex items-center gap-1.5 rounded transition-colors">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Recarregar
+                </button>
+            </div>
+
+            <div class="relative w-full xl:w-72">
+                <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                <input type="text" id="inputPesquisa" oninput="renderTabela()" class="corp-input !pl-8 w-full py-1.5" placeholder="Buscar pedido, cliente...">
+            </div>
+        </div>
+
+        <!-- KPIs DARK -->
+        <div class="px-6 py-4 bg-[#0f172a] shrink-0 grid grid-cols-2 md:grid-cols-4 gap-4 z-0">
+            <div class="dash-card p-4">
+                <span class="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Pedidos Retidos</span>
+                <span id="kpiQtdPedidos" class="text-xl font-bold text-rose-500">0</span>
+            </div>
+            <div class="dash-card p-4 border-t-2 border-t-sky-500">
+                <span class="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Valor Financeiro Retido</span>
+                <span id="kpiValorRetido" class="text-xl font-bold text-sky-400 tabular-nums">R$ 0,00</span>
+            </div>
+            <div class="dash-card p-4">
+                <span class="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Clientes Afetados</span>
+                <span id="kpiQtdClientes" class="text-xl font-bold text-amber-500">0</span>
+            </div>
+            <div class="dash-card p-4 border-t-2 border-t-emerald-500 bg-emerald-500/5">
+                <span class="block text-[9px] font-semibold text-emerald-500 uppercase tracking-widest mb-1">Retidos com Bom Score</span>
+                <span id="kpiFalsosPositivos" class="text-xl font-bold text-emerald-400" title="Clientes com Score V8 Excelente que estão bloqueados">0</span>
+            </div>
+        </div>
+
+        <!-- TABELA SLATE -->
+        <div class="flex-1 overflow-auto bg-[#0f172a] px-6 pb-6">
+            <div class="dash-card h-full flex flex-col overflow-hidden">
+                <div class="flex-1 overflow-auto custom-scroll relative bg-[#0f172a]">
+                    <table class="table-slate">
+                        <thead>
+                            <tr>
+                                <th class="w-16 text-center">Filial</th>
+                                <th class="w-24 text-center">Pedido</th>
+                                <th class="w-28 text-center">Emissão</th>
+                                <th>Cliente / Razão Social</th>
+                                <th class="w-48">Vendedor</th>
+                                <th class="w-32">Rota OMS</th>
+                                <th class="w-32 text-center">Cond. Pgto</th>
+                                <th class="text-right w-32">Valor Total</th>
+                                <th class="w-32 text-center">Bloqueio</th>
+                                <th class="w-32 text-center" title="Avaliação de Risco do Motor V8">Score V8</th>
+                                <th class="w-24 text-center">Análise</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyLiberacao">
+                            <tr><td colspan="11" class="text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="shield-check" class="w-6 h-6 mx-auto mb-3 opacity-50"></i> Selecione a Filial para Iniciar</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="drawerBackdrop" class="fixed inset-0 bg-[#0f172a]/80 backdrop-blur-sm z-[90] hidden opacity-0 transition-opacity duration-300" onclick="toggleDrawer(false)"></div>
+
+    <!-- GAVETA (DRAWER) DE ANÁLISE COMPACTA DARK -->
+    <div id="analysisDrawer" class="fixed top-0 right-0 h-full flex flex-col">
+        <div class="bg-[#1e293b] px-6 py-4 border-b border-[#334155] flex justify-between items-start shrink-0">
+            <div class="w-full">
+                <div class="flex items-center gap-2 mb-1.5">
+                    <span class="bg-[#0f172a] text-sky-400 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border border-[#334155]">Dossiê de Crédito V8</span>
+                    <span id="headerID" class="text-slate-400 font-mono text-[9px] font-bold uppercase">ID: 000</span>
+                    <span class="text-slate-500">•</span>
+                    <span id="headerCNPJ" class="text-slate-400 font-mono text-[9px] font-bold uppercase">CNPJ: 00.000.000/0000-00</span>
+                </div>
+                <h3 id="drawerNome" class="text-base font-bold text-slate-200 uppercase tracking-tight truncate max-w-xl">NOME DO CLIENTE</h3>
+                
+                <div class="mt-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-md flex items-center justify-between" id="bannerPedidoInfo"></div>
+            </div>
+            <button onclick="toggleDrawer(false)" class="text-slate-400 hover:text-white bg-[#0f172a] hover:bg-[#334155] p-1.5 rounded transition-colors border border-[#334155] ml-4 shrink-0">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scroll" id="drawerContent"></div>
+
+        <div class="p-4 px-6 bg-[#1e293b] border-t border-[#334155] shrink-0 flex justify-between items-center">
+            <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">Ações Executivas de Liberação</span>
+            <div class="flex gap-3">
+                <button onclick="rejeitarPedido()" class="bg-[#0f172a] hover:bg-rose-500/10 text-rose-500 border border-rose-500/30 px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5">
+                    <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Manter Bloqueio
+                </button>
+                <button onclick="liberarPedido()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-lg flex items-center gap-1.5">
+                    <i data-lucide="unlock" class="w-3.5 h-3.5"></i> Aprovar / Liberar Pedido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAIS DE ACESSO A DADOS (DARK) -->
+    <div id="modalRFB" class="fixed inset-0 z-[150] bg-[#0f172a]/90 backdrop-blur-sm hidden items-center justify-center p-4 modal-overlay">
+        <div class="bg-[#1e293b] border border-[#334155] rounded-xl shadow-2xl w-full max-w-2xl flex flex-col modal-content overflow-hidden">
+            <div class="p-5 border-b border-[#334155] flex justify-between items-center bg-[#0f172a]">
+                <h3 class="font-semibold text-slate-200 uppercase tracking-widest text-xs flex items-center gap-2"><i data-lucide="building-2" class="w-4 h-4 text-sky-400"></i> Base Receita Federal</h3>
+                <button onclick="closeModal('modalRFB')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="p-8 min-h-[200px]" id="rfbContent"></div>
+        </div>
+    </div>
+    
+    <div id="modalTitulos" class="fixed inset-0 z-[150] bg-[#0f172a]/90 backdrop-blur-sm hidden items-center justify-center p-4 modal-overlay">
+        <div class="bg-[#1e293b] border border-[#334155] rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col modal-content overflow-hidden">
+            <div class="px-6 py-5 border-b border-[#334155] bg-[#0f172a] flex flex-col gap-4 shrink-0">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="font-semibold text-slate-200 uppercase tracking-widest text-xs flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-sky-400"></i> Extrato Financeiro de Títulos</h3>
+                        <p class="text-[10px] text-slate-400 font-medium uppercase mt-1" id="titulosClienteNome">CLIENTE</p>
+                    </div>
+                    <button onclick="closeModal('modalTitulos')" class="text-slate-400 hover:text-white p-1 bg-[#1e293b] border border-[#334155] hover:bg-[#334155] rounded transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                
+                <div class="flex flex-col gap-3 pt-2">
+                    <div class="flex justify-between items-center flex-wrap gap-2">
+                        <div class="flex gap-2">
+                            <button onclick="setTitulosTab('todos')" id="tabTitulos-todos" class="tab-btn active">Todos</button>
+                            <button onclick="setTitulosTab('aberto')" id="tabTitulos-aberto" class="tab-btn">Em Aberto</button>
+                            <button onclick="setTitulosTab('pago')" id="tabTitulos-pago" class="tab-btn">Pagos</button>
+                        </div>
+                        <div id="filtroAtrasoContainer" class="hidden flex items-center gap-2 bg-[#1e293b] px-3 py-1.5 rounded border border-[#334155]">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="chkPagosAtraso" onchange="renderTitulos()" class="w-3.5 h-3.5 text-sky-500 bg-[#0f172a] rounded border-[#334155] focus:ring-sky-500">
+                                <span class="text-[9px] font-semibold text-slate-300 uppercase tracking-wider">Apenas Pagos em Atraso</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-3 bg-[#1e293b] p-2.5 rounded border border-[#334155]">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[9px] font-semibold text-slate-400 uppercase">Emissão:</span>
+                            <input type="date" id="filtroTitEmissaoIni" onchange="renderTitulos()" class="corp-input !py-1 !px-2 [color-scheme:dark]">
+                            <span class="text-[9px] text-slate-500 font-bold">a</span>
+                            <input type="date" id="filtroTitEmissaoFim" onchange="renderTitulos()" class="corp-input !py-1 !px-2 [color-scheme:dark]">
+                        </div>
+                        <div class="flex items-center gap-1.5 border-l border-[#334155] pl-3">
+                            <span class="text-[9px] font-semibold text-slate-400 uppercase">Vencimento:</span>
+                            <input type="date" id="filtroTitVencIni" onchange="renderTitulos()" class="corp-input !py-1 !px-2 [color-scheme:dark]">
+                            <span class="text-[9px] text-slate-500 font-bold">a</span>
+                            <input type="date" id="filtroTitVencFim" onchange="renderTitulos()" class="corp-input !py-1 !px-2 [color-scheme:dark]">
+                        </div>
+                        <div class="flex items-center gap-1.5 border-l border-[#334155] pl-3">
+                            <span class="text-[9px] font-semibold text-slate-400 uppercase">Pagamento:</span>
+                            <input type="date" id="filtroTitPagIni" onchange="renderTitulos()" class="corp-input !py-1 !px-2 [color-scheme:dark]">
+                            <span class="text-[9px] text-slate-500 font-bold">a</span>
+                            <input type="date" id="filtroTitPagFim" onchange="renderTitulos()" class="corp-input !py-1 !px-2 [color-scheme:dark]">
+                        </div>
+                        <button onclick="limparFiltrosTitulos()" class="ml-auto text-[9px] text-slate-300 border border-[#334155] bg-[#0f172a] px-2 py-1 rounded font-bold hover:bg-[#334155] uppercase transition-colors flex items-center gap-1">
+                            <i data-lucide="eraser" class="w-3 h-3"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-0 bg-[#0f172a] relative custom-scroll">
+                <table class="table-slate">
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th class="text-center">Parc.</th>
+                            <th class="text-center">Emissão</th>
+                            <th class="text-center">Vencimento</th>
+                            <th class="text-center">Data Pagto</th>
+                            <th class="text-right">Valor (R$)</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyTitulos"></tbody>
+                    <tfoot class="bg-[#1e293b] border-t border-[#334155] sticky bottom-0 z-10">
+                        <tr>
+                            <td colspan="5" class="px-6 py-3 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Exibido:</td>
+                            <td class="px-6 py-3 text-right text-sm font-bold text-sky-400 tabular-nums" id="totalTitulosRodape">R$ 0,00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div id="modalFaturamento" class="fixed inset-0 z-[150] bg-[#0f172a]/90 backdrop-blur-sm hidden items-center justify-center p-4 modal-overlay">
+        <div class="bg-[#1e293b] border border-[#334155] rounded-xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col modal-content overflow-hidden">
+            <div class="px-6 py-5 border-b border-[#334155] bg-[#0f172a] flex flex-col gap-3 shrink-0">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="font-semibold text-slate-200 uppercase tracking-widest text-xs flex items-center gap-2"><i data-lucide="receipt" class="w-4 h-4 text-sky-400"></i> Histórico de Faturamento (NFs)</h3>
+                        <p class="text-[10px] text-slate-400 font-medium uppercase mt-1" id="fatClienteNome">CLIENTE</p>
+                    </div>
+                    <button onclick="closeModal('modalFaturamento')" class="text-slate-400 hover:text-white p-1 bg-[#1e293b] border border-[#334155] hover:bg-[#334155] rounded transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                    <div class="relative w-full md:w-80">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                        <input type="text" id="filtroBuscaFat" oninput="renderFaturamento()" placeholder="Buscar nota, data, cond..." class="corp-input !pl-9 w-full">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-0 bg-[#0f172a] relative custom-scroll">
+                <table class="table-slate">
+                    <thead>
+                        <tr>
+                            <th>Nota Fiscal</th>
+                            <th class="text-center">Série</th>
+                            <th class="text-center">Emissão</th>
+                            <th>Condição Pagto</th>
+                            <th class="text-right">Valor Total (R$)</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyFaturamento"></tbody>
+                    <tfoot class="bg-[#1e293b] border-t border-[#334155] sticky bottom-0 z-10">
+                        <tr>
+                            <td colspan="4" class="px-6 py-3 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Faturado (Exibido):</td>
+                            <td class="px-6 py-3 text-right text-sm font-bold text-sky-400 tabular-nums" id="totalFaturamentoRodape">R$ 0,00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let dadosLogistica = [], dadosCredito = [], dadosComerciais = [], dadosCombinados = [], pedidoEmAnalise = null;
+        
+        let apiHost = window.location.hostname;
+        if (!apiHost || apiHost.includes('goog') || apiHost === 'localhost') { apiHost = '201.91.126.114'; }
+        const API_URL = `http://${apiHost}:3001/api`;
+
+        let toastTimer;
+        function showToast(msg, isError = false) {
+            // Reutilizamos a lógica mas ignoramos se não houver um toast notification element na tela 
+            // (pode adicionar se quiser, ou usar alertas padrão, omitido aqui para limpeza).
+        }
+
+        const getValUniversal = (row, ...possiveisNomes) => {
+            if(!row) return '';
+            const chavesDaLinha = Object.keys(row);
+            for (let i = 0; i < possiveisNomes.length; i++) {
+                const nomeProcurado = String(possiveisNomes[i]).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                const chaveEncontrada = chavesDaLinha.find(k => String(k).trim().toLowerCase().replace(/[^a-z0-9]/g, '') === nomeProcurado);
+                if (chaveEncontrada && row[chaveEncontrada] !== undefined && row[chaveEncontrada] !== null && String(row[chaveEncontrada]).trim() !== '') return row[chaveEncontrada];
+            }
+            return '';
+        };
+
+        const parseNum = v => {
+            if (v === undefined || v === null || v === '---' || v === '') return 0;
+            if (typeof v === 'number') return v;
+            let str = String(v).trim().replace(/[^0-9,\.-]/g, '');
+            if (str.includes(',')) { str = str.replace(/\./g, ''); str = str.replace(',', '.'); }
+            let n = parseFloat(str); return isNaN(n) ? 0 : n;
+        };
+
+        const fmtCurr = v => parseNum(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        function formatarDataParaTabela(dataStr) {
+            if (!dataStr) return '--/--/----';
+            let cleanStr = String(dataStr).split('T')[0].replace(/-/g, ''); 
+            if (cleanStr.length >= 8) return `${cleanStr.substring(6,8)}/${cleanStr.substring(4,6)}/${cleanStr.substring(0,4)}`;
+            return dataStr;
+        }
+
+        function parseProtheusDate(str) {
+            if(!str) return null; let v = String(str).replace(/\D/g, '');
+            if(v.length === 8) return new Date(parseInt(v.substring(0,4)), parseInt(v.substring(4,6))-1, parseInt(v.substring(6,8)));
+            return null;
+        }
+        
+        const formatSpecialDate = (dateStr) => {
+            if (!dateStr || dateStr === '---' || String(dateStr).trim() === '') return 'N/A';
+            const str = String(dateStr).trim();
+            if (str.length === 8 && /^\d+$/.test(str)) return `${str.substring(6, 8)}/${str.substring(4, 6)}/${str.substring(0, 4)}`;
+            if (str.includes('-')) { const parts = str.split('T')[0].split('-'); if(parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`; }
+            return str;
+        };
+        
+        const getComparableDate = (d) => {
+            if(!d) return ''; return String(d).replace(/\D/g, ''); 
+        };
+
+        function getV8Params() {
+            return {
+                tempo: [{ m: 6, p: 1 }, { m: 12, p: 2 }, { m: 24, p: 3 }, { m: Infinity, p: 4 }],
+                atraso: [{ m: 1.5, p: 4 }, { m: 4, p: 3 }, { m: 7, p: 2 }, { m: Infinity, p: 1 }],
+                freq: [{ m: 1.0, p: 1 }, { m: 1.5, p: 2 }, { m: 2.0, p: 3 }, { m: 3.0, p: 4 }, { m: Infinity, p: 5 }],
+                recencia: [{ m: 0, p: 4 }, { m: 3, p: 2 }, { m: 6, p: 3 }, { m: Infinity, p: 1 }]
+            };
+        }
+
+        function calculateV8Score(row) {
+            const params = getV8Params();
+            const tempoRel = parseNum(getValUniversal(row, 'TEMPO_MESES', 'MESES'));
+            const atrasoMedio = parseNum(getValUniversal(row, 'MEDIA DIAS ATRASO', 'MÉDIA DIAS ATRASO'));
+            const freqMes = parseNum(getValUniversal(row, 'COMPRAS POR MES', 'COMPRAS_MES'));
+            let recencia = 0; 
+            const dtUltCompra = parseProtheusDate(getValUniversal(row, 'DATA ULTIMA COMPRA', 'ULTIMA_COMPRA', 'ULT_COMPRA', 'ULTIMA COMPRA'));
+            if (dtUltCompra) {
+                const hoje = new Date();
+                recencia = (hoje.getFullYear() - dtUltCompra.getFullYear()) * 12 + (hoje.getMonth() - dtUltCompra.getMonth());
+                if (recencia < 0) recencia = 0;
+            } else { recencia = freqMes > 0 ? (1 / freqMes) : 6; }
+
+            let ptsTempo = params.tempo.find(f => tempoRel <= f.m)?.p || 1;
+            let ptsAtraso = params.atraso.find(f => atrasoMedio <= f.m)?.p || 1;
+            let ptsFreq = params.freq.find(f => freqMes <= f.m)?.p || 1;
+            let ptsRecencia = params.recencia.find(f => recencia <= f.m)?.p || 1;
+
+            let totalPts = ptsTempo + ptsAtraso + ptsFreq + ptsRecencia; 
+            let maxPts = 14;
+
+            let score10 = (totalPts / maxPts) * 10;
+            const riscoVal = String(getValUniversal(row, 'A1_RISCO', 'RISCO')).toUpperCase();
+            
+            let penalidade = 0;
+            if (riscoVal === 'D') penalidade = 4; else if (riscoVal === 'C') penalidade = 2;
+            
+            score10 -= penalidade; score10 = Math.max(0, Math.min(10, score10));
+            
+            let status = '';
+            if (score10 >= 8.5 || riscoVal === 'A') status = 'EXCELENTE';
+            else if (score10 >= 7.0 || riscoVal === 'B') status = 'RAZOÁVEL';
+            else if (score10 >= 5.0 || riscoVal === 'C') status = 'ATENÇÃO';
+            else status = 'CRÍTICO';
+
+            let rationale = `COMPOSIÇÃO DO SCORE V8:\n• Tempo Relacionamento: ${ptsTempo} pts\n• Histórico de Atrasos: ${ptsAtraso} pts\n• Frequência de Compras: ${ptsFreq} pts\n• Recência: ${ptsRecencia} pts\n\nSOMA: ${totalPts}/${maxPts}.\n\nAJUSTE RISCO ERP (${riscoVal || 'N/A'}): -${penalidade} pts.\n\n[(${totalPts}/${maxPts})*10] - ${penalidade} = ${score10.toFixed(1)}`;
+
+            return { score: score10.toFixed(1), status: status, ptsAtraso, ptsFreq, ptsRecencia, maxAtraso: 4, maxFreq: 5, rationale: rationale };
+        }
+
+        function enrichProtheusData(data) {
+            return data.map(row => {
+                let dtPrimeiraStr = String(getValUniversal(row, 'PRIMEIRA COMPRA', 'PRIMEIRA_COMPRA')).replace(/\D/g, '');
+                let dtUltimaStr = String(getValUniversal(row, 'DATA ULTIMA COMPRA', 'ULTIMA_COMPRA', 'ULT_COMPRA', 'ULTIMA COMPRA')).replace(/\D/g, '');
+                let mesesRel = parseNum(getValUniversal(row, 'TEMPO_MESES', 'MESES'));
+                
+                if (mesesRel <= 0) {
+                    if (dtPrimeiraStr && dtPrimeiraStr.length === 8) {
+                        const y = parseInt(dtPrimeiraStr.substring(0, 4)); const m = parseInt(dtPrimeiraStr.substring(4, 6));
+                        const dPrimeira = new Date(y, m - 1, 1); let dUltima = new Date(); 
+                        if (dtUltimaStr && dtUltimaStr.length === 8) { const uy = parseInt(dtUltimaStr.substring(0, 4)); const um = parseInt(dtUltimaStr.substring(4, 6)); dUltima = new Date(uy, um - 1, 1); }
+                        mesesRel = (dUltima.getFullYear() - dPrimeira.getFullYear()) * 12 + (dUltima.getMonth() - dPrimeira.getMonth());
+                    }
+                    if (mesesRel <= 0) mesesRel = 1; row['TEMPO_MESES'] = mesesRel;
+                }
+
+                let totalSF2 = parseNum(getValUniversal(row, 'TOTAL MERCADORIA SF2', 'TOTAL_SF2', 'FATURAMENTO'));
+                let mediaCompras = parseNum(getValUniversal(row, 'MEDIA DE COMPRAS', 'MEDIA_COMPRAS'));
+                let qtdNotas = parseInt(getValUniversal(row, 'NUMERO DE COMPRAS', 'QTD_NOTAS', 'COMPRAS')) || 0;
+                let maiorCompra = parseNum(getValUniversal(row, 'MAIOR COMPRA', 'MAIOR_COMPRA'));
+
+                if (totalSF2 <= 0 && mediaCompras > 0 && qtdNotas > 0) totalSF2 = mediaCompras * qtdNotas;
+                else if (mediaCompras <= 0 && totalSF2 > 0 && qtdNotas > 0) mediaCompras = totalSF2 / qtdNotas;
+                
+                let compMes = parseNum(getValUniversal(row, 'COMPRAS POR MES', 'COMPRAS_MES'));
+                if (compMes <= 0) { compMes = qtdNotas / mesesRel; row['COMPRAS POR MES'] = compMes > 0 ? compMes : 0; }
+
+                row['TOTAL MERCADORIA SF2'] = totalSF2; row['MEDIA DE COMPRAS'] = mediaCompras; row['NUMERO DE COMPRAS'] = qtdNotas;
+                row['MAIOR COMPRA'] = maiorCompra;
+                
+                row['SALDO EM ABERTO'] = parseNum(getValUniversal(row, 'SALDO EM ABERTO', 'SALDO_ABERTO', 'SALDO'));
+                row['VALOR PAGO EM ATRASO'] = parseNum(getValUniversal(row, 'VALOR PAGO EM ATRASO', 'VALOR_ATRASO'));
+                row['TITULOS PAGOS'] = parseInt(getValUniversal(row, 'TITULOS PAGOS', 'PAGOS')) || 0;
+                row['TOTAL DE TITULOS'] = parseInt(getValUniversal(row, 'TOTAL DE TITULOS', 'TOTAL_TITULOS')) || 0;
+                
+                const rawLimite = getValUniversal(row, 'LIMITE', 'A1_LC', 'LIMCRED');
+                const limite = parseNum(rawLimite);
+                row['LIMITE_REAL_CALCULADO'] = limite; 
+                
+                const calc = calculateV8Score(row);
+                row['SCORE_TOTAL'] = calc.score; row['STATUS DO CLIENTE'] = calc.status;
+                
+                let baseCalculo = limite > 0 ? limite : (mediaCompras > 0 ? mediaCompras * 1.5 : (maiorCompra > 0 ? maiorCompra * 1.2 : 1500));
+
+                if (calc.status === 'EXCELENTE') { row['VARIACAO DO LIMITE'] = limite === 0 ? 'NOVO LIMITE' : 'AUMENTOU 15%'; row['SUGESTAO_REAL_CALCULADA'] = baseCalculo * 1.15; } 
+                else if (calc.status === 'RAZOÁVEL' || calc.status === 'RAZOAVEL') { row['VARIACAO DO LIMITE'] = limite === 0 ? 'NOVO LIMITE' : 'ESTÁVEL'; row['SUGESTAO_REAL_CALCULADA'] = baseCalculo; } 
+                else if (calc.status === 'ATENÇÃO' || calc.status === 'ATENCAO') { row['VARIACAO DO LIMITE'] = limite === 0 ? 'NOVO LIMITE' : 'REDUZIU 10%'; row['SUGESTAO_REAL_CALCULADA'] = baseCalculo * 0.90; } 
+                else { row['VARIACAO DO LIMITE'] = 'LIMITE ZERADO'; row['SUGESTAO_REAL_CALCULADA'] = 0; }
+                
+                row._v8Data = calc; return row;
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => { abrirModalFilial(); });
+
+        function abrirModalFilial() {
+            const modal = document.getElementById('filialModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0', 'pointer-events-none'); }, 10);
+        }
+
+        function selecionarFilialInicial(cod) {
+            document.getElementById('filtroFilial').value = cod;
+            const modal = document.getElementById('filialModal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+            limparFiltrosEFetch();
+        }
+
+        function limparFiltrosEFetch() {
+            document.getElementById('inputPesquisa').value = '';
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
+            document.getElementById('filtroTipoBloqueio').value = 'TODOS';
+            fetchDadosCombinados();
+        }
+
+        // =====================================
+        // CONTROLO VISUAL DA SINCRONIZAÇÃO DARK
+        // =====================================
+        let currentProgress = 0;
+        function startLoadingUI() {
+            currentProgress = 0;
+            const overlay = document.getElementById('loadingOverlay');
+            const box = document.getElementById('loadingBox');
+            
+            overlay.classList.remove('hidden');
+            box.classList.remove('scale-95');
+            
+            [1,2,3].forEach(i => {
+                const el = document.getElementById(`step${i}`);
+                const icon = document.getElementById(`step${i}-icon`);
+                el.className = "flex items-center gap-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest opacity-50";
+                icon.setAttribute('data-lucide', 'loader-2');
+                icon.classList.add('animate-spin');
+                icon.classList.remove('text-emerald-400');
+            });
+            lucide.createIcons();
+
+            setTimeout(() => { overlay.classList.remove('opacity-0'); updateProgressCircle(10, "Conectando ao ERP..."); }, 50);
+        }
+
+        function marcarPassoConcluido(stepNum) {
+            const el = document.getElementById(`step${stepNum}`);
+            const icon = document.getElementById(`step${stepNum}-icon`);
+            el.className = "flex items-center gap-3 text-[10px] font-bold text-slate-200 uppercase tracking-widest";
+            icon.setAttribute('data-lucide', 'check-circle-2');
+            icon.classList.remove('animate-spin');
+            icon.classList.add('text-emerald-400');
+            lucide.createIcons({root: el});
+            
+            currentProgress += 28; 
+            let text = "Sincronizando módulos...";
+            if(stepNum === 1) text = "Processando Roteirização...";
+            if(stepNum === 2) text = "Calculando Valores Comerciais...";
+            if(stepNum === 3) text = "Cruzando Matriz de Risco...";
+            updateProgressCircle(currentProgress, text);
+        }
+
+        function finalizarLoadingUI() {
+            updateProgressCircle(100, "Renderizando Dashboard...");
+            setTimeout(() => {
+                const overlay = document.getElementById('loadingOverlay');
+                overlay.classList.add('opacity-0');
+                document.getElementById('loadingBox').classList.add('scale-95');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }, 500);
+        }
+
+        function erroLoadingUI(msg) {
+            document.getElementById('loadingStageText').innerText = 'Erro na sincronização';
+            document.getElementById('loadingStageText').classList.add('text-rose-500');
+            document.getElementById('progressText').innerText = '!';
+            document.getElementById('progressText').classList.add('text-rose-500');
+            document.getElementById('progressCircle').style.stroke = '#f43f5e'; 
+            
+            setTimeout(() => {
+                const overlay = document.getElementById('loadingOverlay');
+                overlay.classList.add('opacity-0');
+                document.getElementById('loadingBox').classList.add('scale-95');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }, 2000);
+        }
+
+        function updateProgressCircle(percent, text) {
+            document.getElementById('progressText').innerText = Math.round(percent) + '%';
+            document.getElementById('loadingStageText').innerText = text;
+            const circle = document.getElementById('progressCircle');
+            const offset = 283 - (283 * percent) / 100;
+            circle.style.strokeDashoffset = offset;
+        }
+
+        // =====================================
+        // SINCRONIZAÇÃO PARALELA (FETCH REAL)
+        // =====================================
+        async function fetchDadosCombinados() {
+            startLoadingUI();
+            const filial = document.getElementById('filtroFilial').value;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); 
+            const fetchOpts = { signal: controller.signal };
+
+            try {
+                let pLog, pCred, pCom;
+
+                if (filial === 'consolidado') {
+                    pLog = Promise.all([
+                        fetch(`${API_URL}/motor-logistico/01`, fetchOpts).then(r => r.ok ? r.json() : []).catch(() => []),
+                        fetch(`${API_URL}/motor-logistico/02`, fetchOpts).then(r => r.ok ? r.json() : []).catch(() => []),
+                        fetch(`${API_URL}/motor-logistico/03`, fetchOpts).then(r => r.ok ? r.json() : []).catch(() => [])
+                    ]).then(res => { marcarPassoConcluido(1); return [...(res[0].data || res[0] || []), ...(res[1].data || res[1] || []), ...(res[2].data || res[2] || [])]; });
+                } else {
+                    pLog = fetch(`${API_URL}/motor-logistico/${filial}`, fetchOpts).then(r => r.ok ? r.json() : []).catch(() => []).then(res => { marcarPassoConcluido(1); return res.data || res || []; });
+                }
+
+                pCom = fetch(`${API_URL}/analise-comercial/consolidado?meses=2`, fetchOpts).then(r => r.ok ? r.json() : []).catch(() => []).then(res => { marcarPassoConcluido(2); return res.data || res || []; });
+                pCred = fetch(`${API_URL}/motor-credito`, fetchOpts).then(r => r.ok ? r.json() : []).catch(() => []).then(res => { marcarPassoConcluido(3); return res.data || res || []; });
+
+                const [logJson, rawCom, rawCred] = await Promise.all([pLog, pCom, pCred]);
+                clearTimeout(timeoutId);
+
+                dadosCredito = enrichProtheusData(Array.isArray(rawCred) ? rawCred : []);
+                dadosComerciais = Array.isArray(rawCom) ? rawCom : [];
+
+                let mapPedidos = new Map(); let descMap = new Map();
+                
+                dadosComerciais.forEach(c => {
+                     const ped = String(getValUniversal(c, 'NumPedido', 'C5_NUM', 'Pedido', 'NumeroPedido')).trim();
+                     if(!descMap.has(ped)) descMap.set(ped, { count: 0, descSum: 0, valor: 0 });
+                     const obj = descMap.get(ped);
+                     obj.descSum += parseFloat(getValUniversal(c, 'DescGeral')) || 0;
+                     obj.valor += parseFloat(getValUniversal(c, 'Valor', 'Valor_Total')) || 0;
+                     obj.count++;
+                });
+
+                let baseLoop = (logJson && logJson.length > 0) ? logJson : dadosComerciais;
+
+                baseLoop.forEach(r => {
+                    const numPed = String(getValUniversal(r, 'NumeroPedido', 'C5_NUM', 'NumPedido', 'Pedido')).trim();
+                    if (!numPed || numPed === '---') return;
+
+                    let bloqueioRaw = String(getValUniversal(r, 'StatusCarga', 'Bloqueio', '_status', 'status')).trim().toUpperCase();
+                    const codCli = String(getValUniversal(r, 'CodCliente', 'C5_CLIENTE')).trim();
+                    const cnpjCli = String(getValUniversal(r, 'CnpjCliente', 'A1_CGC', 'CNPJ')).trim().replace(/\D/g, '');
+                    const nomeCli = String(getValUniversal(r, 'NomeCliente', 'Cliente', 'A1_NOME')).trim().toUpperCase();
+                    
+                    let clientV8 = dadosCredito.find(c => {
+                        const cCod = String(getValUniversal(c, 'CODIGO', 'A1_COD')).trim();
+                        const cCnpj = String(getValUniversal(c, 'CNPJ', 'A1_CGC')).trim().replace(/\D/g, '');
+                        const cNome = String(getValUniversal(c, 'NOME', 'A1_NOME')).trim().toUpperCase();
+                        if (cCnpj && cnpjCli && cCnpj === cnpjCli) return true;
+                        if (cCod && codCli && cCod === codCli) return true;
+                        if (cNome && nomeCli && cNome === nomeCli) return true; return false;
+                    });
+
+                    if (!clientV8) {
+                        clientV8 = { CODIGO: codCli || '---', NOME: nomeCli || 'NÃO IDENTIFICADO', CNPJ: cnpjCli || '---', LIMITE_REAL_CALCULADO: 0, 'TEMPO_MESES': 1, _v8Data: { score: '0.0', status: 'S/ Avaliação', ptsAtraso: 0, ptsFreq: 0, maxAtraso: 4, maxFreq: 5, rationale: 'Sem histórico.' } };
+                    }
+                    
+                    const comData = dadosComerciais.find(c => String(getValUniversal(c, 'NumPedido', 'C5_NUM', 'Pedido')).trim() === numPed);
+                    const descCond = getValUniversal(r, 'CondPagtoDesc', 'E4_DESCRI', 'CondPagto');
+                    const codCond = getValUniversal(r, 'CondPagtoCod', 'C5_CONDPAG');
+                    const condFinal = descCond ? descCond : (codCond ? codCond : 'NÃO INFORMADA');
+
+                    if (bloqueioRaw === 'LIBERADO' || bloqueioRaw === '' || bloqueioRaw === 'N/A' || bloqueioRaw === 'UNDEFINED') {
+                         let isBlockedSimulated = false;
+                         if (clientV8 && clientV8._v8Data && (clientV8._v8Data.status === 'CRÍTICO' || clientV8._v8Data.status === 'CRITICO' || clientV8._v8Data.status === 'ATENÇÃO' || clientV8._v8Data.status === 'ATENCAO')) { bloqueioRaw = 'BLOQ. CRÉDITO'; isBlockedSimulated = true; }
+                         const dInfo = descMap.get(numPed);
+                         if (dInfo && dInfo.count > 0 && (dInfo.descSum / dInfo.count) > 5) { bloqueioRaw = isBlockedSimulated ? 'BLOQUEIO DUPLO' : 'BLOQ. CRÉDITO'; }
+                    }
+
+                    if (bloqueioRaw === 'BLOQ. CRÉDITO' || bloqueioRaw === 'BLOQUEIO DUPLO' || bloqueioRaw === 'BLOQ. CREDITO' || bloqueioRaw === 'BLOQ. ESTOQUE') {
+                        if(!mapPedidos.has(numPed)) {
+                            mapPedidos.set(numPed, {
+                                filial: getValUniversal(r, 'Filial', 'C5_FILIAL') || filial,
+                                pedido: numPed,
+                                emissao: getValUniversal(r, 'DataEmissao', 'DataEmissaoPedido', 'Emissao', 'C5_EMISSAO'),
+                                clienteNome: nomeCli || 'NÃO IDENTIFICADO',
+                                vendedor: (comData ? getValUniversal(comData, 'Vendedor', 'A3_NOME') : getValUniversal(r, 'Vendedor', 'A3_NOME')) || 'N/A', 
+                                rota: getValUniversal(r, 'Rota', 'Roteiro') || 'SEM ROTA',
+                                condPagto: condFinal,
+                                tipoBloqueio: bloqueioRaw,
+                                valorTotal: 0,
+                                clientV8: clientV8 || null
+                            });
+                        }
+                        const obj = mapPedidos.get(numPed);
+                        const vCom = comData ? parseFloat(getValUniversal(comData, 'Valor', 'Valor_Total')) : 0;
+                        const vLog = parseFloat(getValUniversal(r, 'ValorPendente', 'ValorTotal', 'Valor')) || (parseFloat(getValUniversal(r, 'PesoPendente', 'PesoTotal', 'Peso')) * 45) || 0;
+                        if (obj.valorTotal === 0) obj.valorTotal = vCom > 0 ? vCom : vLog;
+                    }
+                });
+
+                dadosLogistica = Array.from(mapPedidos.values());
+                dadosLogistica.forEach(d => { const dInfo = descMap.get(d.pedido); if (d.valorTotal === 0 && dInfo && dInfo.valor > 0) d.valorTotal = dInfo.valor; });
+
+                if (dadosLogistica.length > 0) { document.getElementById('apiStatus').classList.remove('hidden'); document.getElementById('apiStatus').classList.add('flex'); }
+                dadosCombinados = dadosLogistica;
+                finalizarLoadingUI(); renderTabela();
+
+            } catch (e) {
+                console.warn("Erro ao buscar dados.", e);
+                dadosLogistica = []; dadosCombinados = [];
+                const isTimeout = e.name === 'AbortError';
+                erroLoadingUI();
+                
+                const tbody = document.getElementById('tbodyLiberacao');
+                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-16"><div class="flex flex-col items-center justify-center text-rose-500"><i data-lucide="${isTimeout ? 'timer-off' : 'server-crash'}" class="w-10 h-10 mb-3 opacity-50"></i><h3 class="text-xs font-bold uppercase tracking-widest">Erro na Conexão com ERP</h3><p class="text-[10px] mt-1 text-slate-400">Verifique o servidor de API.</p></div></td></tr>`;
+                lucide.createIcons({root: tbody});
+            }
+        }
+
+        function renderTabela() {
+            const tbody = document.getElementById('tbodyLiberacao');
+            const search = document.getElementById('inputPesquisa').value.toLowerCase().trim();
+            const tipoBloqueio = document.getElementById('filtroTipoBloqueio').value;
+            const dIni = document.getElementById('dateStart').value.replace(/-/g, '');
+            const dFim = document.getElementById('dateEnd').value.replace(/-/g, '');
+
+            let filtered = dadosCombinados.filter(r => {
+                const em = String(r.emissao).replace(/\D/g, '');
+                if (dIni && em < dIni) return false; if (dFim && em > dFim) return false;
+                if (tipoBloqueio !== 'TODOS') {
+                    if (tipoBloqueio === 'CREDITO' && (r.tipoBloqueio === 'BLOQ. CRÉDITO' || r.tipoBloqueio === 'BLOQ. CREDITO')) return false;
+                    if (tipoBloqueio === 'DUPLO' && r.tipoBloqueio !== 'BLOQUEIO DUPLO') return false;
+                    if (tipoBloqueio === 'ESTOQUE' && r.tipoBloqueio !== 'BLOQ. ESTOQUE') return false;
+                }
+                if (search) {
+                    const str = `${r.pedido} ${r.clienteNome} ${r.vendedor}`.toLowerCase();
+                    if (!str.includes(search)) return false;
+                } return true;
+            });
+
+            let tValor = 0, clientesSet = new Set(), falsosPositivos = 0;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-16 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="shield-check" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Nenhum pedido retido nos filtros selecionados.</td></tr>`;
+            } else {
+                tbody.innerHTML = filtered.map((r, idx) => {
+                    tValor += r.valorTotal; clientesSet.add(r.clienteNome);
+
+                    let badgeBloqueio = '';
+                    if (r.tipoBloqueio.includes('DUPLO')) badgeBloqueio = `<span class="badge-block badge-duplo"><i data-lucide="layers" class="w-3 h-3"></i> Duplo</span>`;
+                    else if (r.tipoBloqueio.includes('ESTOQUE')) badgeBloqueio = `<span class="badge-block badge-estoque"><i data-lucide="package-x" class="w-3 h-3"></i> Estoque</span>`;
+                    else badgeBloqueio = `<span class="badge-block badge-credito"><i data-lucide="shield-alert" class="w-3 h-3"></i> Crédito</span>`;
+
+                    let scoreHtml = `<span class="text-[10px] font-bold text-slate-500">S/ Avaliação</span>`;
+                    let statusClass = 'bg-[#1e293b] text-slate-400 border border-[#334155]';
+                    let v8ScoreRaw = 0;
+
+                    if (r.clientV8) {
+                        const v8 = r.clientV8._v8Data; v8ScoreRaw = parseFloat(v8.score);
+                        if(v8.status === 'EXCELENTE') { statusClass = 'status-excelente'; falsosPositivos++; }
+                        else if(v8.status === 'RAZOÁVEL' || v8.status === 'RAZOAVEL') statusClass = 'status-razoavel';
+                        else if(v8.status === 'ATENÇÃO' || v8.status === 'ATENCAO') statusClass = 'status-atencao';
+                        else statusClass = 'status-critico';
+                        scoreHtml = `<span class="px-2 py-1 rounded text-[10px] font-black tabular-nums shadow-sm flex items-center justify-center gap-1 mx-auto w-fit cursor-help ${statusClass}" title="${v8.rationale}"><span>${v8.score}</span> <span class="opacity-50">/</span> <span class="truncate max-w-[80px]">${v8.status}</span></span>`;
+                    }
+
+                    return `
+                    <tr class="hover:bg-[#1e293b] transition-colors">
+                        <td class="text-center font-bold text-slate-400 tabular-nums">${r.filial}</td>
+                        <td class="text-center font-black text-sky-400 tabular-nums">${r.pedido}</td>
+                        <td class="text-center font-mono text-slate-500">${formatarDataParaTabela(r.emissao)}</td>
+                        <td class="font-bold text-slate-200 uppercase truncate max-w-[200px]" title="${r.clienteNome}">${r.clienteNome}</td>
+                        <td class="font-bold text-slate-400 truncate max-w-[150px]">${r.vendedor}</td>
+                        <td class="text-[10px] font-bold text-slate-500 truncate max-w-[120px]" title="${r.rota || 'N/A'}">${r.rota || 'N/A'}</td>
+                        <td class="text-center font-bold text-slate-400 text-[10px]">${r.condPagto || 'N/A'}</td>
+                        <td class="text-right font-black text-sky-400 tabular-nums">${fmtCurr(r.valorTotal)}</td>
+                        <td class="text-center">${badgeBloqueio}</td>
+                        <td class="text-center">${scoreHtml}</td>
+                        <td class="text-center">
+                            <button onclick="abrirDrawerV8(${idx})" class="bg-[#1e293b] hover:bg-[#334155] border border-[#334155] text-slate-300 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest shadow-sm flex items-center justify-center gap-1.5 mx-auto w-fit rounded transition-colors">
+                                <i data-lucide="activity" class="w-3.5 h-3.5 text-sky-400"></i> Análise V8
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            }
+            
+            document.getElementById('kpiQtdPedidos').innerText = filtered.length;
+            document.getElementById('kpiValorRetido').innerText = fmtCurr(tValor);
+            document.getElementById('kpiQtdClientes').innerText = clientesSet.size;
+            document.getElementById('kpiFalsosPositivos').innerText = falsosPositivos;
+            lucide.createIcons({ root: tbody });
+        }
+
+        // ==========================================
+        // GAVETA DE ANÁLISE (DRAWER DARK)
+        // ==========================================
+        async function abrirDrawerV8(idx) {
+            const pedidoRow = dadosCombinados[idx];
+            const row = pedidoRow.clientV8; 
+            if (!row) return;
+
+            pedidoEmAnalise = pedidoRow.pedido;
+            const nomeCli = getValUniversal(row, 'NOME', 'A1_NOME', 'Nome_Cliente', 'Cliente');
+            const cnpjOrig = getValUniversal(row, 'CNPJ', 'CGC', 'A1_CGC', 'CPF/CNPJ', 'CNPJ/CPF');
+            let cnpjRaw = String(cnpjOrig).replace(/\D/g, '');
+            let cnpjFmt = cnpjRaw;
+            if(cnpjRaw.length === 14) cnpjFmt = cnpjRaw.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+            else if(cnpjRaw.length === 11) cnpjFmt = cnpjRaw.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+            if(!cnpjFmt) cnpjFmt = '---';
+
+            document.getElementById('drawerNome').innerText = nomeCli;
+            document.getElementById('headerID').innerText = `ID: ${getValUniversal(row, 'CODIGO', 'A1_COD')}`;
+            document.getElementById('headerCNPJ').innerText = `CNPJ: ${cnpjFmt}`;
+            
+            const condPgtoDisplay = pedidoRow.condPagto || 'N/A';
+            const bannerPedidoInfo = document.getElementById('bannerPedidoInfo');
+            if(bannerPedidoInfo) {
+                bannerPedidoInfo.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="lock" class="w-4 h-4 text-rose-500"></i>
+                        <div>
+                            <p class="text-[9px] font-bold text-rose-500 uppercase tracking-widest">A Avaliar Liberação</p>
+                            <p class="text-xs font-black text-rose-200">
+                                Pedido: <span class="text-white">${pedidoRow.pedido}</span> 
+                                <span class="text-rose-500/50 font-normal">|</span> Valor: <span class="text-white">${fmtCurr(pedidoRow.valorTotal)}</span>
+                                <span class="text-rose-500/50 font-normal">|</span> Cond. Pgto: <span class="text-white uppercase">${condPgtoDisplay}</span>
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const content = document.getElementById('drawerContent');
+            content.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-10 text-sky-400">
+                    <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-3"></i>
+                    <h3 class="text-xs font-bold uppercase tracking-widest">Sincronizando...</h3>
+                    <p class="text-[10px] text-slate-500 mt-1">Calculando Score V8 (SE1/SF2)</p>
+                </div>
+            `;
+            toggleDrawer(true);
+            lucide.createIcons();
+
+            let titulos = []; let faturas = [];
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); 
+
+            try {
+                const [resTit, resFat] = await Promise.all([
+                    fetch(`${API_URL}/gestao-titulos?cnpj=${cnpjRaw}`, { signal: controller.signal }).catch(() => ({ok: false})),
+                    fetch(`${API_URL}/faturamento/${cnpjRaw}`, { signal: controller.signal }).catch(() => ({ok: false}))
+                ]);
+                
+                clearTimeout(timeoutId);
+                if(resTit && resTit.ok) { try { let d = await resTit.json(); titulos = d.data || d; } catch(err){} }
+                if(resFat && resFat.ok) { try { let d = await resFat.json(); faturas = d.data || d; } catch(err){} }
+            } catch(e) {}
+
+            if(!Array.isArray(titulos)) titulos = []; if(!Array.isArray(faturas)) faturas = [];
+
+            let saldoAberto = 0, valorAtraso = 0, titulosPagos = 0, totalTitulos = titulos.length;
+            let somaDiasAtraso = 0, countAtrasos = 0; let uniqueDocs = new Set();
+            
+            titulos.forEach(t => {
+                let val = parseFloat(t.E1_VALOR || t.val) || 0;
+                let dtBaixa = String(t.E1_BAIXA || t.pagto || '').trim();
+                let dtVenc = String(t.E1_VENCTO || t.venc || '').trim();
+                let isPago = dtBaixa !== '';
+                uniqueDocs.add(t.E1_NUM || t.num || t.doc);
+                
+                if(!isPago) {
+                    saldoAberto += val;
+                    let dv = parseProtheusDate(dtVenc); if(dv && new Date() > dv) valorAtraso += val;
+                } else {
+                    titulosPagos++;
+                    if(dtBaixa > dtVenc) {
+                        valorAtraso += val; let dB = parseProtheusDate(dtBaixa); let dV = parseProtheusDate(dtVenc);
+                        if(dB && dV) { somaDiasAtraso += Math.floor((dB - dV) / (1000 * 60 * 60 * 24)); countAtrasos++; }
+                    }
+                }
+            });
+            
+            let mediaAtraso = countAtrasos > 0 ? somaDiasAtraso / countAtrasos : 0;
+            let totalSf2 = 0, maiorCompra = 0; let prim = null, ult = null;
+            faturas.forEach(f => {
+                let val = parseFloat(f.VALOR_TOTAL || f.F2_VALBRUT || f.valor) || 0;
+                let em = String(f.EMISSAO || f.F2_EMISSAO || f.emissao || '').trim();
+                totalSf2 += val; if(val > maiorCompra) maiorCompra = val;
+                if(em !== '') { if(!prim || em < prim) prim = em; if(!ult || em > ult) ult = em; }
+            });
+            
+            let numCompras = faturas.length; let mediaCompras = numCompras > 0 ? totalSf2 / numCompras : 0;
+            let mesesRel = parseNum(row['TEMPO_MESES']) || 1;
+            if(prim && ult) {
+                let dP = parseProtheusDate(prim); let dU = parseProtheusDate(ult);
+                if(dP && dU) mesesRel = (dU.getFullYear() - dP.getFullYear())*12 + (dU.getMonth() - dP.getMonth());
+            }
+            if(mesesRel <= 0) mesesRel = 1; let compMes = numCompras / mesesRel;
+
+            if(titulos.length === 0 && faturas.length === 0) {
+                saldoAberto = row['SALDO EM ABERTO'] || 0; valorAtraso = row['VALOR PAGO EM ATRASO'] || 0;
+                titulosPagos = row['TITULOS PAGOS'] || 0; totalTitulos = row['TOTAL DE TITULOS'] || 0;
+                mediaAtraso = row['MEDIA DIAS ATRASO'] || 0; totalSf2 = row['TOTAL MERCADORIA SF2'] || 0; 
+                maiorCompra = row['MAIOR COMPRA'] || 0; numCompras = row['NUMERO DE COMPRAS'] || 0; 
+                mediaCompras = row['MEDIA DE COMPRAS'] || 0; compMes = row['COMPRAS POR MES'] || 0;
+            }
+
+            row['SALDO EM ABERTO'] = saldoAberto; row['VALOR PAGO EM ATRASO'] = valorAtraso;
+            row['TITULOS PAGOS'] = titulosPagos; row['TOTAL DE TITULOS'] = totalTitulos;
+            row['MEDIA DIAS ATRASO'] = mediaAtraso; row['TOTAL MERCADORIA SF2'] = totalSf2; 
+            row['MEDIA DE COMPRAS'] = mediaCompras; row['MAIOR COMPRA'] = maiorCompra; 
+            row['NUMERO DE COMPRAS'] = numCompras; row['COMPRAS POR MES'] = compMes; row['TEMPO_MESES'] = mesesRel;
+            
+            const calc = calculateV8Score(row);
+            row._v8Data = calc; row['SCORE_TOTAL'] = calc.score; row['STATUS DO CLIENTE'] = calc.status;
+
+            const limiteVal = row['LIMITE_REAL_CALCULADO'] || 0;
+            let baseCalculo = limiteVal > 0 ? limiteVal : (mediaCompras > 0 ? mediaCompras * 1.5 : (maiorCompra > 0 ? maiorCompra * 1.2 : 1500));
+
+            let varLimiteStr = ''; let sugestaoVal = 0;
+            if (calc.status === 'EXCELENTE') { varLimiteStr = limiteVal === 0 ? 'NOVO LIMITE' : 'AUMENTOU 15%'; sugestaoVal = baseCalculo * 1.15; } 
+            else if (calc.status === 'RAZOÁVEL' || calc.status === 'RAZOAVEL') { varLimiteStr = limiteVal === 0 ? 'NOVO LIMITE' : 'ESTÁVEL'; sugestaoVal = baseCalculo; } 
+            else if (calc.status === 'ATENÇÃO' || calc.status === 'ATENCAO') { varLimiteStr = limiteVal === 0 ? 'NOVO LIMITE' : 'REDUZIU 10%'; sugestaoVal = baseCalculo * 0.90; } 
+            else { varLimiteStr = 'LIMITE ZERADO'; sugestaoVal = 0; }
+
+            let iconTrend = 'minus';
+            if(varLimiteStr.includes('AUMENTOU') || varLimiteStr.includes('NOVO')) iconTrend = 'trending-up';
+            else if(varLimiteStr.includes('REDUZIU') || varLimiteStr.includes('ZERADO')) iconTrend = 'trending-down';
+
+            let classStatus = 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
+            if(calc.status === 'EXCELENTE') classStatus = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+            else if(calc.status === 'RAZOÁVEL' || calc.status === 'RAZOAVEL') classStatus = 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
+            else if(calc.status === 'ATENÇÃO' || calc.status === 'ATENCAO') classStatus = 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
+
+            let maxAtraso = calc.maxAtraso || 4; let maxFreq = calc.maxFreq || 5;
+            let critAtraso = calc.ptsAtraso >= maxAtraso ? '<span class="text-emerald-400 font-bold">Excelente (Risco A)</span>' : (calc.ptsAtraso >= maxAtraso - 1 ? '<span class="text-sky-400 font-bold">Razoável (Risco B)</span>' : (calc.ptsAtraso > 1 ? '<span class="text-amber-400 font-bold">Atenção (Risco C)</span>' : '<span class="text-rose-500 font-bold">Crítico (Risco D)</span>'));
+            let freqScore = calc.ptsFreq >= maxFreq - 1 ? '<span class="text-emerald-400 font-bold">Alta / Regular</span>' : (calc.ptsFreq >= maxFreq - 2 ? '<span class="text-sky-400 font-bold">Média</span>' : (calc.ptsFreq > 1 ? '<span class="text-amber-400 font-bold">Baixa</span>' : '<span class="text-rose-500 font-bold">Irregular</span>'));
+            let riscoExposicao = parseFloat(calc.score) >= 8.5 ? '<span class="text-emerald-400 font-bold">Baixo</span>' : (parseFloat(calc.score) >= 7.0 ? '<span class="text-sky-400 font-bold">Moderado</span>' : (parseFloat(calc.score) >= 5.0 ? '<span class="text-amber-400 font-bold">Elevado</span>' : '<span class="text-rose-500 font-bold">Extremo</span>'));
+            
+            const nomeCliEscaped = String(nomeCli).replace(/'/g, "\\'");
+
+            content.innerHTML = `
+                <div class="space-y-2 animate-pop">
+                    <div class="flex items-center gap-2 border-b border-[#334155] pb-1">
+                        <i data-lucide="zap" class="w-4 h-4 text-sky-400"></i>
+                        <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Ações Executivas</h4>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div onclick="abrirReceitaFederal('${cnpjRaw}')" class="bg-[#1e293b] border border-[#334155] rounded-lg p-2.5 flex items-center gap-3 hover:border-sky-400 hover:shadow-md transition-all cursor-pointer group">
+                            <div class="w-8 h-8 rounded bg-[#0f172a] border border-[#334155] flex items-center justify-center text-slate-400 group-hover:text-sky-400 transition-colors shrink-0"><i data-lucide="building-2" class="w-4 h-4"></i></div>
+                            <span class="font-bold text-slate-200 text-[10px] uppercase tracking-wide group-hover:text-sky-400">Receita Federal</span>
+                        </div>
+                        <div onclick="abrirExtratoTitulos('${cnpjRaw}', '${nomeCliEscaped}')" class="bg-[#1e293b] border border-[#334155] rounded-lg p-2.5 flex items-center gap-3 hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer group">
+                            <div class="w-8 h-8 rounded bg-[#0f172a] border border-[#334155] flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors shrink-0"><i data-lucide="file-text" class="w-4 h-4"></i></div>
+                            <span class="font-bold text-slate-200 text-[10px] uppercase tracking-wide group-hover:text-emerald-500">Extrato Financeiro</span>
+                        </div>
+                        <div onclick="abrirFaturamento('${cnpjRaw}', '${nomeCliEscaped}')" class="bg-[#1e293b] border border-[#334155] rounded-lg p-2.5 flex items-center gap-3 hover:border-sky-400 hover:shadow-md transition-all cursor-pointer group">
+                            <div class="w-8 h-8 rounded bg-[#0f172a] border border-[#334155] flex items-center justify-center text-slate-400 group-hover:text-sky-400 transition-colors shrink-0"><i data-lucide="receipt" class="w-4 h-4"></i></div>
+                            <span class="font-bold text-slate-200 text-[10px] uppercase tracking-wide group-hover:text-sky-400">Faturamento NFs</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-4 animate-pop delay-1">
+                    <div class="col-span-12 lg:col-span-4 bg-[#1e293b] border border-[#334155] rounded-lg flex flex-col justify-center items-center text-center p-4 relative overflow-hidden">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Score V8</span>
+                        <div class="text-4xl font-black text-white my-1 leading-none tracking-tighter cursor-help" title="${calc.rationale}">${calc.score}</div>
+                        <span class="px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest mt-1 mb-3 w-full text-center ${classStatus}">${calc.status}</span>
+                        <div class="w-full text-left space-y-1.5 pt-3 border-t border-[#334155]">
+                            <div class="flex justify-between items-center text-[10px]"><span class="text-slate-500 font-semibold">Histórico</span>${critAtraso}</div>
+                            <div class="flex justify-between items-center text-[10px]"><span class="text-slate-500 font-semibold">Frequência</span>${freqScore}</div>
+                            <div class="flex justify-between items-center text-[10px]"><span class="text-slate-500 font-semibold">Risco</span>${riscoExposicao}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-12 lg:col-span-8 bg-[#1e293b] border border-[#334155] rounded-lg p-5 relative overflow-hidden flex flex-col justify-center">
+                        <i data-lucide="activity" class="absolute -right-4 -bottom-4 w-32 h-32 opacity-5 text-white"></i>
+                        <div class="flex items-center gap-2 mb-4 relative z-10">
+                            <div class="w-6 h-6 rounded bg-[#0f172a] border border-[#334155] flex items-center justify-center shrink-0"><i data-lucide="shield" class="w-3 h-3 text-sky-400"></i></div>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-300">Decisão de Crédito V8</span>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 relative z-10">
+                            <div class="flex flex-col justify-center">
+                                <p class="text-slate-400 text-[9px] font-bold uppercase tracking-wider mb-0.5">Exposição Atual</p>
+                                <p class="text-lg lg:text-xl tracking-tighter font-bold text-white whitespace-nowrap">${fmtCurr(limiteVal)}</p>
+                            </div>
+                            <div class="flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-[#334155] pt-2 lg:pt-0 lg:pl-4">
+                                <p class="text-slate-400 text-[9px] font-bold uppercase tracking-wider mb-0.5">Limite Sugerido</p>
+                                <p class="text-lg lg:text-xl tracking-tighter font-black text-sky-400 whitespace-nowrap">${fmtCurr(sugestaoVal)}</p>
+                            </div>
+                            <div class="flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-[#334155] pt-2 lg:pt-0 lg:pl-4">
+                                <p class="text-slate-400 text-[9px] font-bold uppercase tracking-wider mb-0.5">Variação do Algoritmo</p>
+                                <div class="flex items-center gap-1.5 text-base lg:text-lg tracking-tight font-bold ${varLimiteStr.includes('AUMENTOU') || varLimiteStr.includes('NOVO') ? 'text-emerald-400' : (varLimiteStr.includes('REDUZIU') || varLimiteStr.includes('ZERADO') ? 'text-rose-500' : 'text-slate-300')} whitespace-nowrap">
+                                    <i data-lucide="${iconTrend}" class="w-4 h-4 shrink-0"></i><span>${varLimiteStr}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2 animate-pop delay-2">
+                    <div class="flex items-center gap-2 border-b border-[#334155] pb-1">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4 text-slate-400"></i>
+                        <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Métricas Financeiras Históricas</h4>
+                    </div>
+                    <div class="grid grid-cols-4 gap-3">
+                        <div class="bg-[#1e293b] border border-[#334155] rounded-lg p-3 flex flex-col justify-center">
+                            <span class="text-[8px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Média de Compras</span>
+                            <p class="text-sm font-bold text-slate-200">${fmtCurr(mediaCompras)}</p>
+                        </div>
+                        <div class="bg-[#1e293b] border border-[#334155] rounded-lg p-3 flex flex-col justify-center">
+                            <span class="text-[8px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Maior Compra</span>
+                            <p class="text-sm font-bold text-slate-200">${fmtCurr(maiorCompra)}</p>
+                        </div>
+                        <div class="bg-[#1e293b] border border-[#334155] rounded-lg p-3 flex flex-col justify-center">
+                            <span class="text-[8px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Média de Atraso</span>
+                            <p class="text-sm font-bold ${mediaAtraso > 0 ? 'text-rose-500' : 'text-emerald-400'}">${Math.round(mediaAtraso)} Dias</p>
+                        </div>
+                        <div class="bg-[#1e293b] border border-[#334155] rounded-lg p-3 flex flex-col justify-center">
+                            <span class="text-[8px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Títulos Pagos / Total</span>
+                            <p class="text-sm font-bold text-sky-400">${titulosPagos} / ${totalTitulos}</p>
+                        </div>
+                        <div class="bg-[#1e293b] border border-[#334155] rounded-lg p-3 flex flex-col justify-center border-l-2 border-l-amber-500">
+                            <span class="text-[8px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Saldo em Aberto</span>
+                            <p class="text-sm font-bold text-amber-500">${fmtCurr(saldoAberto)}</p>
+                        </div>
+                        <div class="bg-[#1e293b] border border-[#334155] rounded-lg p-3 flex flex-col justify-center border-l-2 border-l-rose-500">
+                            <span class="text-[8px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Valor em Atraso</span>
+                            <p class="text-sm font-bold text-rose-500">${fmtCurr(valorAtraso)}</p>
+                        </div>
+                        <div class="bg-[#1e293b] border border-[#334155] rounded-lg p-3 flex flex-col justify-center">
+                            <span class="text-[8px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Frequência Mensal</span>
+                            <p class="text-sm font-bold text-slate-200">${compMes.toFixed(2).replace(/\.00$/, '')} un/mês</p>
+                        </div>
+                        <div class="bg-[#1e293b] border border-[#334155] rounded-lg p-3 flex flex-col justify-center">
+                            <span class="text-[8px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Tempo Relacion.</span>
+                            <p class="text-sm font-bold text-slate-200">${mesesRel} Meses</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function toggleDrawer(open) { 
+            const drawer = document.getElementById('analysisDrawer');
+            const backdrop = document.getElementById('drawerBackdrop');
+            if(open) {
+                backdrop.classList.remove('hidden'); void backdrop.offsetWidth; 
+                backdrop.classList.remove('opacity-0'); drawer.classList.add('open');
+            } else {
+                backdrop.classList.add('opacity-0'); drawer.classList.remove('open');
+                setTimeout(() => backdrop.classList.add('hidden'), 300);
+            }
+        }
+
+        function liberarPedido() {
+            if(!pedidoEmAnalise) return;
+            showToast(`Sucesso! Pedido ${pedidoEmAnalise} liberado no ERP Protheus.`);
+            dadosCombinados = dadosCombinados.filter(p => p.pedido !== pedidoEmAnalise);
+            renderTabela(); toggleDrawer(false);
+        }
+
+        function rejeitarPedido() {
+            if(!pedidoEmAnalise) return;
+            showToast(`Atenção: Pedido ${pedidoEmAnalise} mantido bloqueado com justificação de Risco.`, true);
+            dadosCombinados = dadosCombinados.filter(p => p.pedido !== pedidoEmAnalise);
+            renderTabela(); toggleDrawer(false);
+        }
+
+        function openModal(id) { const modal = document.getElementById(id); if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); void modal.offsetWidth; modal.classList.add('modal-active'); } }
+        function closeModal(id) { const modal = document.getElementById(id); if (modal) { modal.classList.remove('modal-active'); setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300); } }
+
+        // ==========================================
+        // MODAIS EXTERNOS (RECEITA E FINANCEIRO)
+        // ==========================================
+        async function abrirReceitaFederal(cnpj) {
+            openModal('modalRFB'); const content = document.getElementById('rfbContent');
+            content.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-400 py-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-3 text-sky-400"></i><p class="font-bold uppercase tracking-widest text-[10px]">A consultar Base Oficial...</p></div>`;
+            lucide.createIcons({root: content});
+            try {
+                const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+                if (!res.ok) throw new Error("CNPJ não encontrado na base pública.");
+                const data = await res.json();
+                content.innerHTML = `
+                    <div class="grid grid-cols-2 gap-6 text-sm">
+                        <div class="border-b border-[#334155] pb-3"><span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Razão Social</span><p class="font-bold text-slate-200 uppercase">${data.razao_social || '--'}</p></div>
+                        <div class="border-b border-[#334155] pb-3"><span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Nome Fantasia</span><p class="font-bold text-slate-200 uppercase">${data.nome_fantasia || '--'}</p></div>
+                        <div class="col-span-2 border-b border-[#334155] pb-3"><span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Atividade Principal (CNAE)</span><p class="font-semibold text-slate-300">${data.cnae_fiscal_descricao || '--'}</p></div>
+                        <div class="border-b border-[#334155] pb-3"><span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Situação Cadastral</span><p class="font-bold uppercase ${data.situacao_cadastral === 2 ? 'text-emerald-400' : 'text-rose-500'}">${data.descricao_situacao_cadastral || '--'}</p></div>
+                        <div class="border-b border-[#334155] pb-3"><span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Data Início Atividade</span><p class="font-mono text-slate-300">${data.data_inicio_atividade ? data.data_inicio_atividade.split('-').reverse().join('/') : '--'}</p></div>
+                        <div class="col-span-2 pb-3"><span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Endereço Registrado</span><p class="font-medium text-slate-300">${data.logradouro}, ${data.numero} - ${data.bairro}, ${data.municipio} / ${data.uf} - CEP: ${data.cep}</p></div>
+                    </div>`;
+            } catch(e) {
+                content.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-rose-500 py-10"><i data-lucide="alert-triangle" class="w-8 h-8 mb-3"></i><p class="font-bold uppercase tracking-widest text-[10px]">Erro na Consulta</p><p class="text-xs mt-1 text-slate-400 font-medium">${e.message}</p></div>`;
+                lucide.createIcons({root: content});
+            }
+        }
+
+        let currentTitulos = []; let currentTitulosTab = 'todos';
+        async function abrirExtratoTitulos(cnpj, nomeCliente) {
+            document.getElementById('titulosClienteNome').innerText = nomeCliente; openModal('modalTitulos'); setTitulosTab('todos', true);
+            limparFiltrosTitulos(true);
+            const tbody = document.getElementById('tbodyTitulos');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-slate-500 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-3 text-sky-400"></i> A consultar ERP (SE1)...</td></tr>';
+            lucide.createIcons({root: tbody});
+            try {
+                const res = await fetch(`${API_URL}/gestao-titulos?cnpj=${String(cnpj).replace(/\D/g, '')}`);
+                if (!res.ok) throw new Error("A API não está acessível no momento.");
+                const responseData = await res.json();
+                let rawTitulos = []; if (Array.isArray(responseData)) rawTitulos = responseData; else if (responseData && responseData.data && Array.isArray(responseData.data)) rawTitulos = responseData.data;
+                if (rawTitulos.length === 0) throw new Error("Nenhum título financeiro encontrado para este cliente.");
+                currentTitulos = rawTitulos.map(t => ({ doc: getValUniversal(t, 'E1_NUM', 'num', 'doc') || '---', parc: getValUniversal(t, 'E1_PARCELA', 'parc') || 'A', emissao: getValUniversal(t, 'E1_EMISSAO', 'emissao') || '---', venc: getValUniversal(t, 'E1_VENCTO', 'venc') || '---', pagto: getValUniversal(t, 'E1_BAIXA', 'pagto') && String(getValUniversal(t, 'E1_BAIXA', 'pagto')).trim() !== '' ? getValUniversal(t, 'E1_BAIXA', 'pagto') : null, val: parseFloat(getValUniversal(t, 'E1_VALOR', 'val', 'Valor')) || 0, status: getValUniversal(t, 'status') || (getValUniversal(t, 'E1_BAIXA', 'pagto') && String(getValUniversal(t, 'E1_BAIXA', 'pagto')).trim() !== '' ? (getValUniversal(t, 'E1_BAIXA', 'pagto') > getValUniversal(t, 'E1_VENCTO', 'venc') ? 'PAGO_ATRASO' : 'PAGO') : 'ABERTO') }));
+                renderTitulos();
+            } catch(e) {
+                currentTitulos = []; tbody.innerHTML = `<tr><td colspan="7" class="text-center py-16 text-rose-500 font-bold text-xs uppercase tracking-widest"><i data-lucide="server-crash" class="w-8 h-8 mx-auto mb-3 text-rose-500"></i>Conexão com a SE1 Vazia<br><span class="text-[10px] text-slate-400 mt-2 block normal-case font-medium">Detalhe do erro: ${e.message}</span></td></tr>`;
+                document.getElementById('totalTitulosRodape').innerText = 'R$ 0,00';
+                lucide.createIcons({root: tbody});
+            }
+        }
+        function setTitulosTab(tab, skipRender = false) { currentTitulosTab = tab; ['todos', 'aberto', 'pago'].forEach(t => document.getElementById(`tabTitulos-${t}`).classList.remove('active')); document.getElementById(`tabTitulos-${tab}`).classList.add('active'); if(tab === 'pago' || tab === 'todos') { document.getElementById('filtroAtrasoContainer').classList.remove('hidden'); document.getElementById('filtroAtrasoContainer').classList.add('flex'); } else { document.getElementById('filtroAtrasoContainer').classList.remove('flex'); document.getElementById('filtroAtrasoContainer').classList.add('hidden'); } if (!skipRender) renderTitulos(); }
+        
+        function limparFiltrosTitulos(skipRender = false) {
+            document.getElementById('filtroTitEmissaoIni').value = ''; document.getElementById('filtroTitEmissaoFim').value = '';
+            document.getElementById('filtroTitVencIni').value = ''; document.getElementById('filtroTitVencFim').value = '';
+            document.getElementById('filtroTitPagIni').value = ''; document.getElementById('filtroTitPagFim').value = '';
+            if(!skipRender) renderTitulos();
+        }
+
+        function renderTitulos() {
+            const tbody = document.getElementById('tbodyTitulos'); 
+            const chkAtraso = document.getElementById('chkPagosAtraso').checked; 
+            
+            const emIni = document.getElementById('filtroTitEmissaoIni').value.replace(/-/g, ''); const emFim = document.getElementById('filtroTitEmissaoFim').value.replace(/-/g, '');
+            const venIni = document.getElementById('filtroTitVencIni').value.replace(/-/g, ''); const venFim = document.getElementById('filtroTitVencFim').value.replace(/-/g, '');
+            const pagIni = document.getElementById('filtroTitPagIni').value.replace(/-/g, ''); const pagFim = document.getElementById('filtroTitPagFim').value.replace(/-/g, '');
+
+            let html = ''; let count = 0; let totalCalc = 0;
+            currentTitulos.forEach(t => {
+                if (currentTitulosTab === 'aberto' && t.status !== 'ABERTO') return; 
+                if (currentTitulosTab === 'pago' && !t.status.includes('PAGO')) return; 
+                if (chkAtraso && (currentTitulosTab === 'todos' || currentTitulosTab === 'pago') && t.status !== 'PAGO_ATRASO') return;
+                
+                const tEm = getComparableDate(t.emissao); const tVen = getComparableDate(t.venc); const tPag = getComparableDate(t.pagto);
+                if(emIni && tEm < emIni) return; if(emFim && tEm > emFim) return;
+                if(venIni && tVen < venIni) return; if(venFim && tVen > venFim) return;
+                if(pagIni && tPag !== '' && tPag < pagIni) return; if(pagFim && tPag !== '' && tPag > pagFim) return;
+                if((pagIni || pagFim) && tPag === '') return; 
+
+                let badge = ''; if (t.status === 'ABERTO') badge = `<span class="bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-1 rounded font-bold text-[9px] uppercase tracking-widest">Em Aberto</span>`; else if (t.status === 'PAGO') badge = `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded font-bold text-[9px] uppercase tracking-widest">Pago no Prazo</span>`; else badge = `<span class="bg-rose-500/10 text-rose-500 border border-rose-500/20 px-2 py-1 rounded font-bold text-[9px] uppercase tracking-widest">Pago Atrasado</span>`;
+                html += `<tr class="hover:bg-[#1e293b] transition-colors"><td class="px-6 py-4 text-[13px] font-bold text-slate-200">${t.doc}</td><td class="px-6 py-4 text-[12px] font-bold text-slate-400 text-center">${t.parc}</td><td class="px-6 py-4 text-[12px] text-slate-400 font-mono text-center">${formatSpecialDate(t.emissao)}</td><td class="px-6 py-4 text-[12px] font-bold text-slate-300 font-mono text-center">${formatSpecialDate(t.venc)}</td><td class="px-6 py-4 text-[12px] text-slate-500 font-mono text-center">${t.pagto ? formatSpecialDate(t.pagto) : '--/--/----'}</td><td class="px-6 py-4 text-[13px] font-black text-sky-400 tabular-nums text-right">${fmtCurr(t.val)}</td><td class="px-6 py-4 text-center">${badge}</td></tr>`; 
+                count++; totalCalc += t.val;
+            });
+            if (count === 0) html = `<tr><td colspan="7" class="text-center py-12 text-slate-500 font-bold uppercase tracking-widest text-[10px]">Sem registros com estes filtros.</td></tr>`;
+            tbody.innerHTML = html;
+            document.getElementById('totalTitulosRodape').innerText = fmtCurr(totalCalc);
+        }
+
+        let currentFaturas = [];
+        async function abrirFaturamento(cnpj, nomeCliente) {
+            document.getElementById('fatClienteNome').innerText = nomeCliente; openModal('modalFaturamento');
+            document.getElementById('filtroBuscaFat').value = '';
+            const tbody = document.getElementById('tbodyFaturamento'); tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-slate-500 font-bold text-xs uppercase tracking-widest"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-3 text-sky-400"></i> A consultar ERP (SF2)...</td></tr>'; lucide.createIcons({root: tbody});
+            try {
+                const res = await fetch(`${API_URL}/faturamento/${String(cnpj).replace(/\D/g, '')}`);
+                if (!res.ok) throw new Error("A API não está acessível no momento.");
+                const responseData = await res.json();
+                let rawFaturas = []; if (Array.isArray(responseData)) rawFaturas = responseData; else if (responseData && responseData.data && Array.isArray(responseData.data)) rawFaturas = responseData.data;
+                if (rawFaturas.length === 0) throw new Error("Nenhuma Nota Fiscal faturada para este cliente.");
+                currentFaturas = rawFaturas.map(f => ({ nf: getValUniversal(f, 'NUM_NOTA', 'F2_DOC', 'nf') || '---', serie: getValUniversal(f, 'SERIE', 'F2_SERIE', 'serie') || '1', emissao: getValUniversal(f, 'EMISSAO', 'F2_EMISSAO', 'emissao') || '---', cond: getValUniversal(f, 'COND_PAGTO', 'E4_DESCRI', 'cond') || 'NÃO INFORMADA', valor: parseFloat(getValUniversal(f, 'VALOR_TOTAL', 'F2_VALBRUT', 'valor')) || 0 }));
+                renderFaturamento();
+            } catch (e) {
+                currentFaturas = []; tbody.innerHTML = `<tr><td colspan="6" class="text-center py-16 text-rose-500 font-bold text-xs uppercase tracking-widest"><i data-lucide="server-crash" class="w-8 h-8 mx-auto mb-3 text-rose-500"></i>Conexão com a SF2 Vazia<br><span class="text-[10px] text-slate-400 mt-2 block normal-case font-medium">Detalhe do erro: ${e.message}</span></td></tr>`; 
+                document.getElementById('totalFaturamentoRodape').innerText = 'R$ 0,00';
+                lucide.createIcons({root: tbody});
+            }
+        }
+        function renderFaturamento() {
+            const tbody = document.getElementById('tbodyFaturamento'); 
+            const busca = document.getElementById('filtroBuscaFat').value.toLowerCase().trim();
+            let html = ''; let totalCalc = 0; let count = 0;
+            currentFaturas.forEach(f => {
+                const str = `${f.nf} ${f.serie} ${formatSpecialDate(f.emissao)} ${f.cond}`.toLowerCase();
+                if (busca && !str.includes(busca)) return;
+
+                html += `<tr class="hover:bg-[#1e293b] transition-colors"><td class="px-6 py-4 text-[13px] font-black text-slate-200 tabular-nums">${f.nf}</td><td class="px-6 py-4 text-center text-[12px] font-bold text-slate-400 tabular-nums">${f.serie}</td><td class="px-6 py-4 text-center text-[12px] text-slate-400 font-mono">${formatSpecialDate(f.emissao)}</td><td class="px-6 py-4 text-[12px] font-bold text-slate-300"><i data-lucide="calendar-clock" class="w-3.5 h-3.5 inline mr-1 text-slate-500"></i> ${f.cond}</td><td class="px-6 py-4 text-[13px] text-right font-black text-sky-400 tabular-nums">${fmtCurr(f.valor)}</td><td class="px-6 py-4 text-center"><button onclick="imprimirDanfe('${f.nf}', '${f.emissao}', '${f.valor}')" class="bg-[#0f172a] hover:bg-[#334155] text-slate-300 border border-[#334155] px-3 py-1.5 rounded font-bold text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 mx-auto"><i data-lucide="printer" class="w-3.5 h-3.5"></i> DANFE</button></td></tr>`;
+                count++; totalCalc += f.valor;
+            });
+            if (count === 0) html = `<tr><td colspan="6" class="text-center py-12 text-slate-500 font-bold uppercase tracking-widest text-[10px]">Nenhuma nota localizada para esta pesquisa.</td></tr>`;
+            tbody.innerHTML = html; 
+            document.getElementById('totalFaturamentoRodape').innerText = fmtCurr(totalCalc);
+            lucide.createIcons({root: tbody});
+        }
+        function imprimirDanfe(nf, emissao, valor) {
+            const dataHora = new Date().toLocaleString('pt-BR'); const emissaoFmt = formatSpecialDate(emissao); 
+            const html = `<html><head><title>DANFE - ${nf}</title><style>@media print { @page { size: A4 portrait; margin: 10mm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } } body { font-family: Arial, sans-serif; padding: 20px; color: #1e293b; margin: 0; } .border { border: 1px solid #000; padding: 10px; margin-bottom: 10px; } .title { font-size: 14px; font-weight: bold; text-transform: uppercase; text-align: center; } .subtitle { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; } .val { font-size: 12px; font-weight: bold; }</style></head><body><div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #0f172a; padding-bottom:10px; margin-bottom:15px;"><div style="width: 150px;"><svg viewBox="0 0 150 40" xmlns="http://www.w3.org/2000/svg"><text x="0" y="28" font-family="Arial, sans-serif" font-weight="900" font-size="34" letter-spacing="-2" fill="#0f172a">LEME</text><text x="85" y="28" font-family="Arial, sans-serif" font-weight="900" font-size="34" letter-spacing="-2" fill="#94a3b8">ERP</text></svg></div><div style="text-align: right;"><h2 style="color:#0f172a; margin:0; text-transform:uppercase; font-size:16px;">Simulação de Impressão DANFE</h2><p style="margin:2px 0; font-size: 10px;">Documento Auxiliar da Nota Fiscal Eletrônica</p></div></div><div style="display:flex; gap: 10px;"><div class="border" style="flex: 2;"><div class="subtitle">NATUREZA DA OPERAÇÃO</div><div class="val">VENDA DE MERCADORIA ADQUIRIDA OU RECEBIDA DE TERCEIROS</div></div><div class="border" style="flex: 1; text-align: center;"><div class="subtitle">NÚMERO DA NOTA</div><div class="val" style="font-size: 18px;">${nf}</div></div></div><div class="border"><div class="subtitle">DESTINATÁRIO / REMETENTE</div><div class="val" style="font-size: 14px;">${document.getElementById('drawerNome').innerText}</div><div style="display:flex; justify-content:space-between; margin-top: 10px;"><div><span class="subtitle">DATA DE EMISSÃO:</span> <span class="val">${emissaoFmt}</span></div><div><span class="subtitle">VALOR TOTAL DA NOTA:</span> <span class="val">${fmtCurr(valor)}</span></div></div></div><div style="text-align: center; margin-top: 50px; font-size: 10px; color: #94a3b8;"><p>ESTE DOCUMENTO É APENAS UMA SIMULAÇÃO VISUAL.</p><p>Gerado em ${dataHora}</p></div></body></html>`;
+            const win = window.open('', '_blank'); win.document.write(html); win.document.close(); setTimeout(() => { win.focus(); win.print(); }, 500);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <title>Painel de Metas & Performance - Comlub ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: {
+                        dark: {
+                            bg: '#0F1219',
+                            card: '#161B22',
+                            border: '#2A3441',
+                            blue: '#003865',
+                            accent: '#FFCB05'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0F1219; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; color: #e2e8f0; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        
+        .glass-header {
+            background: rgba(15, 18, 25, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid #2A3441;
+        }
+
+        .dark-card {
+            background-color: #161B22;
+            border: 1px solid #2A3441;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: transform 0.2s, border-color 0.2s;
+            display: flex;
+            flex-col;
+            position: relative;
+        }
+        .dark-card:hover {
+            transform: translateY(-2px);
+            border-color: #3b82f6;
+        }
+
+        .dark-input {
+            background-color: #0F1219;
+            border: 1px solid #2A3441;
+            color: #f8fafc;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .dark-input:focus { border-color: #3b82f6; }
+        .input-label { display: block; font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .status-critico { background: rgba(225, 29, 72, 0.1); color: #f43f5e; border: 1px solid rgba(225, 29, 72, 0.3); }
+        .status-atencao { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .status-no-alvo { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        .loader-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        select option { background-color: #0F1219; color: white; }
+    </style>
+</head>
+<body class="flex flex-col h-screen antialiased relative">
+
+    <!-- OVERLAY LOADING -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center hidden">
+        <div class="bg-[#161B22] p-8 rounded-2xl border border-[#2A3441] shadow-2xl flex items-center gap-5">
+            <i data-lucide="loader-2" class="w-8 h-8 text-sky-500 loader-spin"></i>
+            <div>
+                <h3 class="text-sm font-black text-white uppercase tracking-widest">Sincronizando Faturamento</h3>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Lendo vendas e regras comerciais (Sem Mocks)...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CABEÇALHO E FILTROS -->
+    <header class="glass-header px-6 py-4 flex flex-col xl:flex-row justify-between items-center gap-4 shrink-0 z-40">
+        <div class="flex items-center gap-4 w-full xl:w-auto">
+            <div class="w-10 h-10 rounded-full border border-purple-500/30 bg-purple-500/10 flex items-center justify-center shrink-0">
+                <i data-lucide="target" class="w-5 h-5 text-purple-400"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-base font-black text-white uppercase tracking-widest">Painel de Metas & Performance</h1>
+                    <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest animate-pulse">V5.0 - DADOS REAIS</span>
+                </div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Gestão de Objetivos S&OP</p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 w-full xl:w-auto justify-end">
+            <!-- Select Mês -->
+            <div class="flex flex-col">
+                <label class="input-label">Mês / Período</label>
+                <div class="flex gap-2">
+                    <select id="filtroMes" onchange="fetchDadosERP()" class="dark-input w-28 cursor-pointer appearance-none text-center">
+                        <option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option>
+                        <option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option>
+                        <option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option>
+                        <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+                    </select>
+                    <select id="filtroAno" onchange="fetchDadosERP()" class="dark-input w-20 cursor-pointer appearance-none text-center">
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Select Vendedor -->
+            <div class="flex flex-col">
+                <label class="input-label">Vendedor Alvo</label>
+                <div class="relative">
+                    <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"></i>
+                    <select id="filtroVendedor" onchange="renderizarPainel()" class="dark-input pl-8 w-48 cursor-pointer appearance-none">
+                        <option value="TODOS">Todos os Vendedores</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Select Indicador -->
+            <div class="flex flex-col">
+                <label class="input-label">Indicador (KPI)</label>
+                <div class="relative">
+                    <i data-lucide="crosshair" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"></i>
+                    <select id="filtroIndicador" onchange="renderizarPainel()" class="dark-input pl-8 w-48 cursor-pointer appearance-none">
+                        <option value="TODOS">Todas as Metas</option>
+                        <option value="LITRAGEM">Litragem</option>
+                        <option value="FATURAMENTO">Faturamento</option>
+                        <option value="POSITIVACAO">Positivação</option>
+                        <option value="DESCONTO">Desconto Teto</option>
+                        <option value="INADIMPLENCIA">Inadimplência (Prazo)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-end h-full pb-[1px]">
+                <button onclick="fetchDadosERP()" class="bg-sky-500 hover:bg-sky-400 text-dark-bg p-2 rounded-lg transition-colors shadow-[0_0_10px_rgba(14,165,233,0.3)]">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <div class="h-6 w-px bg-slate-700 hidden lg:block mx-1"></div>
+            
+            <button onclick="window.parent.postMessage({ action: 'closeModule' }, '*')" class="text-slate-500 hover:text-white transition-colors" title="Sair">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- ÁREA PRINCIPAL: DUAS COLUNAS (RÉGUAS ESQ. / RESUMO DIR.) -->
+    <main class="flex-1 flex flex-col lg:flex-row gap-6 p-6 overflow-hidden">
+        
+        <!-- ESQUERDA: CARDS DE PROGRESSO (RÉGUAS) -->
+        <div class="flex-1 flex flex-col min-h-0">
+            <h2 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 mb-4 shrink-0">
+                <i data-lucide="layout-grid" class="w-4 h-4"></i> Painéis de Acompanhamento (Réguas e Progresso)
+            </h2>
+            <div class="flex-1 overflow-y-auto custom-scroll pr-2">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4" id="cardsContainer">
+                    <!-- Cards inseridos dinamicamente -->
+                    <div class="col-span-full text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+                        <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-3"></i> A compilar regras S&OP...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DIREITA: RESUMO CONSOLIDADO DA EQUIPA -->
+        <div class="w-full lg:w-[450px] flex flex-col min-h-0 shrink-0">
+            <h2 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 mb-4 shrink-0">
+                <i data-lucide="layout-list" class="w-4 h-4 text-purple-400"></i> Resumo Consolidado
+            </h2>
+            <div class="bg-[#161B22] border border-[#2A3441] rounded-xl flex-1 flex flex-col overflow-hidden shadow-lg">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-[#0F1219] border-b border-[#2A3441]">
+                        <tr>
+                            <th class="p-4 font-black text-slate-500 uppercase tracking-widest">Vendedor</th>
+                            <th class="p-4 font-black text-slate-500 uppercase tracking-widest text-right">Desempenho</th>
+                            <th class="p-4 font-black text-slate-500 uppercase tracking-widest text-center w-24">Status</th>
+                        </tr>
+                    </thead>
+                </table>
+                <div class="flex-1 overflow-y-auto custom-scroll">
+                    <table class="w-full text-left text-xs">
+                        <tbody id="resumoContainer" class="divide-y divide-[#2A3441]">
+                            <!-- Linhas inseridas dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const API_URL = 'http://201.91.126.114:3001/api/analise-comercial/consolidado?meses=6';
+        
+        let regrasComerciais = [];
+        let rawData = [];
+        let resultadosVendedores = {};
+
+        // Inicializa datas com o mês e ano atuail
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            
+            const hoje = new Date();
+            const cmbMes = document.getElementById('filtroMes');
+            const cmbAno = document.getElementById('filtroAno');
+            if(cmbMes) cmbMes.value = String(hoje.getMonth() + 1).padStart(2, '0');
+            if(cmbAno) cmbAno.value = String(hoje.getFullYear());
+
+            carregarRegras();
+            fetchDadosERP();
+        });
+
+        const fmtCurr = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+        const fmtNum = v => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v || 0);
+        const fmtDec = v => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v || 0);
+
+        // Extrator Blindado
+        const extrairNum = (row, ...keys) => {
+            if (!row) return 0; const rowKeys = Object.keys(row);
+            for (let k of keys) { 
+                const match = rowKeys.find(rk => rk.toLowerCase().replace(/[^a-z0-9]/g, '') === k.toLowerCase().replace(/[^a-z0-9]/g, '')); 
+                if (match && row[match] !== undefined && row[match] !== null) {
+                    const v = row[match]; if(typeof v === 'number') return v;
+                    let s = String(v).replace(/[^0-9,\.-]/g, ''); if(s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+                    return isNaN(parseFloat(s)) ? 0 : parseFloat(s);
+                } 
+            }
+            return 0;
+        };
+
+        const extrairStr = (row, ...keys) => {
+            if (!row) return ''; const rowKeys = Object.keys(row);
+            for (let k of keys) { 
+                const match = rowKeys.find(rk => rk.toLowerCase().replace(/[^a-z0-9]/g, '') === k.toLowerCase().replace(/[^a-z0-9]/g, '')); 
+                if (match && row[match]) return String(row[match]); 
+            }
+            return '';
+        };
+
+        // Normalizador Universal de Data para Mês
+        function normalizarMesAno(dtStr) {
+            if (!dtStr || dtStr === '---' || String(dtStr).trim() === '') return 'N/A';
+            const s = String(dtStr).trim();
+            if (s.includes('-')) { const parts = s.split('T')[0].split('-'); if (parts.length >= 2) return parts[0] + parts[1]; }
+            if (s.includes('/')) { const parts = s.split('/'); if (parts.length === 3) { let y = parts[2]; if (y.length === 2) y = '20' + y; return y + parts[1]; } }
+            const num = s.replace(/\D/g, '');
+            if (num.length >= 6) {
+                if (num.startsWith('20') || num.startsWith('19')) return num.substring(0, 6);
+                if (num.length === 8) return num.substring(4, 8) + num.substring(2, 4); // DDMMYYYY
+            }
+            return num.substring(0, 6);
+        }
+
+        // Lê as metas dinâmicas configuradas pela Diretoria
+        function carregarRegras() {
+            try {
+                const regrasStr = localStorage.getItem('comlub_regras_comerciais');
+                if (regrasStr) regrasComerciais = JSON.parse(regrasStr);
+                else regrasComerciais = [];
+            } catch(e) {
+                regrasComerciais = [];
+            }
+        }
+
+        // Fetch de dados limpo sem mocks
+        async function fetchDadosERP() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error("A API retornou erro.");
+                
+                const data = await response.json();
+                rawData = Array.isArray(data) ? data : (data.data || []);
+                
+                if (rawData.length === 0) throw new Error("A API não retornou faturamento.");
+
+                // Extrair vendedores dinamicamente para o filtro
+                const vendsSet = new Set();
+                rawData.forEach(r => {
+                    const v = extrairStr(r, 'vendedor', 'a3nome');
+                    if(v) vendsSet.add(v.trim().toUpperCase());
+                });
+
+                const cbVend = document.getElementById('filtroVendedor');
+                const vendAtual = cbVend.value;
+                let htmlVends = '<option value="TODOS">Todos os Vendedores</option>';
+                Array.from(vendsSet).sort().forEach(v => { htmlVends += `<option value="${v}">${v}</option>`; });
+                cbVend.innerHTML = htmlVends;
+                if(Array.from(cbVend.options).some(o => o.value === vendAtual)) cbVend.value = vendAtual;
+
+            } catch (error) {
+                console.error("Falha ao consultar API:", error);
+                rawData = [];
+                document.getElementById('cardsContainer').innerHTML = `
+                    <div class="col-span-full text-center py-20 bg-rose-500/10 border border-rose-500/30 rounded-xl">
+                        <i data-lucide="server-crash" class="w-10 h-10 text-rose-500 mx-auto mb-3 opacity-80"></i>
+                        <h3 class="text-sm font-black text-rose-400 uppercase tracking-widest">Painel Desconectado</h3>
+                        <p class="text-[11px] text-slate-400 mt-2">Sem dados reais recebidos da API.</p>
+                    </div>`;
+                document.getElementById('resumoContainer').innerHTML = '';
+                lucide.createIcons();
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                if (rawData.length > 0) processarResultados();
+            }
+        }
+
+        // Motor de Cruzamento: Cruza Regras Comerciais VS Vendas do Mês Selecionado
+        function processarResultados() {
+            const mesSel = document.getElementById('filtroMes').value;
+            const anoSel = document.getElementById('filtroAno').value;
+            const chaveFiltro = `${anoSel}${mesSel}`; // Ex: 202607
+
+            resultadosVendedores = { 'TODOS': [] }; // TODOS representa a 'EQUIPA GLOBAL'
+
+            // Primeiro: Cria chaves para todos os vendedores que têm regras, ou agrupa tudo
+            regrasComerciais.forEach(regra => {
+                const vendKey = (regra.vendedor || 'TODOS').toUpperCase();
+                if(!resultadosVendedores[vendKey]) resultadosVendedores[vendKey] = [];
+                
+                // Mapeia o indicador e inicializa contadores
+                let shortInd = 'OUTRO';
+                let invertido = false;
+                let isPct = false;
+                
+                if (regra.indicador.toLowerCase().includes('litragem')) shortInd = 'LITRAGEM';
+                else if (regra.indicador.toLowerCase().includes('faturamento')) shortInd = 'FATURAMENTO';
+                else if (regra.indicador.toLowerCase().includes('positiva')) shortInd = 'POSITIVACAO';
+                else if (regra.indicador.toLowerCase().includes('desconto')) { shortInd = 'DESCONTO'; invertido = true; isPct = true; }
+                else if (regra.indicador.toLowerCase().includes('inadimp') || regra.indicador.toLowerCase().includes('prazo')) { shortInd = 'INADIMPLENCIA'; invertido = true; }
+
+                resultadosVendedores[vendKey].push({
+                    regra: regra,
+                    shortInd: shortInd,
+                    invertido: invertido,
+                    isPct: isPct,
+                    alvo: parseFloat(regra.alvo) || 0,
+                    realizado: 0,
+                    _somaValores: 0,
+                    _somaDescontos: 0,
+                    _somaPrazos: 0,
+                    _clientesUnicos: new Set(),
+                    _qtdLinhas: 0
+                });
+            });
+
+            // Se não houver regras, avisa
+            if (regrasComerciais.length === 0) {
+                document.getElementById('cardsContainer').innerHTML = `<div class="col-span-full text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-[10px]">Nenhuma Regra Comercial Ativa. Acesse Saneamento > Políticas.</div>`;
+                document.getElementById('resumoContainer').innerHTML = '';
+                return;
+            }
+
+            // Varre o Faturamento e alimenta os resultados de TODOS e do VENDEDOR ESPECÍFICO
+            rawData.forEach(r => {
+                const dt = extrairStr(r, 'emissao', 'data', 'c5emissao');
+                if (normalizarMesAno(dt) !== chaveFiltro) return; // Fora do mês selecionado!
+
+                const vendDoc = String(extrairStr(r, 'vendedor', 'a3nome')).trim().toUpperCase();
+                
+                const val = extrairNum(r, 'valor', 'c6valor');
+                const qtd = extrairNum(r, 'qtditens', 'quantidade', 'c6qtdven');
+                const conv = extrairNum(r, 'conversao', 'b1conv') || 1;
+                const lit = qtd * conv;
+                const desc = extrairNum(r, 'descgeral', 'desconto');
+                const prazo = extrairNum(r, 'prazomedio');
+                const cliente = extrairStr(r, 'cnpj', 'cliente', 'a1cgc') || extrairStr(r, 'nome', 'a1nome');
+
+                // Função auxiliar para injetar os dados no objeto de resultado correto
+                const injectData = (k) => {
+                    if(resultadosVendedores[k]) {
+                        resultadosVendedores[k].forEach(res => {
+                            if (res.shortInd === 'LITRAGEM') res.realizado += lit;
+                            if (res.shortInd === 'FATURAMENTO') res.realizado += val;
+                            if (res.shortInd === 'POSITIVACAO') res._clientesUnicos.add(cliente);
+                            if (res.shortInd === 'DESCONTO') { res._somaDescontos += desc; res._qtdLinhas++; }
+                            if (res.shortInd === 'INADIMPLENCIA') { res._somaPrazos += prazo; res._qtdLinhas++; }
+                        });
+                    }
+                };
+
+                // Injeta no acumulador GLOBAL
+                injectData('TODOS');
+                // Injeta no acumulador ESPECÍFICO do Vendedor
+                injectData(vendDoc);
+            });
+
+            // Pós-processamento (Média de Descontos e Size de Set)
+            Object.keys(resultadosVendedores).forEach(k => {
+                resultadosVendedores[k].forEach(res => {
+                    if (res.shortInd === 'POSITIVACAO') res.realizado = res._clientesUnicos.size;
+                    if (res.shortInd === 'DESCONTO') res.realizado = res._qtdLinhas > 0 ? (res._somaDescontos / res._qtdLinhas) : 0;
+                    if (res.shortInd === 'INADIMPLENCIA') res.realizado = res._qtdLinhas > 0 ? (res._somaPrazos / res._qtdLinhas) : 0;
+                    
+                    // Definir o Status (Core Logic do Screenshot)
+                    if (res.invertido) {
+                        if (res.realizado > res.alvo) res.status = 'CRÍTICO';
+                        else if (res.realizado > (res.alvo * 0.8)) res.status = 'ATENÇÃO';
+                        else res.status = 'NO ALVO';
+                    } else {
+                        if (res.realizado >= res.alvo) res.status = 'NO ALVO';
+                        else if (res.realizado >= (res.alvo * 0.8)) res.status = 'ATENÇÃO';
+                        else res.status = 'CRÍTICO';
+                    }
+                });
+            });
+
+            renderizarPainel();
+        }
+
+        // =========================================================
+        // GERAÇÃO DOS CARDS (RÉGUAS ESCURAS)
+        // =========================================================
+        function renderizarPainel() {
+            const fVend = document.getElementById('filtroVendedor').value;
+            const fInd = document.getElementById('filtroIndicador').value;
+            
+            const cContainer = document.getElementById('cardsContainer');
+            const rContainer = document.getElementById('resumoContainer');
+
+            let htmlCards = '';
+            
+            // FILTRAGEM VISUAL PARA CARDS
+            Object.keys(resultadosVendedores).forEach(k => {
+                if (fVend !== 'TODOS' && k !== fVend) return; // Aplica filtro de vendedor
+
+                resultadosVendedores[k].forEach(res => {
+                    if (fInd !== 'TODOS' && res.shortInd !== fInd) return; // Aplica filtro de KPI
+
+                    const r = res.regra;
+                    let badgeLabel = k === 'TODOS' ? 'META GLOBAL' : k;
+                    let iconName = 'target';
+                    
+                    if (res.shortInd === 'LITRAGEM') iconName = 'droplet';
+                    if (res.shortInd === 'FATURAMENTO') iconName = 'dollar-sign';
+                    if (res.shortInd === 'POSITIVACAO') iconName = 'users';
+                    if (res.shortInd === 'DESCONTO') iconName = 'percent';
+                    if (res.shortInd === 'INADIMPLENCIA') iconName = 'alert-triangle';
+
+                    // Formatação Visual Baseada no Tipo
+                    let displayReal = res.realizado;
+                    let displayAlvo = res.alvo;
+                    
+                    if (res.shortInd === 'FATURAMENTO') {
+                        displayReal = fmtCurr(res.realizado);
+                        displayAlvo = fmtCurr(res.alvo);
+                    } else if (res.shortInd === 'LITRAGEM') {
+                        displayReal = fmtNum(res.realizado) + ' L';
+                        displayAlvo = fmtNum(res.alvo) + ' L';
+                    } else if (res.shortInd === 'POSITIVACAO') {
+                        displayReal = fmtNum(res.realizado) + ' Cli';
+                        displayAlvo = fmtNum(res.alvo) + ' Cli';
+                    } else if (res.shortInd === 'DESCONTO') {
+                        displayReal = fmtDec(res.realizado) + '% (Médio)';
+                        displayAlvo = 'Teto ' + fmtDec(res.alvo) + '%';
+                    } else if (res.shortInd === 'INADIMPLENCIA') {
+                        displayReal = fmtDec(res.realizado) + ' dias';
+                        displayAlvo = 'Teto ' + fmtDec(res.alvo) + ' dias';
+                    }
+
+                    // Geração do Miolo do Gráfico (Barra Simples VS Gradiente Inverso)
+                    let barHtml = '';
+                    
+                    if (res.invertido) {
+                        // Gradiente Inverso (Centro é a Meta)
+                        // Posiciona o Thumb (Bolinha)
+                        let diferenca = res.realizado - res.alvo;
+                        let rangeVisivel = res.isPct ? 10 : 15; // +/- 10% ou +/- 15 dias para os lados
+                        let pos = 50 + (diferenca / rangeVisivel) * 50;
+                        pos = Math.max(5, Math.min(95, pos)); // Mantém dentro da barra
+
+                        let markScale = res.isPct ? '%' : 'd';
+                        let mNeg = res.isPct ? '-5' : '-8';
+                        let mPos1 = res.isPct ? '+5' : '+15';
+                        let mPos2 = res.isPct ? '+10' : '+30';
+
+                        barHtml = `
+                            <div class="relative w-full h-1.5 rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 mt-10 mb-6">
+                                
+                                <!-- Marco Central Fixo (Target) -->
+                                <div class="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 w-1 h-3 bg-white z-0"></div>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-slate-800 text-white text-[7px] font-bold rounded border border-slate-600 whitespace-nowrap z-0 shadow-sm">MARCO 0 (META)</div>
+                                
+                                <!-- Thumb Dinâmico (Realizado) -->
+                                <div class="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] border border-slate-800 z-10 transition-all duration-700" style="left: calc(${pos}% - 7px);"></div>
+                                
+                                <!-- Textos Inferiores -->
+                                <div class="absolute top-full left-0 w-full flex justify-between text-[8px] font-bold text-slate-500 mt-2">
+                                    <div class="flex flex-col items-center"><i data-lucide="shield-check" class="w-3 h-3 text-emerald-500 mb-0.5"></i>${mNeg}${markScale}</div>
+                                    <div class="flex flex-col items-center relative pl-4">
+                                        <span><i data-lucide="target" class="w-3 h-3 text-slate-400 mb-0.5 inline"></i> 0</span>
+                                        <span class="absolute top-full mt-1 text-[7px] text-emerald-500 whitespace-nowrap tracking-widest text-center w-full">META CUMPRIDA<br>(SEM RISCO)</span>
+                                    </div>
+                                    <div class="flex flex-col items-center pr-2"><i data-lucide="triangle-alert" class="w-3 h-3 text-amber-500 mb-0.5"></i>${mPos1}${markScale}</div>
+                                    <div class="flex flex-col items-center"><i data-lucide="alert-octagon" class="w-3 h-3 text-rose-500 mb-0.5"></i>${mPos2}${markScale}</div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Barra Progressiva Padrão
+                        let pct = res.alvo > 0 ? (res.realizado / res.alvo) * 100 : 0;
+                        if(pct > 100) pct = 100;
+
+                        barHtml = `
+                            <div class="w-full bg-[#2A3441] h-1.5 rounded-full mt-6 mb-2 overflow-hidden shadow-inner">
+                                <div class="h-full bg-blue-500 rounded-full transition-all duration-700" style="width: ${pct}%;"></div>
+                            </div>
+                            <div class="text-right text-[9px] font-bold text-slate-400">${fmtDec(pct)}% CONCLUÍDO</div>
+                        `;
+                    }
+
+                    htmlCards += `
+                        <div class="dark-card">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <span class="bg-[#1e293b] text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest">${badgeLabel}</span>
+                                    <h3 class="font-black text-white text-xs uppercase tracking-widest mt-3">${r.nome}</h3>
+                                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">${res.shortInd}</p>
+                                </div>
+                                <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0">
+                                    <i data-lucide="${iconName}" class="w-4 h-4 text-slate-400"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-end mb-2">
+                                <div>
+                                    <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Realizado</span>
+                                    <span class="font-black text-white text-xl tabular-nums">${displayReal}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Alvo (Meta)</span>
+                                    <span class="font-bold text-slate-400 text-sm tabular-nums">${displayAlvo}</span>
+                                </div>
+                            </div>
+                            
+                            ${barHtml}
+                        </div>
+                    `;
+                });
+            });
+
+            if (htmlCards === '') htmlCards = `<div class="col-span-full text-center py-10 text-slate-500 font-bold uppercase text-[10px]">Sem dados para os filtros.</div>`;
+            cContainer.innerHTML = htmlCards;
+
+            // =========================================================
+            // GERAÇÃO DO RESUMO CONSOLIDADO (TABELA LATERAL DIREITA)
+            // =========================================================
+            let htmlResumo = '';
+            
+            // Ordena para que EQUIPA GLOBAL (TODOS) apareça no topo
+            const chavesResumo = Object.keys(resultadosVendedores).sort((a,b) => {
+                if(a === 'TODOS') return -1; if(b === 'TODOS') return 1;
+                return a.localeCompare(b);
+            });
+
+            chavesResumo.forEach(k => {
+                const arr = resultadosVendedores[k];
+                if (arr.length === 0) return;
+
+                const labelVend = k === 'TODOS' ? 'EQUIPA GLOBAL' : k;
+                
+                // Descobre o pior status para atribuir ao vendedor
+                let badgeVend = 'status-no-alvo';
+                let textVend = 'NO ALVO';
+                
+                if (arr.some(r => r.status === 'CRÍTICO')) {
+                    badgeVend = 'status-critico'; textVend = 'CRÍTICO';
+                } else if (arr.some(r => r.status === 'ATENÇÃO')) {
+                    badgeVend = 'status-atencao'; textVend = 'ATENÇÃO';
+                }
+
+                let subHtml = '';
+                arr.forEach(r => {
+                    let displayAlvo = r.shortInd === 'FATURAMENTO' || r.shortInd === 'LITRAGEM' ? fmtNum(r.alvo) : r.alvo.toString();
+                    let suffix = r.shortInd === 'LITRAGEM' ? 'L' : (r.shortInd === 'POSITIVACAO' ? 'c' : (r.shortInd === 'DESCONTO' ? '%' : (r.shortInd === 'INADIMPLENCIA' ? 'd' : '')));
+                    
+                    let displayReal = r.shortInd === 'FATURAMENTO' || r.shortInd === 'LITRAGEM' || r.shortInd === 'POSITIVACAO' ? fmtNum(r.realizado) : fmtDec(r.realizado);
+
+                    subHtml += `
+                        <div class="flex justify-between items-center py-1.5 border-b border-[#2A3441]/50 last:border-0">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-slate-300 text-[9px] uppercase tracking-widest">${r.shortInd}</span>
+                                <span class="text-[8px] text-slate-500 font-semibold tracking-wider">Alvo: ${displayAlvo}${suffix}</span>
+                            </div>
+                            <span class="font-black text-white text-[10px] tabular-nums">${displayReal}${suffix}</span>
+                        </div>
+                    `;
+                });
+
+                htmlResumo += `
+                    <tr class="hover:bg-[#1C212B] transition-colors">
+                        <td class="p-4 align-top w-1/3">
+                            <div class="font-black text-white text-[10px] uppercase tracking-wide leading-tight">${labelVend}</div>
+                            <div class="text-[9px] text-slate-500 mt-1 font-semibold tracking-wider">${arr.length} Metas Avaliadas</div>
+                        </td>
+                        <td class="p-4 align-top w-1/2">
+                            ${subHtml}
+                        </td>
+                        <td class="p-4 align-top text-center w-1/6">
+                            <span class="status-badge ${badgeVend}">${textVend}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (htmlResumo === '') htmlResumo = `<tr><td colspan="3" class="text-center py-10 text-slate-500 text-[10px] font-bold uppercase tracking-widest">Sem análises disponíveis.</td></tr>`;
+            rContainer.innerHTML = htmlResumo;
+
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa de Mercado - Comlub ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F0F4F8; overflow-x: hidden; }
+        .form-input { width: 100%; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #334155; outline: none; transition: border-color 0.2s; }
+        .form-input:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
+        .form-label { display: block; font-size: 10px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+        
+        .add-btn { background: white; border: 1px solid #E2E8F0; border-radius: 8px; width: 42px; display: flex; align-items: center; justify-content: center; color: #0284c7; transition: all 0.2s; cursor: pointer; }
+        .add-btn:hover { background: #F0F9FF; border-color: #0284c7; }
+
+        /* Estilo da Tabela */
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        th { background: #F8FAFC; color: #64748B; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 14px 16px; border-bottom: 1px solid #E2E8F0; text-align: left; position: sticky; top: 0; z-index: 10; }
+        td { padding: 14px 16px; border-bottom: 1px solid #F1F5F9; font-size: 12px; color: #334155; font-weight: 600; }
+        tr:hover td { background-color: #F8FAFC; }
+
+        /* Animacao do Modal */
+        @keyframes bounceIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-bounce-in { animation: bounceIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col gap-6 max-w-7xl mx-auto min-h-screen relative">
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-[200] bg-slate-800 text-white text-xs font-bold uppercase tracking-widest px-5 py-4 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-3 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300">
+        <i data-lucide="check-circle" class="w-5 h-5 text-sky-400" id="toastIcon"></i>
+        <span id="toastMessage">Operacao concluida!</span>
+    </div>
+
+    <!-- MODAL QUICK ADD PARAMETRO -->
+    <div id="quickAddModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md animate-bounce-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-black text-[#003865] uppercase" id="modalTitle">Adicionar Parametro</h3>
+                <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-rose-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <p class="text-xs text-slate-500 mb-4" id="modalDesc">Introduza o nome do novo parametro que deseja cadastrar no sistema.</p>
+            <form onsubmit="salvarNovoParametro(event)">
+                <input type="hidden" id="modalCategoria">
+                <input type="text" id="modalInput" required class="form-input mb-4 uppercase" placeholder="Digite aqui...">
+                <button type="submit" class="w-full bg-[#003865] hover:bg-blue-800 text-white font-black uppercase text-xs py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="save" class="w-4 h-4"></i> Salvar & Atualizar Lista
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SECAO 1: NOVA PESQUISA -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 shrink-0 relative overflow-hidden">
+        
+        <div class="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
+            <div class="w-8 h-8 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center"><i data-lucide="plus-circle" class="w-5 h-5"></i></div>
+            <h2 class="text-sm font-black text-[#003865] uppercase tracking-wider">Nova Pesquisa</h2>
+        </div>
+
+        <form id="formPesquisa" class="space-y-6 relative z-10" onsubmit="lancarPesquisa(event)">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="form-label">Data</label>
+                    <input type="date" id="campoData" required class="form-input cursor-pointer">
+                </div>
+                <div>
+                    <label class="form-label">Vendedor</label>
+                    <input type="text" id="campoVendedor" required class="form-input bg-slate-50" readonly placeholder="Carregando...">
+                </div>
+                <div>
+                    <label class="form-label">Preco Unitario (R$)</label>
+                    <input type="number" step="0.01" id="campoPreco" required class="form-input font-mono" placeholder="0.00">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" id="campoCidade" required class="form-input uppercase" placeholder="Ex.: Belo Horizonte">
+                </div>
+                <div>
+                    <label class="form-label">Estado (UF)</label>
+                    <select id="campoEstado" required class="form-input cursor-pointer">
+                        <option value="">Selecione...</option>
+                        <option value="AL">AL</option>
+                        <option value="PE">PE</option>
+                        <option value="SE">SE</option>
+                        <option value="PB">PB</option>
+                        <option value="BA">BA</option>
+                        <option value="RN">RN</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div>
+                    <label class="form-label">Classe do Produto</label>
+                    <div class="flex gap-2">
+                        <select id="campoClasse" required class="form-input flex-1 cursor-pointer">
+                            <option value="">A carregar...</option>
+                        </select>
+                        <button type="button" onclick="openModal('classes', 'Nova Classe de Produto')" class="add-btn" title="Adicionar Classe"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Tipo / Viscosidade</label>
+                    <div class="flex gap-2">
+                        <select id="campoTipo" required class="form-input flex-1 cursor-pointer">
+                            <option value="">A carregar...</option>
+                        </select>
+                        <button type="button" onclick="openModal('tipos', 'Novo Tipo / Viscosidade')" class="add-btn" title="Adicionar Viscosidade"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Concorrente</label>
+                    <div class="flex gap-2">
+                        <select id="campoConcorrente" required class="form-input flex-1 cursor-pointer">
+                            <option value="">A carregar...</option>
+                        </select>
+                        <button type="button" onclick="openModal('concorrentes', 'Novo Concorrente / Marca')" class="add-btn" title="Adicionar Concorrente"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2">
+                    <label class="form-label">Observacoes (Anotacoes Complementares)</label>
+                    <textarea id="campoObs" rows="2" class="form-input resize-none" placeholder="Anotacoes do vendedor sobre a oferta do concorrente..."></textarea>
+                </div>
+                <div>
+                    <label class="form-label">Foto Comprovativa</label>
+                    <label for="campoFoto" class="form-input flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors h-[62px] text-slate-400">
+                        <i data-lucide="camera" class="w-5 h-5"></i>
+                        <span id="txtFoto" class="truncate">Tirar / escolher foto</span>
+                    </label>
+                    <input type="file" id="campoFoto" accept="image/*" class="hidden" onchange="document.getElementById('txtFoto').innerText = this.files[0].name">
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" id="btnSubmitPesquisa" class="bg-[#0284c7] hover:bg-sky-700 text-white font-black text-[11px] uppercase tracking-widest px-8 py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 w-full md:w-auto">
+                    <i data-lucide="save" class="w-4 h-4"></i> Gravar Pesquisa na Nuvem
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- SECAO 2: PESQUISAS LANCADAS -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1 min-h-[500px]">
+        
+        <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white shrink-0">
+            <div class="flex items-center gap-3">
+                <i data-lucide="list-checks" class="w-5 h-5 text-[#003865]"></i>
+                <div>
+                    <h2 class="text-sm font-black text-[#003865] uppercase tracking-wider">Pesquisas Lancadas</h2>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Sincronizado com a Base de Dados Oficial</p>
+                </div>
+                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full ml-2" id="countPesquisas">0 registros</span>
+            </div>
+
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <button onclick="exportarParaExcel()" class="flex-1 md:flex-none justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-sm">
+                    <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Excel
+                </button>
+                <button onclick="carregarPesquisas(true)" id="btnSyncPesquisas" class="flex-1 md:flex-none justify-center bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-4 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-sm">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Atualizar Base
+                </button>
+            </div>
+        </div>
+
+        <!-- BARRA DE FILTROS DAS PESQUISAS -->
+        <div class="p-6 border-b border-slate-200 bg-slate-50/50 shrink-0">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
+                <div>
+                    <label class="form-label">De</label>
+                    <input type="date" id="filtroDe" class="form-input bg-white cursor-pointer py-2 text-xs">
+                </div>
+                <div>
+                    <label class="form-label">Ate</label>
+                    <input type="date" id="filtroAte" class="form-input bg-white cursor-pointer py-2 text-xs">
+                </div>
+                <div>
+                    <label class="form-label">Vendedor</label>
+                    <input type="text" id="filtroVendedor" class="form-input bg-white py-2 text-xs" placeholder="Nome...">
+                </div>
+                <div>
+                    <label class="form-label">Cidade</label>
+                    <input type="text" id="filtroCidade" class="form-input bg-white py-2 text-xs" placeholder="Cidade...">
+                </div>
+                <div>
+                    <label class="form-label">Estado (UF)</label>
+                    <select id="filtroEstado" class="form-input bg-white cursor-pointer py-2 text-xs">
+                        <option value="TODOS">Todas</option>
+                        <option value="AL">AL</option>
+                        <option value="PE">PE</option>
+                        <option value="SE">SE</option>
+                        <option value="PB">PB</option>
+                        <option value="BA">BA</option>
+                        <option value="RN">RN</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Classe</label>
+                    <select id="filtroClasse" class="form-input bg-white cursor-pointer py-2 text-xs">
+                        <option value="TODOS">Todas</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Tipo / Visc.</label>
+                    <select id="filtroTipo" class="form-input bg-white cursor-pointer py-2 text-xs">
+                        <option value="TODOS">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Concorrente</label>
+                    <select id="filtroConcorrente" class="form-input bg-white cursor-pointer py-2 text-xs">
+                        <option value="TODOS">Todos</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-slate-200 pt-4">
+                <label class="flex items-center gap-2.5 cursor-pointer group">
+                    <input type="checkbox" id="chkSintetico" onchange="aplicarFiltrosPesquisa()" class="w-4 h-4 text-[#003865] rounded border-slate-300 focus:ring-[#003865] cursor-pointer">
+                    <span class="text-xs font-bold text-slate-700 group-hover:text-[#003865] transition-colors select-none">
+                        Sintetico por Fabricante 
+                        <span class="text-slate-400 font-medium ml-1">— preco min., medio e max.</span>
+                    </span>
+                </label>
+                
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="aplicarFiltrosPesquisa()" class="bg-[#0f172a] hover:bg-slate-800 text-white px-8 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors w-full sm:w-auto shadow-md">
+                        <i data-lucide="filter" class="w-3.5 h-3.5"></i> Filtrar Base
+                    </button>
+                    <button onclick="limparFiltrosPesquisa()" class="bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 px-6 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-colors w-full sm:w-auto">
+                        Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-auto relative">
+            
+            <!-- TABELA 1: ANALITICA (Padrao) -->
+            <table id="tabelaAnalitica" class="w-full">
+                <thead class="bg-[#F8FAFC] sticky top-0 z-10 shadow-sm">
+                    <tr>
+                        <th class="w-24">Data</th>
+                        <th class="w-40">Vendedor</th>
+                        <th class="w-40">Cidade / UF</th>
+                        <th>Classe</th>
+                        <th>Tipo / Visc.</th>
+                        <th>Concorrente & Observacoes</th>
+                        <th class="text-right w-28">Preco (R$)</th>
+                        <th class="w-16 text-center">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBodyAnalitico">
+                    <tr><td colspan="8" class="text-center py-12 text-slate-400 font-bold text-xs uppercase tracking-widest"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-sky-500"></i> A sincronizar com o Google Sheets...</td></tr>
+                </tbody>
+            </table>
+
+            <!-- TABELA 2: SINTETICA (Fabricante) -->
+            <table id="tabelaSintetica" class="w-full hidden">
+                <thead class="bg-[#F8FAFC] sticky top-0 z-10 shadow-sm">
+                    <tr>
+                        <th class="w-64">Fabricante (Concorrente)</th>
+                        <th class="text-center w-32">Registros Coletados</th>
+                        <th class="text-right">Preco Minimo</th>
+                        <th class="text-right">Preco Medio</th>
+                        <th class="text-right">Preco Maximo</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBodySintetico">
+                    <!-- Preenchido via JS -->
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+
+    <!-- IFRAME OCULTO (ENVIO SEGURO PARA O GOOGLE SHEETS) -->
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+
+    <script>
+        lucide.createIcons();
+        
+        // URL'S DE INTEGRACAO
+        const API_URL = 'http://201.91.126.114:3001/api/pesquisa-parametros';
+        const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxvBvuPm32UpxG1_9PWLcZg6xa-d_6nwS328QsdbzTnOHc4IARN87LFFBxFv1dx9eXygw/exec';
+        
+        // Base de dados local em Runtime
+        let bdPesquisas = [];
+        let currentFilteredData = [];
+        let isSinteticoMode = false;
+
+        document.getElementById('campoData').valueAsDate = new Date();
+
+        // Identificar Utilizador Logado
+        const sessionStr = sessionStorage.getItem('comlub_portal_pesquisa_user') || sessionStorage.getItem('comlub_portal_user');
+        if (sessionStr) {
+            try {
+                const userData = JSON.parse(sessionStr);
+                document.getElementById('campoVendedor').value = String(userData.nome || userData.login).toUpperCase();
+            } catch(e) {}
+        } else {
+            document.getElementById('campoVendedor').value = 'UTILIZADOR NAO IDENTIFICADO';
+        }
+
+        // =====================================
+        // UTILS
+        // =====================================
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = msg;
+            const icon = document.getElementById('toastIcon');
+            
+            if(isError) {
+                toast.classList.replace('border-slate-700', 'border-rose-500');
+                icon.setAttribute('data-lucide', 'alert-triangle');
+                icon.classList.replace('text-sky-400', 'text-rose-500');
+            } else {
+                toast.classList.replace('border-rose-500', 'border-slate-700');
+                icon.setAttribute('data-lucide', 'check-circle');
+                icon.classList.replace('text-rose-500', 'text-sky-400');
+            }
+            lucide.createIcons({root: toast});
+
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-[-100px]', 'opacity-0');
+            }, 3500);
+        }
+
+        // Funcao BLINDADA para encontrar colunas no Google Sheets independentemente de acentos, espacos ou nomes antigos
+        const getCol = (obj, ...keys) => {
+            if (!obj) return '';
+            const objKeys = Object.keys(obj);
+            for (let key of keys) {
+                const normalizedTarget = String(key).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const foundKey = objKeys.find(k => String(k).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === normalizedTarget);
+                
+                if (foundKey !== undefined && obj[foundKey] !== undefined && obj[foundKey] !== null && String(obj[foundKey]).trim() !== '') {
+                    return obj[foundKey];
+                }
+            }
+            return '';
+        };
+
+        // =====================================
+        // INTEGRACAO COM GOOGLE SHEETS
+        // =====================================
+        function enviarDadosParaPlanilha(dados) {
+            return new Promise((resolve) => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = GOOGLE_SHEETS_URL;
+                form.target = 'hidden_iframe';
+                form.style.display = 'none';
+
+                for (const key in dados) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = dados[key];
+                    form.appendChild(input);
+                }
+
+                document.body.appendChild(form);
+                form.submit();
+
+                setTimeout(() => {
+                    document.body.removeChild(form);
+                    resolve(true);
+                }, 1500);
+            });
+        }
+
+        async function carregarPesquisas(isManualClick = false) {
+            const btn = document.getElementById('btnSyncPesquisas');
+            if (btn) {
+                btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Atualizando...';
+                btn.disabled = true;
+                lucide.createIcons({root: btn});
+            }
+            
+            try {
+                // Adiciona timestamp para furar o cache agressivo do navegador
+                const cacheBuster = `?_t=${new Date().getTime()}`;
+                const res = await fetch(GOOGLE_SHEETS_URL + cacheBuster, { redirect: 'follow' });
+                const textResult = await res.text();
+                const data = JSON.parse(textResult);
+                
+                if (data && data.pesquisas) {
+                    bdPesquisas = data.pesquisas.map(p => {
+                        let dtRaw = String(getCol(p, 'Data Coleta', 'Data da Coleta', 'Data Insercao', 'Data', 'Carimbo de data/hora', 'Timestamp')).trim();
+                        if (!dtRaw) dtRaw = '1970-01-01'; 
+                        
+                        if (dtRaw.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+                            let parts = dtRaw.substring(0, 10).split('/');
+                            dtRaw = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        } else if (dtRaw.includes('T')) {
+                            dtRaw = dtRaw.split('T')[0];
+                        }
+                        
+                        return {
+                            id: getCol(p, 'ID', 'id') || Date.now() + Math.random(),
+                            data: dtRaw,
+                            vendedor: String(getCol(p, 'Vendedor', 'Nome do Vendedor', 'Consultor')).trim().toUpperCase(),
+                            cidade: String(getCol(p, 'Cidade', 'Municipio')).trim().toUpperCase(),
+                            estado: String(getCol(p, 'UF', 'Estado')).trim().toUpperCase(),
+                            // Busca robusta de Classe, Tipo e Obs
+                            classe: String(getCol(p, 'Classe', 'Categoria', 'Classe do Produto', 'Classe Produto')).trim().toUpperCase(),
+                            tipo: String(getCol(p, 'Viscosidade', 'Tipo', 'Tipo de Produto', 'Tipo / Visc.')).trim().toUpperCase(),
+                            concorrente: String(getCol(p, 'Concorrente', 'Marca', 'Fabricante')).trim().toUpperCase(),
+                            preco: parseFloat(String(getCol(p, 'Preco Ofertado (R$)', 'Preco', 'Valor', 'Preco Ofertado', 'Preço Unitário (R$)')).replace(',', '.')) || 0,
+                            obs: String(getCol(p, 'Observacoes', 'Obs', 'Anotacoes', 'Observação')).trim()
+                        };
+                    }).filter(p => p.vendedor !== '' || p.concorrente !== ''); 
+                    
+                    localStorage.setItem('comlub_historico_pesquisas', JSON.stringify(bdPesquisas));
+                    if (isManualClick) showToast("Sincronizacao com a Nuvem concluida!");
+                }
+            } catch (e) {
+                console.warn("API Offline ou bloqueada. Lendo cache local.", e);
+                bdPesquisas = JSON.parse(localStorage.getItem('comlub_historico_pesquisas')) || [];
+                if (isManualClick) showToast("Base carregada offline (Cache Local).", true);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Atualizar Base';
+                    btn.disabled = false;
+                    lucide.createIcons({root: btn});
+                }
+                aplicarFiltrosPesquisa();
+            }
+        }
+
+        // =====================================
+        // CARREGAR PARAMETROS PARA OS SELECTS
+        // =====================================
+        function getFallbackParams() {
+            const saved = localStorage.getItem('comlub_pesquisa_params');
+            if (saved) return JSON.parse(saved);
+            return {
+                classes: [{ id: 1, nome: 'MOTOS' }, { id: 2, nome: 'LINHA LEVE' }, { id: 3, nome: 'LINHA PESADA' }],
+                tipos: [{ id: 1, nome: '10W30' }, { id: 2, nome: '20W50' }, { id: 3, nome: '15W40' }, { id: 4, nome: '5W30' }],
+                concorrentes: [{ id: 1, nome: 'LUBRAX' }, { id: 2, nome: 'MOBIL' }, { id: 3, nome: 'IPIRANGA' }, { id: 4, nome: 'SHELL' }]
+            };
+        }
+
+        async function fetchParametros() {
+            try {
+                const res = await fetch(API_URL);
+                if(!res.ok) throw new Error("API Indisponivel");
+                const data = await res.json();
+                
+                preencherSelect('campoClasse', data.classes, 'Selecione a Classe...', false);
+                preencherSelect('campoTipo', data.tipos, 'Selecione o Tipo...', false);
+                preencherSelect('campoConcorrente', data.concorrentes, 'Selecione o Concorrente...', false);
+                
+                preencherSelect('filtroClasse', data.classes, 'Todas as Classes', true);
+                preencherSelect('filtroTipo', data.tipos, 'Todos os Tipos', true);
+                preencherSelect('filtroConcorrente', data.concorrentes, 'Todos os Concorrentes', true);
+
+            } catch(e) {
+                console.warn("API Offline. Lendo parametros do navegador.");
+                const localData = getFallbackParams();
+                
+                preencherSelect('campoClasse', localData.classes, 'Selecione a Classe...', false);
+                preencherSelect('campoTipo', localData.tipos, 'Selecione o Tipo...', false);
+                preencherSelect('campoConcorrente', localData.concorrentes, 'Selecione o Concorrente...', false);
+
+                preencherSelect('filtroClasse', localData.classes, 'Todas as Classes', true);
+                preencherSelect('filtroTipo', localData.tipos, 'Todos os Tipos', true);
+                preencherSelect('filtroConcorrente', localData.concorrentes, 'Todos os Concorrentes', true);
+            }
+        }
+
+        function preencherSelect(id, lista, placeholder, isFilter) {
+            const select = document.getElementById(id);
+            const emptyValue = isFilter ? 'TODOS' : '';
+            let html = `<option value="${emptyValue}">${placeholder}</option>`;
+            lista.forEach(item => { 
+                const val = String(item.nome).trim().toUpperCase();
+                html += `<option value="${val}">${val}</option>`; 
+            });
+            select.innerHTML = html;
+        }
+
+        fetchParametros();
+        carregarPesquisas(); 
+
+        // =====================================
+        // LOGICA DO MODAL DE ADICAO (+)
+        // =====================================
+        function openModal(categoria, titulo) {
+            document.getElementById('modalCategoria').value = categoria;
+            document.getElementById('modalTitle').innerText = titulo;
+            document.getElementById('modalInput').value = '';
+            document.getElementById('quickAddModal').classList.remove('hidden');
+            document.getElementById('quickAddModal').classList.add('flex');
+            document.getElementById('modalInput').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('quickAddModal').classList.add('hidden');
+            document.getElementById('quickAddModal').classList.remove('flex');
+        }
+
+        async function salvarNovoParametro(e) {
+            e.preventDefault();
+            const btn = e.submitter;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> A Gravar...';
+            lucide.createIcons({root: btn});
+
+            const cat = document.getElementById('modalCategoria').value;
+            const nome = document.getElementById('modalInput').value.trim().toUpperCase();
+            const fieldMap = { 'classes': 'campoClasse', 'tipos': 'campoTipo', 'concorrentes': 'campoConcorrente' };
+
+            enviarDadosParaPlanilha({
+                tipo: 'cadastro',
+                modulo: 'PESQUISA',
+                subtipoCadastro: cat,
+                id: Date.now(),
+                descricao: nome,
+                detalhe1: '', detalhe2: ''
+            });
+
+            try {
+                const res = await fetch(`${API_URL}/${cat}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome })
+                });
+                if(!res.ok) throw new Error("Falha na gravacao API");
+            } catch(error) {
+                const localData = getFallbackParams();
+                if (!localData[cat].some(i => i.nome === nome)) {
+                    localData[cat].push({ id: Date.now(), nome });
+                    localStorage.setItem('comlub_pesquisa_params', JSON.stringify(localData));
+                }
+            } finally {
+                await fetchParametros();
+                document.getElementById(fieldMap[cat]).value = nome;
+                closeModal();
+                btn.innerHTML = originalHTML;
+            }
+        }
+
+        // =====================================
+        // LANCAR A PESQUISA OFICIAL (POST)
+        // =====================================
+        async function lancarPesquisa(e) {
+            e.preventDefault();
+            
+            const btnSubmit = document.getElementById('btnSubmitPesquisa');
+            const oldBtnText = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Sincronizando com Nuvem...';
+            btnSubmit.disabled = true;
+            lucide.createIcons({root: btnSubmit});
+
+            const p = {
+                id: Date.now(),
+                data: document.getElementById('campoData').value, 
+                vendedor: document.getElementById('campoVendedor').value.toUpperCase().trim(),
+                preco: parseFloat(document.getElementById('campoPreco').value) || 0,
+                cidade: document.getElementById('campoCidade').value.toUpperCase().trim(),
+                estado: document.getElementById('campoEstado').value,
+                classe: document.getElementById('campoClasse').value.toUpperCase().trim(),
+                tipo: document.getElementById('campoTipo').value.toUpperCase().trim(),
+                concorrente: document.getElementById('campoConcorrente').value.toUpperCase().trim(),
+                obs: document.getElementById('campoObs').value
+            };
+
+            const payloadSheet = {
+                tipo: 'pesquisa',
+                id: p.id,
+                dataColeta: p.data,
+                vendedor: p.vendedor,
+                cidade: p.cidade,
+                uf: p.estado,
+                classe: p.classe,
+                viscosidade: p.tipo,
+                concorrente: p.concorrente,
+                preco: p.preco,
+                obs: p.obs
+            };
+
+            await enviarDadosParaPlanilha(payloadSheet);
+
+            bdPesquisas.unshift(p);
+            localStorage.setItem('comlub_historico_pesquisas', JSON.stringify(bdPesquisas));
+            
+            document.getElementById('campoPreco').value = '';
+            document.getElementById('campoObs').value = '';
+            document.getElementById('campoFoto').value = '';
+            document.getElementById('txtFoto').innerText = 'Tirar / escolher foto';
+            document.getElementById('campoPreco').focus();
+            
+            btnSubmit.innerHTML = oldBtnText;
+            btnSubmit.disabled = false;
+            lucide.createIcons({root: btnSubmit});
+            
+            showToast("Pesquisa salva com sucesso!");
+            
+            aplicarFiltrosPesquisa();
+        }
+
+        function deletarPesquisa(id) {
+            if(!confirm("Esta acao vai apagar o registro apenas da sua visualizacao local. Deseja continuar?")) return;
+            bdPesquisas = bdPesquisas.filter(p => String(p.id) !== String(id));
+            localStorage.setItem('comlub_historico_pesquisas', JSON.stringify(bdPesquisas));
+            aplicarFiltrosPesquisa();
+        }
+
+        // =====================================
+        // GESTAO DE FILTROS E TABELAS
+        // =====================================
+        function limparFiltrosPesquisa() {
+            document.getElementById('filtroDe').value = '';
+            document.getElementById('filtroAte').value = '';
+            document.getElementById('filtroVendedor').value = '';
+            document.getElementById('filtroCidade').value = '';
+            document.getElementById('filtroEstado').value = 'TODOS';
+            document.getElementById('filtroClasse').value = 'TODOS';
+            document.getElementById('filtroTipo').value = 'TODOS';
+            document.getElementById('filtroConcorrente').value = 'TODOS';
+            document.getElementById('chkSintetico').checked = false;
+            
+            aplicarFiltrosPesquisa();
+        }
+
+        function aplicarFiltrosPesquisa() {
+            const de = document.getElementById('filtroDe').value;
+            const ate = document.getElementById('filtroAte').value;
+            const vend = document.getElementById('filtroVendedor').value.toLowerCase().trim();
+            const cid = document.getElementById('filtroCidade').value.toLowerCase().trim();
+            const uf = document.getElementById('filtroEstado').value;
+            const cls = document.getElementById('filtroClasse').value;
+            const tip = document.getElementById('filtroTipo').value;
+            const conc = document.getElementById('filtroConcorrente').value;
+            
+            isSinteticoMode = document.getElementById('chkSintetico').checked;
+
+            currentFilteredData = bdPesquisas.filter(p => {
+                if(de && p.data < de) return false;
+                if(ate && p.data > ate) return false;
+                if(vend && !p.vendedor.toLowerCase().includes(vend)) return false;
+                if(cid && !p.cidade.toLowerCase().includes(cid)) return false;
+                if(uf !== 'TODOS' && p.estado !== uf) return false;
+                if(cls !== 'TODOS' && p.classe !== cls) return false;
+                if(tip !== 'TODOS' && p.tipo !== tip) return false;
+                if(conc !== 'TODOS' && p.concorrente !== conc) return false;
+                return true;
+            });
+
+            if (isSinteticoMode) {
+                document.getElementById('tabelaAnalitica').classList.add('hidden');
+                document.getElementById('tabelaSintetica').classList.remove('hidden');
+                renderTabelaSintetica();
+            } else {
+                document.getElementById('tabelaSintetica').classList.add('hidden');
+                document.getElementById('tabelaAnalitica').classList.remove('hidden');
+                renderTabelaAnalitica();
+            }
+        }
+
+        function formatarData(strData) {
+            if(!strData || strData === '1970-01-01') return '--/--/----';
+            const partes = strData.split('T')[0].split('-');
+            if(partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+            return strData;
+        }
+
+        function formatarMoeda(val) {
+            if(isNaN(val) || val === Infinity || val === -Infinity) return "R$ 0,00";
+            return val.toLocaleString('pt-BR', {style: 'currency', currency:'BRL'});
+        }
+
+        function renderTabelaAnalitica() {
+            const tb = document.getElementById('tableBodyAnalitico');
+            document.getElementById('countPesquisas').innerText = `${currentFilteredData.length} registros`;
+
+            if(currentFilteredData.length === 0) {
+                tb.innerHTML = '<tr><td colspan="8" class="text-center py-16 text-slate-400 font-bold tracking-widest text-[10px] uppercase"><i data-lucide="search-x" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Nenhuma pesquisa encontrada.</td></tr>';
+                lucide.createIcons({root: tb});
+                return;
+            }
+
+            tb.innerHTML = currentFilteredData.map(p => {
+                let obsHtml = '';
+                if(p.obs && p.obs.trim() !== '') {
+                    const txtObs = p.obs.length > 40 ? p.obs.substring(0,40) + '...' : p.obs;
+                    obsHtml = `<span class="block text-[10px] font-semibold text-slate-400 mt-1 normal-case leading-tight truncate max-w-[200px]" title="${p.obs}"><i data-lucide="message-square" class="w-3 h-3 inline mr-1 opacity-70"></i>${txtObs}</span>`;
+                }
+
+                return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="tabular-nums font-bold text-slate-500 text-[11px]">${formatarData(p.data)}</td>
+                    <td class="font-bold text-slate-700 uppercase truncate max-w-[150px]" title="${p.vendedor}">${p.vendedor}</td>
+                    <td class="font-bold text-[#003865] uppercase truncate max-w-[150px]" title="${p.cidade}">${p.cidade} / <span class="text-sky-500">${p.estado}</span></td>
+                    <td class="uppercase text-slate-600 text-[11px] font-bold">${p.classe}</td>
+                    <td class="uppercase text-slate-600 font-bold font-mono">${p.tipo}</td>
+                    <td class="font-black text-slate-800 uppercase">
+                        ${p.concorrente}
+                        ${obsHtml}
+                    </td>
+                    <td class="text-right font-black text-[#0284c7] tabular-nums text-[13px] font-mono">${formatarMoeda(p.preco)}</td>
+                    <td class="text-center">
+                        <button onclick="deletarPesquisa('${p.id}')" class="text-slate-400 hover:text-rose-500 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-300 p-2 rounded-lg transition-colors shadow-sm" title="Apagar Registro Local">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+            lucide.createIcons({root: tb});
+        }
+
+        function renderTabelaSintetica() {
+            const tb = document.getElementById('tableBodySintetico');
+            
+            const mapStats = {};
+            currentFilteredData.forEach(p => {
+                const fab = p.concorrente;
+                if(!mapStats[fab]) {
+                    mapStats[fab] = { count: 0, min: Infinity, max: -Infinity, sum: 0 };
+                }
+                mapStats[fab].count++;
+                mapStats[fab].sum += p.preco;
+                if(p.preco > 0 && p.preco < mapStats[fab].min) mapStats[fab].min = p.preco;
+                if(p.preco > 0 && p.preco > mapStats[fab].max) mapStats[fab].max = p.preco;
+            });
+
+            const statsArray = Object.keys(mapStats).map(fab => {
+                const data = mapStats[fab];
+                return {
+                    fabricante: fab,
+                    registros: data.count,
+                    min: data.min === Infinity ? 0 : data.min,
+                    max: data.max === -Infinity ? 0 : data.max,
+                    med: data.sum / data.count
+                };
+            });
+
+            statsArray.sort((a,b) => b.registros - a.registros);
+
+            document.getElementById('countPesquisas').innerText = `${statsArray.length} fabricantes mapeados`;
+
+            if(statsArray.length === 0) {
+                tb.innerHTML = '<tr><td colspan="5" class="text-center py-16 text-slate-400 font-bold uppercase tracking-widest text-[10px]"><i data-lucide="search-x" class="w-8 h-8 mx-auto mb-3 opacity-30"></i>Nenhum dado sintetico gerado.</td></tr>';
+                lucide.createIcons({root: tb});
+                return;
+            }
+
+            tb.innerHTML = statsArray.map(st => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="font-black text-[#003865] uppercase">${st.fabricante}</td>
+                    <td class="text-center font-bold text-slate-600 tabular-nums">${st.registros}</td>
+                    <td class="text-right text-slate-500 font-bold font-mono">${formatarMoeda(st.min)}</td>
+                    <td class="text-right text-[#0284c7] font-black text-[13px] font-mono">${formatarMoeda(st.med)}</td>
+                    <td class="text-right text-rose-500 font-bold font-mono">${formatarMoeda(st.max)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function exportarParaExcel() {
+            if(currentFilteredData.length === 0) {
+                alert("Nao ha registos para exportar com os filtros atuais.");
+                return;
+            }
+
+            let cabecalhos = [];
+            let linhasCSV = [];
+
+            if (isSinteticoMode) {
+                cabecalhos = ["Fabricante", "Registros", "Preco Minimo", "Preco Medio", "Preco Maximo"];
+                
+                const mapStats = {};
+                currentFilteredData.forEach(p => {
+                    const fab = p.concorrente;
+                    if(!mapStats[fab]) mapStats[fab] = { count: 0, min: Infinity, max: -Infinity, sum: 0 };
+                    mapStats[fab].count++;
+                    mapStats[fab].sum += p.preco;
+                    if(p.preco > 0 && p.preco < mapStats[fab].min) mapStats[fab].min = p.preco;
+                    if(p.preco > 0 && p.preco > mapStats[fab].max) mapStats[fab].max = p.preco;
+                });
+
+                linhasCSV = Object.keys(mapStats).map(fab => {
+                    const data = mapStats[fab];
+                    const med = data.sum / data.count;
+                    const minFormated = data.min === Infinity ? 0 : data.min;
+                    const maxFormated = data.max === -Infinity ? 0 : data.max;
+                    return `"${fab}";"${data.count}";"${minFormated.toFixed(2).replace('.',',')}";"${med.toFixed(2).replace('.',',')}";"${maxFormated.toFixed(2).replace('.',',')}"`;
+                });
+
+            } else {
+                cabecalhos = ["Data", "Vendedor", "Cidade", "UF", "Classe", "Tipo", "Concorrente", "Preco", "Observacoes"];
+                linhasCSV = currentFilteredData.map(p => {
+                    return `"${formatarData(p.data)}";"${p.vendedor}";"${p.cidade}";"${p.estado}";"${p.classe}";"${p.tipo}";"${p.concorrente}";"${p.preco.toFixed(2).replace('.',',')}";"${p.obs.replace(/"/g, '""')}"`;
+                });
+            }
+
+            const csvContent = cabecalhos.join(";") + "\n" + linhasCSV.join("\n");
+            
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.setAttribute("href", url);
+            a.setAttribute("download", `Pesquisa_Precos_${isSinteticoMode ? 'Sintetica' : 'Analitica'}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>

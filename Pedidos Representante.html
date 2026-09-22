@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos do Representante</title>
+    <style>
+        :root {
+            --primary-dark: #033D73;   /* Azul Escuro */
+            --primary-light: #0578BF;  /* Azul Claro/Médio */
+            --yellow: #FFD100;         /* Amarelo Vibrante */
+            --gold: #E3A60D;           /* Amarelo Ouro/Dourado */
+            --bg: #f8fafc;
+            --text: #1f2937;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 1.2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--yellow);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        nav {
+            background-color: var(--primary-light);
+            padding: 0.8rem;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        nav button {
+            background-color: transparent;
+            color: white;
+            border: 1px solid white;
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: 600;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 150px;
+            max-width: 300px;
+        }
+        nav button:hover {
+            background-color: var(--yellow);
+            color: var(--primary-dark);
+            border-color: var(--yellow);
+        }
+        .container {
+            max-width: 1050px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+        }
+        .view {
+            display: none;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(3, 61, 115, 0.08);
+            border-top: 3px solid var(--primary-dark);
+        }
+        .active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--primary-dark);
+        }
+        input {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem; /* Previne zoom no iOS */
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 2px rgba(5, 120, 191, 0.2);
+        }
+        .box-produtos {
+            background-color: #f0f7ff;
+            border: 1px dashed var(--primary-light);
+            padding: 1.2rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .box-produtos h3 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            font-size: 1.1rem;
+        }
+        button.btn-add {
+            background-color: var(--primary-light);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+        button.btn-add:hover { background-color: var(--primary-dark); }
+        
+        button.btn-submit {
+            background-color: var(--primary-dark);
+            color: white;
+            border: none;
+            padding: 1.2rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            width: 100%;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+        button.btn-submit:hover:not(:disabled) { background-color: var(--primary-light); }
+        button.btn-submit:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+        }
+        
+        /* Contêiner para rolagem horizontal das tabelas no celular */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 1rem;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            min-width: 600px; /* Garante que a tabela não fique espremida */
+        }
+        th, td {
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th { 
+            background-color: #f1f5f9; 
+            color: var(--primary-dark);
+            white-space: nowrap;
+        }
+        
+        .status-aguardando { color: var(--gold); font-weight: bold; }
+        .status-lancado { color: #059669; font-weight: bold; }
+        
+        .btn-action {
+            background-color: var(--primary-light);
+            color: white;
+            border: none;
+            padding: 0.6rem 0.8rem;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: 500;
+            width: 100%;
+            margin-bottom: 0.3rem;
+        }
+        .btn-action:hover {
+            background-color: var(--primary-dark);
+        }
+        .total-destaque {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary-dark);
+            text-align: right;
+            margin-top: 1rem;
+            padding-top: 0.5rem;
+        }
+        .lista-itens-admin {
+            margin: 0;
+            padding-left: 1.2rem;
+            color: #475569;
+        }
+        .btn-remover {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            width: 100%;
+        }
+        .login-box {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .error-message {
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        .admin-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .admin-header-bar > div {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-logout {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Responsividade Específica para Celulares */
+        @media (max-width: 768px) {
+            .view {
+                padding: 1rem;
+            }
+            .admin-header-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .admin-header-bar h2 {
+                font-size: 1.3rem;
+            }
+            .admin-header-bar > div {
+                width: 100%;
+                flex-direction: column;
+            }
+            .admin-header-bar > div button {
+                width: 100%;
+                margin: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Pedidos do Representante</h1>
+    </header>
+    
+    <nav>
+        <button onclick="switchView('rep-view')">Área do Representante</button>
+        <button onclick="acessarAreaAdmin()">Área do Administrador</button>
+    </nav>
+
+    <div class="container">
+        <!-- ÁREA DO REPRESENTANTE -->
+        <div id="rep-view" class="view active">
+            <h2 style="color: var(--primary-dark);">Novo Pedido</h2>
+            <form id="orderForm">
+                
+                <!-- DADOS DO CLIENTE -->
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 100%;">
+                        <label>Código ou CNPJ do Cliente</label>
+                        <input type="text" id="cnpj" required>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 100%;">
+                        <label>Nome do Cliente</label>
+                        <input type="text" id="cliente" required>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 100%;">
+                        <label>Condição de Pagamento</label>
+                        <input type="text" id="pagamento" placeholder="Ex: 30/60/90 dias" required>
+                    </div>
+                </div>
+
+                <!-- ÁREA DE INSERÇÃO DE PRODUTOS -->
+                <div class="box-produtos">
+                    <h3>Adicionar Produtos</h3>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 100%; margin-bottom: 0;">
+                            <label>Código ou Nome do Produto</label>
+                            <input type="text" id="produtoTemporario">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: calc(50% - 0.5rem); margin-bottom: 0;">
+                            <label>Quantidade</label>
+                            <input type="number" id="qtdTemporaria" min="1">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: calc(50% - 0.5rem); margin-bottom: 0;">
+                            <label>Preço Unid. (R$)</label>
+                            <input type="number" id="precoTemporario" step="0.01">
+                        </div>
+                        <div style="flex: 1; min-width: 100%;">
+                            <button type="button" class="btn-add" onclick="adicionarProduto()">+ Adicionar à Lista</button>
+                        </div>
+                    </div>
+
+                    <!-- TABELA DE PRODUTOS DO PEDIDO ATUAL -->
+                    <div class="table-responsive" id="containerTabelaCarrinho" style="display: none; border:none;">
+                        <table id="tabelaCarrinho">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Qtd</th>
+                                    <th>Unid (R$)</th>
+                                    <th>Total (R$)</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="carrinhoBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="total-destaque" id="divTotalPedido" style="display: none;">
+                        Total do Pedido: R$ <span id="valorTotalPedido">0,00</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="btnEnviar" disabled>Enviar Pedido Completo</button>
+            </form>
+
+            <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #e2e8f0;">
+
+            <h2 style="color: var(--primary-dark);">Meu Histórico de Pedidos</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID / Data</th>
+                            <th>Cliente</th>
+                            <th>Qtd. Itens</th>
+                            <th>Valor Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="repTableBody">
+                        <!-- Preenchido via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TELA DE LOGIN DO ADMINISTRADOR -->
+        <div id="login-view" class="view">
+            <div class="login-box">
+                <h2 style="color: var(--primary-dark);">Login de Administrador</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" id="loginEmail" placeholder="seu-email@comlub.com.br" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" id="loginSenha" required>
+                    </div>
+                    <p id="loginError" class="error-message">E-mail ou senha incorretos!</p>
+                    <button type="submit" class="btn-submit" style="margin-top: 0.5rem;">Entrar no Painel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ÁREA DO ADMINISTRADOR (Protegida) -->
+        <div id="admin-view" class="view">
+            <div class="admin-header-bar">
+                <h2 style="color: var(--primary-dark); margin: 0;">Painel - Pedidos Recebidos</h2>
+                <div>
+                    <button class="btn-action" style="background-color: var(--primary-dark);" onclick="exportarCSV()">📥 Exportar Planilha (CSV)</button>
+                    <button class="btn-logout" onclick="fazerLogout()">Sair do Admin</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID / Data</th>
+                            <th>Cliente</th>
+                            <th>Pagamento</th>
+                            <th>Produtos (Qtd x Unit = Total)</th>
+                            <th>Total do Pedido</th>
+                            <th>Status</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody">
+                        <!-- Preenchido via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === URL DO SEU APPS SCRIPT MANTIDA ===
+        const URL_DO_WEB_APP = 'https://script.google.com/macros/s/AKfycbzTWXL_czwtHaOHJvCZDFOQlFdC1lqF-DUZfU2s8_EJ2TwX2ptRPI0kMl-_Grl0BrO3/exec'; 
+
+        let pedidos = [];
+        let isAdminAutenticado = false;
+        let produtosPedidoAtual = [];
+
+        async function carregarPedidos() {
+            try {
+                const btnEnviar = document.getElementById('btnEnviar');
+                if(btnEnviar) btnEnviar.innerText = "Carregando sistema...";
+                
+                const response = await fetch(URL_DO_WEB_APP);
+                pedidos = await response.json();
+                
+                if(pedidos.erro) {
+                    console.error("Erro retornado do Apps Script:", pedidos.erro);
+                    pedidos = [];
+                }
+                
+                atualizarTabelas();
+                
+                if(btnEnviar) btnEnviar.innerText = "Enviar Pedido Completo";
+            } catch(e) {
+                console.error("Erro ao carregar pedidos", e);
+            }
+        }
+        carregarPedidos();
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            atualizarTabelas();
+        }
+
+        function acessarAreaAdmin() {
+            if (isAdminAutenticado) switchView('admin-view');
+            else switchView('login-view');
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const emailDigitado = document.getElementById('loginEmail').value.trim();
+            const senhaDigitada = document.getElementById('loginSenha').value;
+            const erroMsg = document.getElementById('loginError');
+
+            if (emailDigitado === 'filipe@comlub.com.br' && senhaDigitada === 'comlub2026@#') {
+                isAdminAutenticado = true;
+                erroMsg.style.display = 'none';
+                this.reset();
+                switchView('admin-view');
+            } else {
+                erroMsg.style.display = 'block';
+            }
+        });
+
+        function fazerLogout() {
+            isAdminAutenticado = false;
+            switchView('rep-view');
+        }
+
+        function adicionarProduto() {
+            const nomeProd = document.getElementById('produtoTemporario').value;
+            const qtd = parseFloat(document.getElementById('qtdTemporaria').value);
+            const preco = parseFloat(document.getElementById('precoTemporario').value);
+            if(!nomeProd || !qtd || !preco || qtd <= 0 || preco <= 0) { alert("Preencha dados válidos!"); return; }
+            produtosPedidoAtual.push({ nome: nomeProd, quantidade: qtd, precoUnitario: preco, total: qtd * preco });
+            document.getElementById('produtoTemporario').value = '';
+            document.getElementById('qtdTemporaria').value = '';
+            document.getElementById('precoTemporario').value = '';
+            document.getElementById('produtoTemporario').focus();
+            atualizarCarrinho();
+        }
+
+        function removerProduto(index) { produtosPedidoAtual.splice(index, 1); atualizarCarrinho(); }
+
+        function atualizarCarrinho() {
+            const tbody = document.getElementById('carrinhoBody');
+            const tabelaContainer = document.getElementById('containerTabelaCarrinho');
+            const divTotal = document.getElementById('divTotalPedido');
+            const btnEnviar = document.getElementById('btnEnviar');
+            tbody.innerHTML = '';
+            let valorTotalGeral = 0;
+
+            if(produtosPedidoAtual.length === 0) {
+                tabelaContainer.style.display = 'none'; divTotal.style.display = 'none'; btnEnviar.disabled = true; return;
+            }
+
+            tabelaContainer.style.display = 'block'; divTotal.style.display = 'block'; btnEnviar.disabled = false;
+            produtosPedidoAtual.forEach((prod, index) => {
+                valorTotalGeral += prod.total;
+                tbody.innerHTML += `<tr>
+                    <td>${prod.nome}</td><td>${prod.quantidade}</td>
+                    <td>R$ ${prod.precoUnitario.toFixed(2).replace('.', ',')}</td>
+                    <td>R$ ${prod.total.toFixed(2).replace('.', ',')}</td>
+                    <td><button type="button" class="btn-remover" onclick="removerProduto(${index})">X</button></td>
+                </tr>`;
+            });
+            document.getElementById('valorTotalPedido').innerText = valorTotalGeral.toFixed(2).replace('.', ',');
+        }
+
+        document.getElementById('orderForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if(produtosPedidoAtual.length === 0) { alert("Adicione produtos!"); return; }
+
+            const totalPedido = produtosPedidoAtual.reduce((soma, prod) => soma + prod.total, 0);
+            const agora = new Date();
+            const dataEnvioFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const btn = document.getElementById('btnEnviar');
+            
+            const novoPedido = {
+                id: Date.now(),
+                dataEnvio: dataEnvioFormatada,
+                cnpj: document.getElementById('cnpj').value,
+                cliente: document.getElementById('cliente').value,
+                pagamento: document.getElementById('pagamento').value,
+                produtos: [...produtosPedidoAtual],
+                valorTotal: totalPedido,
+                status: 'Aguardando Lançamento'
+            };
+
+            btn.disabled = true;
+            btn.innerText = "Salvando no sistema...";
+
+            try {
+                const res = await fetch(URL_DO_WEB_APP, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ acao: 'adicionar', pedido: novoPedido })
+                });
+                const data = await res.json();
+                
+                if(data.sucesso) {
+                    pedidos.push(novoPedido);
+                    alert('Pedido enviado com sucesso!');
+                    this.reset();
+                    produtosPedidoAtual = [];
+                    atualizarCarrinho();
+                    atualizarTabelas();
+                } else {
+                    alert("Erro ao salvar: " + data.erro);
+                }
+            } catch(err) {
+                alert("Erro de comunicação ao enviar pedido. Verifique a internet.");
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Enviar Pedido Completo";
+            }
+        });
+
+        function atualizarTabelas() {
+            const repBody = document.getElementById('repTableBody');
+            const adminBody = document.getElementById('adminTableBody');
+            repBody.innerHTML = ''; adminBody.innerHTML = '';
+
+            const pedidosReversos = [...pedidos].reverse();
+
+            pedidosReversos.forEach(pedido => {
+                const statusClass = pedido.status === 'Lançado' ? 'status-lancado' : 'status-aguardando';
+                const idCurto = '#' + pedido.id.toString().slice(-4);
+                
+                const valor = parseFloat(pedido.valorTotal) || 0;
+                const valorFormatado = 'R$ ' + valor.toFixed(2).replace('.', ',');
+
+                repBody.innerHTML += `<tr>
+                    <td><strong>${idCurto}</strong><br><span style="font-size: 0.8rem; color: #64748b;">${pedido.dataEnvio || ''}</span></td>
+                    <td>${pedido.cliente}</td><td>${pedido.produtos ? pedido.produtos.length : 0} item(ns)</td>
+                    <td><strong>${valorFormatado}</strong></td><td class="${statusClass}">${pedido.status}</td>
+                </tr>`;
+
+                let listaProdutosHTML = '<ul class="lista-itens-admin">';
+                if(pedido.produtos) {
+                    pedido.produtos.forEach(p => {
+                        const pu = parseFloat(p.precoUnitario) || 0;
+                        listaProdutosHTML += `<li>${p.nome} (Qtd: ${p.quantidade} x R$ ${pu.toFixed(2)})</li>`;
+                    });
+                }
+                listaProdutosHTML += '</ul>';
+
+                const acaoLancado = pedido.status === 'Aguardando Lançamento' 
+                    ? `<button class="btn-action" onclick="marcarComoLancado('${pedido.id}')">✔ Lançar</button>` 
+                    : `<span style="color: #9ca3af; display:block; margin-bottom:5px;">Concluído</span>`;
+                
+                const acaoExcluir = `<button class="btn-remover" onclick="excluirPedido('${pedido.id}')">🗑 Excluir</button>`;
+
+                adminBody.innerHTML += `<tr>
+                    <td><strong>${idCurto}</strong><br><span style="font-size: 0.8rem; color: #64748b;">${pedido.dataEnvio || ''}</span></td>
+                    <td><strong>${pedido.cliente}</strong><br><small>CNPJ: ${pedido.cnpj}</small></td>
+                    <td>${pedido.pagamento}</td><td>${listaProdutosHTML}</td>
+                    <td><strong>${valorFormatado}</strong></td>
+                    <td class="${statusClass}">${pedido.status}</td>
+                    <td>${acaoLancado}${acaoExcluir}</td>
+                </tr>`;
+            });
+        }
+
+        async function marcarComoLancado(id) {
+            if(confirm('Tem certeza que já lançou este pedido no sistema principal?')) {
+                const index = pedidos.findIndex(p => String(p.id) === String(id));
+                
+                if (index !== -1) {
+                    pedidos[index].status = 'Lançado';
+                    atualizarTabelas(); 
+                    
+                    await fetch(URL_DO_WEB_APP, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ acao: 'editar_status', id: id, novoStatus: 'Lançado' })
+                    });
+                }
+            }
+        }
+
+        async function excluirPedido(id) {
+            if(confirm('Atenção: Deseja realmente EXCLUIR este pedido permanentemente?')) {
+                pedidos = pedidos.filter(p => String(p.id) !== String(id));
+                atualizarTabelas(); 
+                
+                await fetch(URL_DO_WEB_APP, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ acao: 'excluir', id: id })
+                });
+            }
+        }
+
+        function exportarCSV() {
+            if(pedidos.length === 0) return alert("Nenhum pedido para exportar.");
+            
+            let csv = "ID,Data,CNPJ,Cliente,Pagamento,Total,Status\n";
+            pedidos.forEach(p => {
+                csv += `${p.id},"${p.dataEnvio}","${p.cnpj}","${p.cliente}","${p.pagamento}",${p.valorTotal},"${p.status}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "pedidos_exportados.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
